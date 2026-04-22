@@ -423,7 +423,7 @@ export default function DashboardPage() {
       {/* Board selected but no lists */}
       {selectedBoardId && lists.length === 0 && (
         <p className="text-center text-sm text-zinc-400 py-8">
-          Board has no lists. This shouldn't happen — try creating a new board.
+          Board has no lists. This shouldn&apos;t happen — try creating a new board.
         </p>
       )}
     </div>

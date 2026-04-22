@@ -4,13 +4,6 @@ import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase";
 import type { Workspace, Board, List, Task } from "@/types/database";
 
-type BoardData = {
-  workspace: Workspace;
-  board: Board;
-  lists: List[];
-  tasks: Task[];
-};
-
 export function useBoardData() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
@@ -20,6 +13,24 @@ export function useBoardData() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
+
+  // Reset derived state when workspace changes (adjust during render, not in effect)
+  const [prevWorkspaceId, setPrevWorkspaceId] = useState<string | null>(null);
+  if (selectedWorkspaceId !== prevWorkspaceId) {
+    setPrevWorkspaceId(selectedWorkspaceId);
+    setBoards([]);
+    setSelectedBoardId(null);
+    setLists([]);
+    setTasks([]);
+  }
+
+  // Reset derived state when board changes (adjust during render, not in effect)
+  const [prevBoardId, setPrevBoardId] = useState<string | null>(null);
+  if (selectedBoardId !== prevBoardId) {
+    setPrevBoardId(selectedBoardId);
+    setLists([]);
+    setTasks([]);
+  }
 
   // Load workspaces for current user
   const fetchWorkspaces = useCallback(async () => {
@@ -115,35 +126,25 @@ export function useBoardData() {
     })();
   }, [fetchWorkspaces]);
 
-  // When workspace changes, load boards
+  // When workspace changes, fetch boards
   useEffect(() => {
-    if (!selectedWorkspaceId) {
-      setBoards([]);
-      setLists([]);
-      setTasks([]);
-      return;
-    }
+    if (!selectedWorkspaceId) return;
     (async () => {
       const bds = await fetchBoards(selectedWorkspaceId);
       if (bds && bds.length > 0) {
         setSelectedBoardId(bds[0].id);
       } else {
         setSelectedBoardId(null);
-        setLists([]);
-        setTasks([]);
       }
     })();
   }, [selectedWorkspaceId, fetchBoards]);
 
-  // When board changes, load lists and tasks
+  // When board changes, fetch lists and tasks
   useEffect(() => {
-    if (!selectedBoardId) {
-      setLists([]);
-      setTasks([]);
-      return;
-    }
-    fetchLists(selectedBoardId);
-    fetchTasks(selectedBoardId);
+    if (!selectedBoardId) return;
+    (async () => {
+      await Promise.all([fetchLists(selectedBoardId), fetchTasks(selectedBoardId)]);
+    })();
   }, [selectedBoardId, fetchLists, fetchTasks]);
 
   // CRUD operations
