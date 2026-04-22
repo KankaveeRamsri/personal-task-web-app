@@ -55,10 +55,10 @@ export default function DashboardPage() {
   const handleCreateWorkspace = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newWorkspaceName.trim()) return;
-    await createWorkspace(newWorkspaceName.trim());
+    const ws = await createWorkspace(newWorkspaceName.trim());
     setNewWorkspaceName("");
     setShowNewWorkspace(false);
-    showSuccess("Workspace created");
+    if (ws) showSuccess("Workspace created");
   };
 
   const handleCreateBoard = async (e: React.FormEvent) => {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase";
+import { createWorkspaceAction } from "@/app/dashboard/workspace-actions";
 import type { Workspace, Board, List, Task } from "@/types/database";
 
 export function useBoardData() {
@@ -149,23 +150,12 @@ export function useBoardData() {
 
   // CRUD operations
   const createWorkspace = useCallback(async (name: string) => {
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from("workspaces")
-      .insert({ name, owner_id: user.id })
-      .select()
-      .single();
-
-    if (error) {
-      setErrorMsg(error.message);
+    const result = await createWorkspaceAction(name);
+    if (!result.ok || !result.data) {
+      setErrorMsg(result.error ?? "เกิดข้อผิดพลาด");
       return;
     }
-    const ws = data as Workspace;
+    const ws = result.data;
     setWorkspaces((prev) => [...prev, ws]);
     setSelectedWorkspaceId(ws.id);
     return ws;
