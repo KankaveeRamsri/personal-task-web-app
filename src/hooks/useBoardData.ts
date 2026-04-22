@@ -300,5 +300,6 @@ export function useBoardData() {
     deleteTask,
     fetchTasks,
     clearError,
+    setErrorMsg,
   };
 }

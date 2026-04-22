@@ -2,7 +2,8 @@
 
 import { useState, useCallback } from "react";
 import { useBoardData } from "@/hooks/useBoardData";
-import type { Task } from "@/types/database";
+import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
+import type { Task, WorkspaceRole } from "@/types/database";
 
 export default function DashboardPage() {
   const {
@@ -22,6 +23,7 @@ export default function DashboardPage() {
     updateTask,
     deleteTask,
     clearError,
+    setErrorMsg,
   } = useBoardData();
 
   // Task form state
@@ -43,6 +45,19 @@ export default function DashboardPage() {
   // Board creation
   const [showNewBoard, setShowNewBoard] = useState(false);
   const [newBoardTitle, setNewBoardTitle] = useState("");
+
+  // Member management
+  const { members, currentRole, invite, remove, updateRole } =
+    useWorkspaceMembers(selectedWorkspaceId);
+  const [showMembers, setShowMembers] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<WorkspaceRole>("member");
+  const [inviting, setInviting] = useState(false);
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  const canEditTasks =
+    !currentRole || ["owner", "admin", "member"].includes(currentRole);
+  const isManager =
+    currentRole === "owner" || currentRole === "admin";
 
   // Auto-select first list for the task form when lists change
   const activeListId = newTaskListId || (lists.length > 0 ? lists[0].id : null);
@@ -120,6 +135,43 @@ export default function DashboardPage() {
     showSuccess("Task deleted");
   };
 
+  // Member handlers
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteEmail.trim()) return;
+    setInviting(true);
+    const result = await invite(inviteEmail.trim(), inviteRole);
+    setInviting(false);
+    if (result.ok) {
+      setInviteEmail("");
+      showSuccess("เชิญสมาชิกสำเร็จ");
+    } else {
+      setErrorMsg(result.error ?? "ไม่สามารถเชิญสมาชิกได้");
+    }
+  };
+
+  const handleRemoveMember = async (userId: string) => {
+    const result = await remove(userId);
+    if (result.ok) {
+      setConfirmRemoveId(null);
+      showSuccess("ลบสมาชิกสำเร็จ");
+    } else {
+      setErrorMsg(result.error ?? "ไม่สามารถลบสมาชิกได้");
+    }
+  };
+
+  const handleRoleChange = async (
+    userId: string,
+    newRole: WorkspaceRole
+  ) => {
+    const result = await updateRole(userId, newRole);
+    if (result.ok) {
+      showSuccess("เปลี่ยน role สำเร็จ");
+    } else {
+      setErrorMsg(result.error ?? "ไม่สามารถเปลี่ยน role ได้");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -165,6 +217,14 @@ export default function DashboardPage() {
         >
           + Workspace
         </button>
+        {selectedWorkspaceId && (
+          <button
+            onClick={() => setShowMembers(!showMembers)}
+            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
+          >
+            Members
+          </button>
+        )}
       </div>
 
       {/* New workspace form */}
@@ -192,6 +252,124 @@ export default function DashboardPage() {
             Cancel
           </button>
         </form>
+      )}
+
+      {/* Members panel */}
+      {showMembers && selectedWorkspaceId && (
+        <div className="mb-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold">
+              Members ({members.length})
+            </h3>
+            <button
+              onClick={() => setShowMembers(false)}
+              className="text-lg leading-none text-zinc-400 hover:text-zinc-600"
+            >
+              &times;
+            </button>
+          </div>
+
+          {/* Member list */}
+          <ul className="mb-3 space-y-2">
+            {members.map((m) => (
+              <li
+                key={m.id}
+                className="flex items-center gap-3 text-sm"
+              >
+                <span className="min-w-0 flex-1 truncate">
+                  {m.display_name || m.email}
+                </span>
+                {m.role === "owner" ? (
+                  <span className="shrink-0 text-xs font-medium text-amber-600 dark:text-amber-400">
+                    owner
+                  </span>
+                ) : isManager ? (
+                  <>
+                    <select
+                      value={m.role}
+                      onChange={(e) =>
+                        handleRoleChange(
+                          m.user_id,
+                          e.target.value as WorkspaceRole
+                        )
+                      }
+                      className="shrink-0 rounded border border-zinc-300 px-1 py-0.5 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+                    >
+                      <option value="admin">admin</option>
+                      <option value="member">member</option>
+                      <option value="viewer">viewer</option>
+                    </select>
+                    {confirmRemoveId === m.user_id ? (
+                      <span className="flex shrink-0 items-center gap-1">
+                        <button
+                          onClick={() => handleRemoveMember(m.user_id)}
+                          className="text-xs font-medium text-red-600 hover:text-red-700"
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          onClick={() => setConfirmRemoveId(null)}
+                          className="text-xs text-zinc-400"
+                        >
+                          Cancel
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmRemoveId(m.user_id)}
+                        className="shrink-0 text-xs text-zinc-400 hover:text-red-500"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <span className="shrink-0 text-xs text-zinc-500">
+                    {m.role}
+                  </span>
+                )}
+              </li>
+            ))}
+            {members.length === 0 && (
+              <li className="py-2 text-xs text-zinc-400">No members</li>
+            )}
+          </ul>
+
+          {/* Invite form — owner/admin only */}
+          {isManager && (
+            <form
+              onSubmit={handleInvite}
+              className="flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800"
+            >
+              <input
+                type="email"
+                placeholder="Email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                required
+                className="min-w-[150px] flex-1 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              />
+              <select
+                value={inviteRole}
+                onChange={(e) =>
+                  setInviteRole(e.target.value as WorkspaceRole)
+                }
+                className="rounded-lg border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              >
+                <option value="admin">admin</option>
+                <option value="member">member</option>
+                <option value="viewer">viewer</option>
+              </select>
+              <button
+                type="submit"
+                disabled={inviting || !inviteEmail.trim()}
+                className="rounded-lg bg-black px-3 py-1.5 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
+              >
+                {inviting ? "..." : "Invite"}
+              </button>
+            </form>
+          )}
+        </div>
       )}
 
       {/* No workspaces at all */}
@@ -259,7 +437,8 @@ export default function DashboardPage() {
       {/* Board content: lists with tasks */}
       {selectedBoardId && lists.length > 0 && (
         <div className="space-y-6">
-          {/* Add task form */}
+          {/* Add task form — hidden for viewers */}
+          {canEditTasks && (
           <form onSubmit={handleAddTask} className="flex gap-3 flex-wrap">
             <select
               value={activeListId ?? ""}
@@ -287,6 +466,7 @@ export default function DashboardPage() {
               {adding ? "Adding..." : "Add"}
             </button>
           </form>
+          )}
 
           {/* Lists */}
           {lists.map((list) => {
@@ -344,7 +524,7 @@ export default function DashboardPage() {
                               type="checkbox"
                               checked={task.is_completed}
                               onChange={() => handleToggleComplete(task)}
-                              disabled={updatingId === task.id}
+                              disabled={updatingId === task.id || !canEditTasks}
                               className="mt-0.5 h-4 w-4 accent-black dark:accent-white"
                             />
                             <div className="flex-1 min-w-0">
@@ -375,6 +555,8 @@ export default function DashboardPage() {
                                   {task.priority}
                                 </span>
                               )}
+                              {canEditTasks && (
+                              <>
                               <button
                                 onClick={() => startEdit(task)}
                                 className="rounded px-2 py-1 text-xs text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
@@ -387,6 +569,8 @@ export default function DashboardPage() {
                               >
                                 Delete
                               </button>
+                              </>
+                              )}
                             </div>
                           </div>
                         )}
