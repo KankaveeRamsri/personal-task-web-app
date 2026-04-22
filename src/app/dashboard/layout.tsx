@@ -29,7 +29,7 @@ export default function DashboardLayout({
   return (
     <div className="flex flex-col flex-1">
       <header className="flex items-center justify-between border-b border-zinc-200 px-6 py-4 dark:border-zinc-800">
-        <h1 className="text-lg font-semibold">Task App</h1>
+        <h1 className="text-lg font-semibold">Task Board</h1>
         <div className="flex items-center gap-4">
           <span className="text-sm text-zinc-500">{userEmail}</span>
           <button

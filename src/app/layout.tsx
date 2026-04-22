@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Task App",
-  description: "Personal task manager",
+  title: "Task Board",
+  description: "Collaborative task board",
 };
 
 export default function RootLayout({
