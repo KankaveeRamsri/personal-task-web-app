@@ -38,44 +38,44 @@ export async function inviteMember(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
 
-  // ห้ามเชิญตัวเอง
-  const { data: profile } = await supabase
+  // 1. ตรวจสอบสิทธิ์ผู้เชิญก่อน
+  const actorRole = await getActorRole(supabase, workspaceId, user.id);
+  if (!actorRole || !canInviteMembers(actorRole))
+    return { ok: false, error: "คุณไม่มีสิทธิ์เชิญสมาชิก" };
+
+  // 2. ห้ามเชิญด้วย role = owner
+  if (role === "owner")
+    return { ok: false, error: "ไม่สามารถเชิญในฐานะ owner ได้" };
+
+  // 3. หา target user จาก email
+  const { data: targetProfile } = await supabase
     .from("profiles")
     .select("id")
     .eq("email", email)
     .single();
 
-  if (profile && profile.id === user.id)
-    return { ok: false, error: "ไม่สามารถเชิญตัวเองได้" };
-
-  // ห้ามเชิญด้วย role = owner
-  if (role === "owner")
-    return { ok: false, error: "ไม่สามารถเชิญในฐานะ owner ได้" };
-
-  // ตรวจสอบสิทธิ์ผู้เชิญ
-  const actorRole = await getActorRole(supabase, workspaceId, user.id);
-  if (!actorRole || !canInviteMembers(actorRole))
-    return { ok: false, error: "คุณไม่มีสิทธิ์เชิญสมาชิก" };
-
-  // หา user จาก email
-  if (!profile)
+  if (!targetProfile)
     return { ok: false, error: "ไม่พบผู้ใช้ที่ใช้อีเมลนี้" };
 
-  // ตรวจสอบว่ายังไม่เป็นสมาชิก
+  // 4. ห้ามเชิญตัวเอง (เปรียบเทียบ user id โดยตรง)
+  if (targetProfile.id === user.id)
+    return { ok: false, error: "ไม่สามารถเชิญตัวเองได้" };
+
+  // 5. ตรวจสอบว่ายังไม่เป็นสมาชิก
   const { data: existing } = await supabase
     .from("workspace_members")
     .select("id")
     .eq("workspace_id", workspaceId)
-    .eq("user_id", profile.id)
+    .eq("user_id", targetProfile.id)
     .single();
 
   if (existing)
     return { ok: false, error: "ผู้ใช้นี้เป็นสมาชิกอยู่แล้ว" };
 
-  // เพิ่มสมาชิก
+  // 6. เพิ่มสมาชิก
   const { data, error } = await supabase
     .from("workspace_members")
-    .insert({ workspace_id: workspaceId, user_id: profile.id, role })
+    .insert({ workspace_id: workspaceId, user_id: targetProfile.id, role })
     .select()
     .single();
 
