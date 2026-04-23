@@ -439,11 +439,11 @@ export default function DashboardPage() {
         <div className="space-y-4">
           {/* Add task form — hidden for viewers */}
           {canEditTasks && (
-          <form onSubmit={handleAddTask} className="flex gap-3 flex-wrap">
+          <form onSubmit={handleAddTask} className="flex gap-2 flex-wrap items-center rounded-xl border border-zinc-200 bg-white px-3 py-2.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
             <select
               value={activeListId ?? ""}
               onChange={(e) => setNewTaskListId(e.target.value)}
-              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              className="rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-400"
             >
               {lists.map((l) => (
                 <option key={l.id} value={l.id}>
@@ -456,12 +456,12 @@ export default function DashboardPage() {
               placeholder="Add a task..."
               value={newTaskTitle}
               onChange={(e) => setNewTaskTitle(e.target.value)}
-              className="flex-1 min-w-[200px] rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              className="flex-1 min-w-[180px] rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600"
             />
             <button
               type="submit"
               disabled={adding || !newTaskTitle.trim()}
-              className="rounded-lg bg-black px-6 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-black"
+              className="rounded-lg bg-zinc-900 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
             >
               {adding ? "Adding..." : "Add"}
             </button>
@@ -469,12 +469,12 @@ export default function DashboardPage() {
           )}
 
           {/* Lists — Kanban columns */}
-          <div className="flex gap-4 overflow-x-auto pb-4">
+          <div className="flex gap-4 overflow-x-auto pb-4 items-start">
           {lists.map((list) => {
             const listTasks = tasks.filter((t) => t.list_id === list.id);
             return (
-              <div key={list.id} className="min-w-[280px] flex-shrink-0 rounded-xl border border-zinc-200 bg-zinc-50/50 dark:border-zinc-800 dark:bg-zinc-900/30">
-                <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800/70">
+              <div key={list.id} className="w-[300px] flex-shrink-0 rounded-xl border border-zinc-200 bg-zinc-50/50 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/30 flex flex-col max-h-[calc(100vh-220px)]">
+                <div className="flex-shrink-0 border-b border-zinc-200 px-4 py-3.5 dark:border-zinc-800/70">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{list.title}</h3>
                     <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-zinc-200/80 px-1.5 text-[10px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
@@ -482,14 +482,17 @@ export default function DashboardPage() {
                     </span>
                   </div>
                 </div>
+                <div className="flex-1 overflow-y-auto p-2">
                 {listTasks.length === 0 ? (
-                  <p className="px-4 py-6 text-center text-xs text-zinc-400">No tasks yet</p>
+                  <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-zinc-200 py-8 dark:border-zinc-700/50">
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500">No tasks yet</p>
+                  </div>
                 ) : (
-                  <ul>
+                  <ul className="space-y-1.5">
                     {listTasks.map((task) => (
                       <li
                         key={task.id}
-                        className="group relative border-b border-zinc-200/60 px-4 py-3 last:border-b-0 transition-colors hover:bg-white dark:border-zinc-800/60 dark:hover:bg-zinc-800/40"
+                        className="group relative rounded-lg px-3 py-2.5 transition-colors hover:bg-white dark:hover:bg-zinc-800/40"
                       >
                         {/* Editing mode */}
                         {editingId === task.id ? (
@@ -609,6 +612,7 @@ export default function DashboardPage() {
                     ))}
                   </ul>
                 )}
+                </div>
               </div>
             );
           })}
