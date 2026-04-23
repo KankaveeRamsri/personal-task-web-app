@@ -133,6 +133,30 @@ export default function DashboardPage() {
     showSuccess("Task deleted");
   };
 
+  const handleMoveTask = async (taskId: string) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+    const currentList = lists.find((l) => l.id === task.list_id);
+    if (!currentList) return;
+
+    const nextMap: Record<string, string> = {
+      "To Do": "In Progress",
+      "In Progress": "Completed",
+    };
+    const nextTitle = nextMap[currentList.title];
+    if (!nextTitle) return;
+
+    const targetList =
+      lists.find((l) => l.title === nextTitle) ||
+      (nextTitle === "Completed" ? lists.find((l) => l.title === "Done") : undefined);
+    if (!targetList) return;
+
+    setUpdatingId(taskId);
+    await updateTask(taskId, { list_id: targetList.id } as Partial<Task>);
+    setUpdatingId(null);
+    showSuccess(`Moved to ${nextTitle}`);
+  };
+
   // Member handlers
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -490,6 +514,12 @@ export default function DashboardPage() {
           <div className="flex gap-5 overflow-x-auto pb-6 items-start -mx-1 px-1">
           {lists.map((list) => {
             const listTasks = tasks.filter((t) => t.list_id === list.id);
+            const moveLabel =
+              list.title === "To Do"
+                ? "Start"
+                : list.title === "In Progress"
+                ? "Complete"
+                : null;
             return (
               <div key={list.id} className="w-[300px] flex-shrink-0 rounded-xl bg-zinc-100/50 dark:bg-zinc-800/30 flex flex-col max-h-[calc(100vh-220px)]">
                 <div className="flex-shrink-0 px-3 pt-3 pb-1.5">
@@ -593,6 +623,15 @@ export default function DashboardPage() {
                               <span className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                               {canEditTasks && (
                               <>
+                              {moveLabel && (
+                              <button
+                                onClick={() => handleMoveTask(task.id)}
+                                disabled={updatingId === task.id}
+                                className="rounded-md px-1.5 py-1 text-xs text-emerald-600 transition-colors hover:bg-emerald-50 hover:text-emerald-700 active:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-300 dark:text-emerald-400 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-300 dark:active:bg-emerald-900/50 dark:focus:ring-emerald-900"
+                              >
+                                {moveLabel}
+                              </button>
+                              )}
                               <button
                                 onClick={() => startEdit(task)}
                                 className="rounded-md px-1.5 py-1 text-xs text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 active:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:hover:bg-zinc-700 dark:hover:text-zinc-200 dark:active:bg-zinc-600 dark:focus:ring-zinc-600"
