@@ -489,7 +489,7 @@ export default function DashboardPage() {
         <div className="space-y-5">
           {/* Add task form — hidden for viewers */}
           {canEditTasks && (
-          <form onSubmit={handleAddTask} className="flex gap-2 flex-wrap items-center rounded-xl border border-zinc-200 bg-white px-3 py-2.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
+          <form onSubmit={handleAddTask} className="flex gap-2 flex-wrap items-center rounded-xl border border-zinc-200/60 bg-white/80 px-3 py-2.5 dark:border-zinc-800/60 dark:bg-zinc-900/50">
             <select
               value={activeListId ?? ""}
               onChange={(e) => setNewTaskListId(e.target.value)}
@@ -519,22 +519,22 @@ export default function DashboardPage() {
           )}
 
           {/* Lists — Kanban columns */}
-          <div className="flex gap-4 overflow-x-auto pb-4 items-start">
+          <div className="flex gap-5 overflow-x-auto pb-6 items-start -mx-1 px-1">
           {lists.map((list) => {
             const listTasks = tasks.filter((t) => t.list_id === list.id);
             return (
-              <div key={list.id} className="w-[300px] flex-shrink-0 rounded-xl border border-zinc-200 bg-zinc-50/50 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/30 flex flex-col max-h-[calc(100vh-220px)]">
-                <div className="flex-shrink-0 border-b border-zinc-200 px-4 py-3.5 dark:border-zinc-800/70">
+              <div key={list.id} className="w-[300px] flex-shrink-0 rounded-xl bg-zinc-100/50 dark:bg-zinc-800/30 flex flex-col max-h-[calc(100vh-220px)]">
+                <div className="flex-shrink-0 px-3 pt-3 pb-1.5">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{list.title}</h3>
-                    <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-zinc-200/80 px-1.5 text-[10px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                    <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-zinc-200/60 px-1.5 text-[10px] font-medium text-zinc-500 dark:bg-zinc-700/50 dark:text-zinc-500">
                       {listTasks.length}
                     </span>
                   </div>
                 </div>
-                <div className="flex-1 overflow-y-auto p-2">
+                <div className="flex-1 overflow-y-auto px-2.5 pb-2.5">
                 {listTasks.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-zinc-200 py-8 dark:border-zinc-700/50">
+                  <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-zinc-200/60 py-8 dark:border-zinc-700/40">
                     <svg className="mb-2 h-4 w-4 text-zinc-300 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15a2.25 2.25 0 0 1 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
                     </svg>
@@ -544,11 +544,11 @@ export default function DashboardPage() {
                     )}
                   </div>
                 ) : (
-                  <ul className="space-y-1.5">
+                  <ul className="space-y-2">
                     {listTasks.map((task) => (
                       <li
                         key={task.id}
-                        className="group relative rounded-lg px-3 py-2.5 transition-colors hover:bg-white hover:shadow-[0_1px_2px_rgba(0,0,0,0.05)] active:bg-zinc-100 dark:hover:bg-zinc-800/40 dark:active:bg-zinc-700/30"
+                        className="group relative rounded-lg bg-white px-3 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:bg-zinc-800/80 dark:hover:shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
                       >
                         {/* Editing mode */}
                         {editingId === task.id ? (
@@ -625,11 +625,12 @@ export default function DashboardPage() {
                                   {task.priority}
                                 </span>
                               )}
+                              <span className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                               {canEditTasks && (
                               <>
                               <button
                                 onClick={() => startEdit(task)}
-                                className="rounded-md px-1.5 py-1 text-xs text-zinc-400 transition-colors hover:bg-zinc-200/60 hover:text-zinc-700 active:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:hover:bg-zinc-700/60 dark:hover:text-zinc-200 dark:active:bg-zinc-600 dark:focus:ring-zinc-600"
+                                className="rounded-md px-1.5 py-1 text-xs text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 active:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:hover:bg-zinc-700 dark:hover:text-zinc-200 dark:active:bg-zinc-600 dark:focus:ring-zinc-600"
                               >
                                 Edit
                               </button>
@@ -641,13 +642,14 @@ export default function DashboardPage() {
                               </button>
                               </>
                               )}
+                              </span>
                             </div>
                           </div>
                         )}
 
                         {/* Delete confirmation */}
                         {confirmDeleteId === task.id && (
-                          <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 rounded-lg bg-white/95 backdrop-blur-sm dark:bg-zinc-900/95">
+                          <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 rounded-lg bg-white/90 backdrop-blur-sm dark:bg-zinc-800/90">
                             <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Delete this task?</span>
                             <button
                               onClick={() => handleDelete(task.id)}
