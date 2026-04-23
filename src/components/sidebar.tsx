@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 interface SidebarProps {
@@ -78,7 +79,7 @@ export function Sidebar({ userEmail, onSignOut }: SidebarProps) {
         {mainNav.map((item) => {
           const active = isActive(item.href);
           return (
-            <a
+            <Link
               key={item.label}
               href={item.href}
               className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors ${
@@ -89,7 +90,7 @@ export function Sidebar({ userEmail, onSignOut }: SidebarProps) {
             >
               {item.icon}
               {item.label}
-            </a>
+            </Link>
           );
         })}
       </nav>
@@ -99,7 +100,7 @@ export function Sidebar({ userEmail, onSignOut }: SidebarProps) {
         {bottomNav.map((item) => {
           const active = isActive(item.href);
           return (
-            <a
+            <Link
               key={item.label}
               href={item.href}
               className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors ${
@@ -110,7 +111,7 @@ export function Sidebar({ userEmail, onSignOut }: SidebarProps) {
             >
               {item.icon}
               {item.label}
-            </a>
+            </Link>
           );
         })}
       </div>

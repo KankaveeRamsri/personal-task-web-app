@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 
 // ── Static mock data for visual layout ──────────────────────────
@@ -185,34 +186,36 @@ export default function DashboardPage() {
           </div>
           <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
             {recentTasks.map((task, i) => (
-              <li
-                key={i}
-                className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-              >
-                <span className={`h-2 w-2 shrink-0 rounded-full ${statusDot(task.status)}`} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-zinc-800 dark:text-zinc-200">
-                    {task.title}
-                  </p>
-                  <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
-                    {task.board} &middot; {task.status}
-                  </p>
-                </div>
-                <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${priorityBadge(task.priority)}`}
+              <li key={i}>
+                <Link
+                  href="/dashboard/board"
+                  className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
                 >
-                  {task.priority}
-                </span>
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${statusDot(task.status)}`} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                      {task.title}
+                    </p>
+                    <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
+                      {task.board} &middot; {task.status}
+                    </p>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${priorityBadge(task.priority)}`}
+                  >
+                    {task.priority}
+                  </span>
+                </Link>
               </li>
             ))}
           </ul>
           <div className="border-t border-zinc-100 px-5 py-3 dark:border-zinc-800">
-            <a
+            <Link
               href="/dashboard/board"
               className="text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
             >
               View all tasks &rarr;
-            </a>
+            </Link>
           </div>
         </div>
 
@@ -254,7 +257,7 @@ export default function DashboardPage() {
               Quick Actions
             </h2>
             <div className="space-y-2">
-              <a
+              <Link
                 href="/dashboard/board"
                 className="flex items-center gap-2.5 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
               >
@@ -262,8 +265,8 @@ export default function DashboardPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
                 New Task
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/dashboard/board"
                 className="flex items-center gap-2.5 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 hover:border-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:border-zinc-600"
               >
@@ -271,7 +274,7 @@ export default function DashboardPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
                 </svg>
                 Open Board
-              </a>
+              </Link>
             </div>
           </div>
         </div>
