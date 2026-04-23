@@ -203,7 +203,7 @@ export default function DashboardPage() {
             <select
               value={selectedWorkspaceId ?? ""}
               onChange={(e) => setSelectedWorkspaceId(e.target.value)}
-              className="rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm font-medium text-zinc-700 hover:border-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600"
+              className="rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:focus:ring-zinc-600"
             >
               {workspaces.map((ws) => (
                 <option key={ws.id} value={ws.id}>
@@ -219,7 +219,7 @@ export default function DashboardPage() {
                 <select
                   value={selectedBoardId ?? ""}
                   onChange={(e) => setSelectedBoardId(e.target.value)}
-                  className="rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm font-medium text-zinc-700 hover:border-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600"
+                  className="rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:focus:ring-zinc-600"
                 >
                   {boards.map((b) => (
                     <option key={b.id} value={b.id}>
@@ -242,7 +242,7 @@ export default function DashboardPage() {
                 setShowMembers(next);
                 if (next) { setShowNewWorkspace(false); setShowNewBoard(false); }
               }}
-              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
+              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-zinc-50 active:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:bg-zinc-800 dark:active:bg-zinc-700 dark:focus:ring-zinc-600"
             >
               Members
             </button>
@@ -253,7 +253,7 @@ export default function DashboardPage() {
               setShowNewWorkspace(next);
               if (next) { setShowNewBoard(false); setShowMembers(false); }
             }}
-            className="text-sm text-zinc-400 transition-colors hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
+            className="text-sm text-zinc-400 transition-colors hover:text-zinc-600 active:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300 dark:active:text-zinc-200"
           >
             + Workspace
           </button>
@@ -264,7 +264,7 @@ export default function DashboardPage() {
                 setShowNewBoard(next);
                 if (next) { setShowNewWorkspace(false); setShowMembers(false); }
               }}
-              className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+              className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 active:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:focus:ring-zinc-600"
             >
               + Board
             </button>
@@ -281,19 +281,19 @@ export default function DashboardPage() {
             autoFocus
             value={newWorkspaceName}
             onChange={(e) => setNewWorkspaceName(e.target.value)}
-            className="flex-1 rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-600"
+            className="flex-1 rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 dark:focus:ring-zinc-700/50 dark:border-zinc-700 dark:focus:border-zinc-600"
           />
           <button
             type="submit"
             disabled={!newWorkspaceName.trim()}
-            className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 active:bg-zinc-800 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:focus:ring-zinc-600"
           >
             Create
           </button>
           <button
             type="button"
             onClick={() => setShowNewWorkspace(false)}
-            className="text-sm text-zinc-400 transition-colors hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
+            className="text-sm text-zinc-400 transition-colors hover:text-zinc-600 active:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300 dark:active:text-zinc-200"
           >
             Cancel
           </button>
@@ -309,7 +309,7 @@ export default function DashboardPage() {
             </h3>
             <button
               onClick={() => setShowMembers(false)}
-              className="text-lg leading-none text-zinc-400 hover:text-zinc-600"
+              className="text-lg leading-none text-zinc-400 transition-colors hover:text-zinc-600"
             >
               &times;
             </button>
@@ -430,7 +430,7 @@ export default function DashboardPage() {
           <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-5 max-w-[240px]">Create your first workspace to start organizing tasks with your team.</p>
           <button
             onClick={() => setShowNewWorkspace(true)}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 active:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:focus:ring-zinc-600"
           >
             Create workspace
           </button>
@@ -446,19 +446,19 @@ export default function DashboardPage() {
             autoFocus
             value={newBoardTitle}
             onChange={(e) => setNewBoardTitle(e.target.value)}
-            className="flex-1 rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-600"
+            className="flex-1 rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 dark:focus:ring-zinc-700/50 dark:border-zinc-700 dark:focus:border-zinc-600"
           />
           <button
             type="submit"
             disabled={!newBoardTitle.trim()}
-            className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 active:bg-zinc-800 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:focus:ring-zinc-600"
           >
             Create
           </button>
           <button
             type="button"
             onClick={() => setShowNewBoard(false)}
-            className="text-sm text-zinc-400 transition-colors hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
+            className="text-sm text-zinc-400 transition-colors hover:text-zinc-600 active:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300 dark:active:text-zinc-200"
           >
             Cancel
           </button>
@@ -477,7 +477,7 @@ export default function DashboardPage() {
           <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-5 max-w-[240px]">Create a board to organize your tasks into lists.</p>
           <button
             onClick={() => setShowNewBoard(true)}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 active:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:focus:ring-zinc-600"
           >
             Create board
           </button>
@@ -493,7 +493,7 @@ export default function DashboardPage() {
             <select
               value={activeListId ?? ""}
               onChange={(e) => setNewTaskListId(e.target.value)}
-              className="rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-400"
+              className="rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm text-zinc-600 transition-colors hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:focus:ring-zinc-600"
             >
               {lists.map((l) => (
                 <option key={l.id} value={l.id}>
@@ -506,12 +506,12 @@ export default function DashboardPage() {
               placeholder="Add a task..."
               value={newTaskTitle}
               onChange={(e) => setNewTaskTitle(e.target.value)}
-              className="flex-1 min-w-[180px] rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600"
+              className="flex-1 min-w-[180px] rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 dark:focus:ring-zinc-700/50 dark:border-zinc-700 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600"
             />
             <button
               type="submit"
               disabled={adding || !newTaskTitle.trim()}
-              className="rounded-lg bg-zinc-900 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+              className="rounded-lg bg-zinc-900 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 active:bg-zinc-800 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:focus:ring-zinc-600"
             >
               {adding ? "Adding..." : "Add"}
             </button>
@@ -548,7 +548,7 @@ export default function DashboardPage() {
                     {listTasks.map((task) => (
                       <li
                         key={task.id}
-                        className="group relative rounded-lg px-3 py-2.5 transition-colors hover:bg-white dark:hover:bg-zinc-800/40"
+                        className="group relative rounded-lg px-3 py-2.5 transition-colors hover:bg-white hover:shadow-[0_1px_2px_rgba(0,0,0,0.05)] active:bg-zinc-100 dark:hover:bg-zinc-800/40 dark:active:bg-zinc-700/30"
                       >
                         {/* Editing mode */}
                         {editingId === task.id ? (
@@ -557,26 +557,26 @@ export default function DashboardPage() {
                               type="text"
                               value={editTitle}
                               onChange={(e) => setEditTitle(e.target.value)}
-                              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-600"
+                              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 dark:focus:ring-zinc-700/50 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-600"
                             />
                             <textarea
                               value={editDescription}
                               onChange={(e) => setEditDescription(e.target.value)}
                               rows={2}
                               placeholder="Description (optional)"
-                              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm resize-none focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-600"
+                              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm resize-none focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 dark:focus:ring-zinc-700/50 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-600"
                             />
                             <div className="flex gap-2">
                               <button
                                 onClick={() => saveEdit(task.id)}
                                 disabled={updatingId === task.id || !editTitle.trim()}
-                                className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                                className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 active:bg-zinc-800 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:focus:ring-zinc-600"
                               >
                                 {updatingId === task.id ? "Saving..." : "Save"}
                               </button>
                               <button
                                 onClick={cancelEdit}
-                                className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                                className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm transition-colors hover:bg-zinc-100 active:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:hover:bg-zinc-800 dark:active:bg-zinc-700 dark:focus:ring-zinc-600"
                               >
                                 Cancel
                               </button>
@@ -589,7 +589,7 @@ export default function DashboardPage() {
                               checked={task.is_completed}
                               onChange={() => handleToggleComplete(task)}
                               disabled={updatingId === task.id || !canEditTasks}
-                              className="mt-0.5 h-4 w-4 rounded accent-black dark:accent-white"
+                              className="mt-0.5 h-4 w-4 rounded accent-black dark:accent-white cursor-pointer disabled:cursor-not-allowed"
                             />
                             <div className="flex-1 min-w-0">
                               <span
@@ -629,13 +629,13 @@ export default function DashboardPage() {
                               <>
                               <button
                                 onClick={() => startEdit(task)}
-                                className="rounded-md px-1.5 py-1 text-xs text-zinc-400 transition-colors hover:bg-zinc-200/60 hover:text-zinc-700 dark:hover:bg-zinc-700/60 dark:hover:text-zinc-200"
+                                className="rounded-md px-1.5 py-1 text-xs text-zinc-400 transition-colors hover:bg-zinc-200/60 hover:text-zinc-700 active:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:hover:bg-zinc-700/60 dark:hover:text-zinc-200 dark:active:bg-zinc-600 dark:focus:ring-zinc-600"
                               >
                                 Edit
                               </button>
                               <button
                                 onClick={() => setConfirmDeleteId(task.id)}
-                                className="rounded-md px-1.5 py-1 text-xs text-zinc-400 transition-colors hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400"
+                                className="rounded-md px-1.5 py-1 text-xs text-zinc-400 transition-colors hover:bg-red-100 hover:text-red-600 active:bg-red-200 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:hover:bg-red-900/30 dark:hover:text-red-400 dark:active:bg-red-900/50 dark:focus:ring-zinc-600"
                               >
                                 Delete
                               </button>
@@ -652,7 +652,7 @@ export default function DashboardPage() {
                             <button
                               onClick={() => handleDelete(task.id)}
                               disabled={deletingId === task.id}
-                              className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700"
+                              className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700 active:bg-red-800 focus:outline-none focus:ring-2 focus:ring-red-300 dark:focus:ring-red-900"
                             >
                               {deletingId === task.id ? "Deleting..." : "Delete"}
                             </button>
