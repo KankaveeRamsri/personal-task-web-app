@@ -181,22 +181,22 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl">
+    <div className="mx-auto max-w-7xl space-y-6">
       {/* Feedback messages */}
       {errorMsg && (
-        <div className="mb-4 flex items-center justify-between rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
+        <div className="flex items-center justify-between rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
           <span>{errorMsg}</span>
           <button onClick={clearError} className="ml-2 font-bold">&times;</button>
         </div>
       )}
       {successMsg && (
-        <div className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-600 dark:bg-green-950 dark:text-green-400">
+        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-600 dark:bg-green-950 dark:text-green-400">
           {successMsg}
         </div>
       )}
 
       {/* Navigation toolbar */}
-      <div className="mb-6 flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4">
         {/* Left: context selectors */}
         <div className="flex items-center gap-2">
           {workspaces.length > 0 ? (
@@ -274,7 +274,7 @@ export default function DashboardPage() {
 
       {/* New workspace form */}
       {showNewWorkspace && (
-        <form onSubmit={handleCreateWorkspace} className="mb-4 flex gap-2 items-center max-w-sm">
+        <form onSubmit={handleCreateWorkspace} className="flex gap-2 items-center max-w-sm">
           <input
             type="text"
             placeholder="Workspace name"
@@ -302,7 +302,7 @@ export default function DashboardPage() {
 
       {/* Members panel */}
       {showMembers && selectedWorkspaceId && (
-        <div className="mb-4 rounded-xl border border-zinc-200 p-4 shadow-sm dark:border-zinc-800">
+        <div className="rounded-xl border border-zinc-200 p-4 shadow-sm dark:border-zinc-800">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold">
               Members ({members.length})
@@ -439,7 +439,7 @@ export default function DashboardPage() {
 
       {/* New board form */}
       {showNewBoard && (
-        <form onSubmit={handleCreateBoard} className="mb-4 flex gap-2 items-center max-w-sm">
+        <form onSubmit={handleCreateBoard} className="flex gap-2 items-center max-w-sm">
           <input
             type="text"
             placeholder="Board title"
@@ -486,7 +486,7 @@ export default function DashboardPage() {
 
       {/* Board content: lists with tasks */}
       {selectedBoardId && lists.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {/* Add task form — hidden for viewers */}
           {canEditTasks && (
           <form onSubmit={handleAddTask} className="flex gap-2 flex-wrap items-center rounded-xl border border-zinc-200 bg-white px-3 py-2.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
