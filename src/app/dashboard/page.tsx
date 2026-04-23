@@ -108,7 +108,7 @@ export default function DashboardPage() {
   }, [tasks, lists, listTitleMap]);
 
   const totalTasks = tasks.length;
-  const completedTasks = tasks.filter((t) => t.is_completed).length;
+  const completedTasks = (tasksByListTitle["Completed"] ?? 0) + (tasksByListTitle["Done"] ?? 0);
   const inProgressTasks = tasksByListTitle["In Progress"] ?? 0;
 
   const statCards = useMemo(
