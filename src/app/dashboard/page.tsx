@@ -195,59 +195,105 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Workspace selector */}
-      <div className="mb-6 flex items-center gap-3 flex-wrap">
-        <label className="text-sm font-medium text-zinc-600 dark:text-zinc-400">Workspace:</label>
-        {workspaces.length > 0 ? (
-          <select
-            value={selectedWorkspaceId ?? ""}
-            onChange={(e) => setSelectedWorkspaceId(e.target.value)}
-            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-          >
-            {workspaces.map((ws) => (
-              <option key={ws.id} value={ws.id}>
-                {ws.icon} {ws.name}
-              </option>
-            ))}
-          </select>
-        ) : null}
-        <button
-          onClick={() => setShowNewWorkspace(!showNewWorkspace)}
-          className="rounded-lg border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
-        >
-          + Workspace
-        </button>
-        {selectedWorkspaceId && (
+      {/* Navigation toolbar */}
+      <div className="mb-6 flex items-center justify-between gap-4">
+        {/* Left: context selectors */}
+        <div className="flex items-center gap-2">
+          {workspaces.length > 0 ? (
+            <select
+              value={selectedWorkspaceId ?? ""}
+              onChange={(e) => setSelectedWorkspaceId(e.target.value)}
+              className="rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm font-medium text-zinc-700 hover:border-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600"
+            >
+              {workspaces.map((ws) => (
+                <option key={ws.id} value={ws.id}>
+                  {ws.icon} {ws.name}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          {selectedWorkspaceId && (
+            <>
+              <span className="text-zinc-300 dark:text-zinc-700">/</span>
+              {boards.length > 0 ? (
+                <select
+                  value={selectedBoardId ?? ""}
+                  onChange={(e) => setSelectedBoardId(e.target.value)}
+                  className="rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm font-medium text-zinc-700 hover:border-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600"
+                >
+                  {boards.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.title}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="text-sm text-zinc-400">No boards</span>
+              )}
+            </>
+          )}
+        </div>
+        {/* Right: actions */}
+        <div className="flex items-center gap-2">
+          {selectedWorkspaceId && (
+            <button
+              onClick={() => {
+                const next = !showMembers;
+                setShowMembers(next);
+                if (next) { setShowNewWorkspace(false); setShowNewBoard(false); }
+              }}
+              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
+            >
+              Members
+            </button>
+          )}
           <button
-            onClick={() => setShowMembers(!showMembers)}
-            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
+            onClick={() => {
+              const next = !showNewWorkspace;
+              setShowNewWorkspace(next);
+              if (next) { setShowNewBoard(false); setShowMembers(false); }
+            }}
+            className="text-sm text-zinc-400 transition-colors hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
           >
-            Members
+            + Workspace
           </button>
-        )}
+          {selectedWorkspaceId && (
+            <button
+              onClick={() => {
+                const next = !showNewBoard;
+                setShowNewBoard(next);
+                if (next) { setShowNewWorkspace(false); setShowMembers(false); }
+              }}
+              className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            >
+              + Board
+            </button>
+          )}
+        </div>
       </div>
 
       {/* New workspace form */}
       {showNewWorkspace && (
-        <form onSubmit={handleCreateWorkspace} className="mb-4 flex gap-2">
+        <form onSubmit={handleCreateWorkspace} className="mb-4 flex gap-2 items-center max-w-sm">
           <input
             type="text"
             placeholder="Workspace name"
+            autoFocus
             value={newWorkspaceName}
             onChange={(e) => setNewWorkspaceName(e.target.value)}
-            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="flex-1 rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-600"
           />
           <button
             type="submit"
             disabled={!newWorkspaceName.trim()}
-            className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-black"
+            className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
             Create
           </button>
           <button
             type="button"
             onClick={() => setShowNewWorkspace(false)}
-            className="rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700"
+            className="text-sm text-zinc-400 transition-colors hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
           >
             Cancel
           </button>
@@ -256,7 +302,7 @@ export default function DashboardPage() {
 
       {/* Members panel */}
       {showMembers && selectedWorkspaceId && (
-        <div className="mb-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+        <div className="mb-4 rounded-xl border border-zinc-200 p-4 shadow-sm dark:border-zinc-800">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold">
               Members ({members.length})
@@ -379,55 +425,28 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Board selector */}
-      {selectedWorkspaceId && (
-        <div className="mb-6 flex items-center gap-3 flex-wrap">
-          <label className="text-sm font-medium text-zinc-600 dark:text-zinc-400">Board:</label>
-          {boards.length > 0 ? (
-            <select
-              value={selectedBoardId ?? ""}
-              onChange={(e) => setSelectedBoardId(e.target.value)}
-              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-            >
-              {boards.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.title}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <span className="text-sm text-zinc-400">No boards</span>
-          )}
-          <button
-            onClick={() => setShowNewBoard(!showNewBoard)}
-            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
-          >
-            + Board
-          </button>
-        </div>
-      )}
-
       {/* New board form */}
       {showNewBoard && (
-        <form onSubmit={handleCreateBoard} className="mb-4 flex gap-2">
+        <form onSubmit={handleCreateBoard} className="mb-4 flex gap-2 items-center max-w-sm">
           <input
             type="text"
             placeholder="Board title"
+            autoFocus
             value={newBoardTitle}
             onChange={(e) => setNewBoardTitle(e.target.value)}
-            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="flex-1 rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-600"
           />
           <button
             type="submit"
             disabled={!newBoardTitle.trim()}
-            className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-black"
+            className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
             Create
           </button>
           <button
             type="button"
             onClick={() => setShowNewBoard(false)}
-            className="rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700"
+            className="text-sm text-zinc-400 transition-colors hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
           >
             Cancel
           </button>
