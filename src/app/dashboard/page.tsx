@@ -420,8 +420,20 @@ export default function DashboardPage() {
 
       {/* No workspaces at all */}
       {workspaces.length === 0 && !showNewWorkspace && (
-        <div className="text-center py-20">
-          <p className="text-zinc-400 mb-4">No workspaces yet. Create one to get started.</p>
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+            <svg className="h-5 w-5 text-zinc-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
+            </svg>
+          </div>
+          <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">No workspaces yet</h3>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-5 max-w-[240px]">Create your first workspace to start organizing tasks with your team.</p>
+          <button
+            onClick={() => setShowNewWorkspace(true)}
+            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          >
+            Create workspace
+          </button>
         </div>
       )}
 
@@ -451,6 +463,25 @@ export default function DashboardPage() {
             Cancel
           </button>
         </form>
+      )}
+
+      {/* No boards in workspace */}
+      {selectedWorkspaceId && boards.length === 0 && !selectedBoardId && !showNewBoard && (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+            <svg className="h-5 w-5 text-zinc-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
+            </svg>
+          </div>
+          <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">No boards yet</h3>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-5 max-w-[240px]">Create a board to organize your tasks into lists.</p>
+          <button
+            onClick={() => setShowNewBoard(true)}
+            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          >
+            Create board
+          </button>
+        </div>
       )}
 
       {/* Board content: lists with tasks */}
@@ -504,7 +535,13 @@ export default function DashboardPage() {
                 <div className="flex-1 overflow-y-auto p-2">
                 {listTasks.length === 0 ? (
                   <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-zinc-200 py-8 dark:border-zinc-700/50">
-                    <p className="text-xs text-zinc-400 dark:text-zinc-500">No tasks yet</p>
+                    <svg className="mb-2 h-4 w-4 text-zinc-300 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15a2.25 2.25 0 0 1 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
+                    </svg>
+                    <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500">No tasks</p>
+                    {canEditTasks && (
+                      <p className="mt-1 text-[10px] text-zinc-300 dark:text-zinc-600">Add a task above</p>
+                    )}
                   </div>
                 ) : (
                   <ul className="space-y-1.5">
@@ -641,9 +678,15 @@ export default function DashboardPage() {
 
       {/* Board selected but no lists */}
       {selectedBoardId && lists.length === 0 && (
-        <p className="text-center text-sm text-zinc-400 py-8">
-          Board has no lists. This shouldn&apos;t happen — try creating a new board.
-        </p>
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+            <svg className="h-5 w-5 text-zinc-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
+            </svg>
+          </div>
+          <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">This board has no lists</h3>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 max-w-[260px]">Something went wrong. Try creating a new board to get started.</p>
+        </div>
       )}
     </div>
   );
