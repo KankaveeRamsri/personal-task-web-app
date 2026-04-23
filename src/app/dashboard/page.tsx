@@ -473,76 +473,80 @@ export default function DashboardPage() {
           {lists.map((list) => {
             const listTasks = tasks.filter((t) => t.list_id === list.id);
             return (
-              <div key={list.id} className="min-w-[280px] flex-shrink-0 rounded-lg border border-zinc-200 dark:border-zinc-800">
-                <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-                  <h3 className="text-sm font-semibold">{list.title}</h3>
-                  <span className="text-xs text-zinc-400">{listTasks.length} tasks</span>
+              <div key={list.id} className="min-w-[280px] flex-shrink-0 rounded-xl border border-zinc-200 bg-zinc-50/50 dark:border-zinc-800 dark:bg-zinc-900/30">
+                <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800/70">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{list.title}</h3>
+                    <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-zinc-200/80 px-1.5 text-[10px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                      {listTasks.length}
+                    </span>
+                  </div>
                 </div>
                 {listTasks.length === 0 ? (
-                  <p className="px-4 py-3 text-xs text-zinc-400">No tasks</p>
+                  <p className="px-4 py-6 text-center text-xs text-zinc-400">No tasks yet</p>
                 ) : (
                   <ul>
                     {listTasks.map((task) => (
                       <li
                         key={task.id}
-                        className="relative border-b border-zinc-100 px-4 py-3 last:border-b-0 dark:border-zinc-800"
+                        className="group relative border-b border-zinc-200/60 px-4 py-3 last:border-b-0 transition-colors hover:bg-white dark:border-zinc-800/60 dark:hover:bg-zinc-800/40"
                       >
                         {/* Editing mode */}
                         {editingId === task.id ? (
-                          <div className="flex flex-col gap-2">
+                          <div className="flex flex-col gap-2.5">
                             <input
                               type="text"
                               value={editTitle}
                               onChange={(e) => setEditTitle(e.target.value)}
-                              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-600"
                             />
                             <textarea
                               value={editDescription}
                               onChange={(e) => setEditDescription(e.target.value)}
                               rows={2}
                               placeholder="Description (optional)"
-                              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm resize-none dark:border-zinc-700 dark:bg-zinc-900"
+                              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm resize-none focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-600"
                             />
                             <div className="flex gap-2">
                               <button
                                 onClick={() => saveEdit(task.id)}
                                 disabled={updatingId === task.id || !editTitle.trim()}
-                                className="rounded-lg bg-black px-3 py-1.5 text-sm text-white dark:bg-white dark:text-black"
+                                className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
                               >
                                 {updatingId === task.id ? "Saving..." : "Save"}
                               </button>
                               <button
                                 onClick={cancelEdit}
-                                className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
+                                className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
                               >
                                 Cancel
                               </button>
                             </div>
                           </div>
                         ) : (
-                          <div className="flex items-start gap-3">
+                          <div className={`flex items-start gap-3 ${task.is_completed ? "opacity-50" : ""}`}>
                             <input
                               type="checkbox"
                               checked={task.is_completed}
                               onChange={() => handleToggleComplete(task)}
                               disabled={updatingId === task.id || !canEditTasks}
-                              className="mt-0.5 h-4 w-4 accent-black dark:accent-white"
+                              className="mt-0.5 h-4 w-4 rounded accent-black dark:accent-white"
                             />
                             <div className="flex-1 min-w-0">
                               <span
-                                className={`block text-sm ${
+                                className={`block text-sm leading-snug ${
                                   task.is_completed
-                                    ? "line-through text-zinc-400"
-                                    : "text-zinc-900 dark:text-zinc-100"
+                                    ? "line-through text-zinc-400 dark:text-zinc-500"
+                                    : "font-medium text-zinc-900 dark:text-zinc-100"
                                 }`}
                               >
                                 {task.title}
                               </span>
                               {task.description && (
                                 <p
-                                  className={`mt-0.5 text-xs ${
+                                  className={`mt-1 text-xs leading-relaxed line-clamp-2 ${
                                     task.is_completed
-                                      ? "line-through text-zinc-300"
+                                      ? "line-through text-zinc-300 dark:text-zinc-600"
                                       : "text-zinc-500 dark:text-zinc-400"
                                   }`}
                                 >
@@ -550,9 +554,15 @@ export default function DashboardPage() {
                                 </p>
                               )}
                             </div>
-                            <div className="flex items-center gap-1 shrink-0">
+                            <div className="flex items-center gap-0.5 shrink-0">
                               {task.priority && task.priority !== "none" && (
-                                <span className="rounded px-1.5 py-0.5 text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-500">
+                                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                                  task.priority === "high"
+                                    ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
+                                    : task.priority === "medium"
+                                    ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+                                    : "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400"
+                                }`}>
                                   {task.priority}
                                 </span>
                               )}
@@ -560,13 +570,13 @@ export default function DashboardPage() {
                               <>
                               <button
                                 onClick={() => startEdit(task)}
-                                className="rounded px-2 py-1 text-xs text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                                className="rounded-md px-1.5 py-1 text-xs text-zinc-400 transition-colors hover:bg-zinc-200/60 hover:text-zinc-700 dark:hover:bg-zinc-700/60 dark:hover:text-zinc-200"
                               >
                                 Edit
                               </button>
                               <button
                                 onClick={() => setConfirmDeleteId(task.id)}
-                                className="rounded px-2 py-1 text-xs text-zinc-400 hover:text-red-500"
+                                className="rounded-md px-1.5 py-1 text-xs text-zinc-400 transition-colors hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400"
                               >
                                 Delete
                               </button>
@@ -578,18 +588,18 @@ export default function DashboardPage() {
 
                         {/* Delete confirmation */}
                         {confirmDeleteId === task.id && (
-                          <div className="absolute inset-0 flex items-center justify-center gap-2 rounded-lg bg-white/95 dark:bg-zinc-900/95">
-                            <span className="text-xs text-zinc-600 dark:text-zinc-300">Delete?</span>
+                          <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 rounded-lg bg-white/95 backdrop-blur-sm dark:bg-zinc-900/95">
+                            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Delete this task?</span>
                             <button
                               onClick={() => handleDelete(task.id)}
                               disabled={deletingId === task.id}
-                              className="rounded bg-red-600 px-3 py-1.5 text-xs text-white hover:bg-red-700"
+                              className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700"
                             >
-                              {deletingId === task.id ? "..." : "Delete"}
+                              {deletingId === task.id ? "Deleting..." : "Delete"}
                             </button>
                             <button
                               onClick={() => setConfirmDeleteId(null)}
-                              className="rounded border border-zinc-300 px-3 py-1.5 text-xs dark:border-zinc-700"
+                              className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
                             >
                               Cancel
                             </button>
