@@ -63,8 +63,10 @@ export default function DashboardPage() {
   const {
     workspaces,
     selectedWorkspaceId,
+    setSelectedWorkspaceId,
     boards,
     selectedBoardId,
+    setSelectedBoardId,
     lists,
     tasks,
     loading,
@@ -196,15 +198,41 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
             {getGreeting()}, {displayName}
           </h1>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            {formatDate()}
-            {workspaceName && (
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+            <span>{formatDate()}</span>
+            {workspaces.length > 0 && selectedWorkspaceId && (
               <>
-                {" "}&middot; {workspaceName}
-                {boardName && <> / {boardName}</>}
+                <span className="text-zinc-300 dark:text-zinc-700">&middot;</span>
+                <select
+                  value={selectedWorkspaceId ?? ""}
+                  onChange={(e) => setSelectedWorkspaceId(e.target.value)}
+                  className="rounded-md border border-zinc-200 bg-transparent px-2 py-0.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:focus:ring-zinc-600"
+                >
+                  {workspaces.map((ws) => (
+                    <option key={ws.id} value={ws.id}>
+                      {ws.icon} {ws.name}
+                    </option>
+                  ))}
+                </select>
               </>
             )}
-          </p>
+            {selectedWorkspaceId && boards.length > 0 && selectedBoardId && (
+              <>
+                <span className="text-zinc-300 dark:text-zinc-700">/</span>
+                <select
+                  value={selectedBoardId ?? ""}
+                  onChange={(e) => setSelectedBoardId(e.target.value)}
+                  className="rounded-md border border-zinc-200 bg-transparent px-2 py-0.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:focus:ring-zinc-600"
+                >
+                  {boards.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.title}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
+          </div>
         </div>
         <div className="hidden sm:flex items-center gap-1.5">
           {["bg-violet-500", "bg-sky-500", "bg-emerald-500"].map((bg, i) => (
