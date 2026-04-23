@@ -28,7 +28,7 @@ export default function DashboardPage() {
 
   // Task form state
   const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [newTaskListId, setNewTaskListId] = useState<string | null>(null);
+  const [addingToListId, setAddingToListId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -59,9 +59,6 @@ export default function DashboardPage() {
   const isManager =
     currentRole === "owner" || currentRole === "admin";
 
-  // Auto-select first list for the task form when lists change
-  const activeListId = newTaskListId || (lists.length > 0 ? lists[0].id : null);
-
   const showSuccess = useCallback((msg: string) => {
     setSuccessMsg(msg);
     setTimeout(() => setSuccessMsg(""), 3000);
@@ -85,12 +82,13 @@ export default function DashboardPage() {
     showSuccess("Board created");
   };
 
-  const handleAddTask = async (e: React.FormEvent) => {
+  const handleAddTask = async (e: React.FormEvent, listId: string) => {
     e.preventDefault();
-    if (!newTaskTitle.trim() || !activeListId) return;
+    if (!newTaskTitle.trim() || !listId) return;
     setAdding(true);
-    await createTask(activeListId, newTaskTitle.trim());
+    await createTask(listId, newTaskTitle.trim());
     setNewTaskTitle("");
+    setAddingToListId(null);
     setAdding(false);
     showSuccess("Task added");
   };
@@ -487,36 +485,6 @@ export default function DashboardPage() {
       {/* Board content: lists with tasks */}
       {selectedBoardId && lists.length > 0 && (
         <div className="space-y-5">
-          {/* Add task form — hidden for viewers */}
-          {canEditTasks && (
-          <form onSubmit={handleAddTask} className="flex gap-2 flex-wrap items-center rounded-xl border border-zinc-200/60 bg-white/80 px-3 py-2.5 dark:border-zinc-800/60 dark:bg-zinc-900/50">
-            <select
-              value={activeListId ?? ""}
-              onChange={(e) => setNewTaskListId(e.target.value)}
-              className="rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm text-zinc-600 transition-colors hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:focus:ring-zinc-600"
-            >
-              {lists.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.title}
-                </option>
-              ))}
-            </select>
-            <input
-              type="text"
-              placeholder="Add a task..."
-              value={newTaskTitle}
-              onChange={(e) => setNewTaskTitle(e.target.value)}
-              className="flex-1 min-w-[180px] rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 dark:focus:ring-zinc-700/50 dark:border-zinc-700 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600"
-            />
-            <button
-              type="submit"
-              disabled={adding || !newTaskTitle.trim()}
-              className="rounded-lg bg-zinc-900 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 active:bg-zinc-800 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:focus:ring-zinc-600"
-            >
-              {adding ? "Adding..." : "Add"}
-            </button>
-          </form>
-          )}
 
           {/* Lists — Kanban columns */}
           <div className="flex gap-5 overflow-x-auto pb-6 items-start -mx-1 px-1">
@@ -539,9 +507,6 @@ export default function DashboardPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15a2.25 2.25 0 0 1 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
                     </svg>
                     <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500">No tasks</p>
-                    {canEditTasks && (
-                      <p className="mt-1 text-[10px] text-zinc-300 dark:text-zinc-600">Add a task above</p>
-                    )}
                   </div>
                 ) : (
                   <ul className="space-y-2">
@@ -671,6 +636,47 @@ export default function DashboardPage() {
                   </ul>
                 )}
                 </div>
+                {/* Per-column add task */}
+                {canEditTasks && (
+                  addingToListId === list.id ? (
+                    <form
+                      onSubmit={(e) => handleAddTask(e, list.id)}
+                      className="flex-shrink-0 border-t border-zinc-200/60 px-2.5 pt-2.5 pb-2.5 dark:border-zinc-700/40"
+                    >
+                      <input
+                        type="text"
+                        placeholder="Task title..."
+                        autoFocus
+                        value={newTaskTitle}
+                        onChange={(e) => setNewTaskTitle(e.target.value)}
+                        className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 dark:border-zinc-700 dark:bg-zinc-800/80 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 dark:focus:ring-zinc-700/50"
+                      />
+                      <div className="mt-2 flex items-center gap-2">
+                        <button
+                          type="submit"
+                          disabled={adding || !newTaskTitle.trim()}
+                          className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-700 active:bg-zinc-800 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:focus:ring-zinc-600"
+                        >
+                          {adding ? "Adding..." : "Add"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setAddingToListId(null); setNewTaskTitle(""); }}
+                          className="text-xs text-zinc-400 transition-colors hover:text-zinc-600 active:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300 dark:active:text-zinc-200"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <button
+                      onClick={() => setAddingToListId(list.id)}
+                      className="flex-shrink-0 w-full rounded-lg px-3 py-2 text-left text-xs text-zinc-400 transition-colors hover:bg-zinc-200/40 hover:text-zinc-600 dark:text-zinc-500 dark:hover:bg-zinc-700/30 dark:hover:text-zinc-300"
+                    >
+                      + Add task
+                    </button>
+                  )
+                )}
               </div>
             );
           })}
