@@ -133,28 +133,16 @@ export default function DashboardPage() {
     showSuccess("Task deleted");
   };
 
-  const handleMoveTask = async (taskId: string) => {
-    const task = tasks.find((t) => t.id === taskId);
-    if (!task) return;
-    const currentList = lists.find((l) => l.id === task.list_id);
-    if (!currentList) return;
-
-    const nextMap: Record<string, string> = {
-      "To Do": "In Progress",
-      "In Progress": "Completed",
-    };
-    const nextTitle = nextMap[currentList.title];
-    if (!nextTitle) return;
-
+  const handleMoveTask = async (taskId: string, targetTitle: string) => {
     const targetList =
-      lists.find((l) => l.title === nextTitle) ||
-      (nextTitle === "Completed" ? lists.find((l) => l.title === "Done") : undefined);
+      lists.find((l) => l.title === targetTitle) ||
+      (targetTitle === "Completed" ? lists.find((l) => l.title === "Done") : undefined);
     if (!targetList) return;
 
     setUpdatingId(taskId);
     await updateTask(taskId, { list_id: targetList.id } as Partial<Task>);
     setUpdatingId(null);
-    showSuccess(`Moved to ${nextTitle}`);
+    showSuccess(`Moved to ${targetTitle}`);
   };
 
   // Member handlers
@@ -514,11 +502,17 @@ export default function DashboardPage() {
           <div className="flex gap-5 overflow-x-auto pb-6 items-start -mx-1 px-1">
           {lists.map((list) => {
             const listTasks = tasks.filter((t) => t.list_id === list.id);
-            const moveLabel =
+            const moveForward =
               list.title === "To Do"
-                ? "Start"
+                ? { label: "Start", target: "In Progress" }
                 : list.title === "In Progress"
-                ? "Complete"
+                ? { label: "Complete", target: "Completed" }
+                : null;
+            const moveBackward =
+              list.title === "In Progress"
+                ? { label: "Back", target: "To Do" }
+                : list.title === "Completed" || list.title === "Done"
+                ? { label: "Reopen", target: "In Progress" }
                 : null;
             return (
               <div key={list.id} className="w-[300px] flex-shrink-0 rounded-xl bg-zinc-100/50 dark:bg-zinc-800/30 flex flex-col max-h-[calc(100vh-220px)]">
@@ -543,7 +537,7 @@ export default function DashboardPage() {
                     {listTasks.map((task) => (
                       <li
                         key={task.id}
-                        className="group relative rounded-lg bg-white px-3 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:bg-zinc-800/80 dark:hover:shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
+                        className="group relative rounded-lg bg-white px-3 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-150 hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:bg-zinc-800/80 dark:hover:shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
                       >
                         {/* Editing mode */}
                         {editingId === task.id ? (
@@ -620,16 +614,25 @@ export default function DashboardPage() {
                                   {task.priority}
                                 </span>
                               )}
-                              <span className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                              <span className="flex items-center gap-1 opacity-0 transition-all duration-150 group-hover:opacity-100">
                               {canEditTasks && (
                               <>
-                              {moveLabel && (
+                              {moveForward && (
                               <button
-                                onClick={() => handleMoveTask(task.id)}
+                                onClick={() => handleMoveTask(task.id, moveForward.target)}
                                 disabled={updatingId === task.id}
                                 className="rounded-md px-1.5 py-1 text-xs text-emerald-600 transition-colors hover:bg-emerald-50 hover:text-emerald-700 active:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-300 dark:text-emerald-400 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-300 dark:active:bg-emerald-900/50 dark:focus:ring-emerald-900"
                               >
-                                {moveLabel}
+                                {moveForward.label}
+                              </button>
+                              )}
+                              {moveBackward && (
+                              <button
+                                onClick={() => handleMoveTask(task.id, moveBackward.target)}
+                                disabled={updatingId === task.id}
+                                className="rounded-md px-1.5 py-1 text-xs text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 active:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:hover:bg-zinc-700 dark:hover:text-zinc-300 dark:active:bg-zinc-600 dark:focus:ring-zinc-600"
+                              >
+                                {moveBackward.label}
                               </button>
                               )}
                               <button
