@@ -181,7 +181,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-7xl">
       {/* Feedback messages */}
       {errorMsg && (
         <div className="mb-4 flex items-center justify-between rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
@@ -436,7 +436,7 @@ export default function DashboardPage() {
 
       {/* Board content: lists with tasks */}
       {selectedBoardId && lists.length > 0 && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Add task form — hidden for viewers */}
           {canEditTasks && (
           <form onSubmit={handleAddTask} className="flex gap-3 flex-wrap">
@@ -468,11 +468,12 @@ export default function DashboardPage() {
           </form>
           )}
 
-          {/* Lists */}
+          {/* Lists — Kanban columns */}
+          <div className="flex gap-4 overflow-x-auto pb-4">
           {lists.map((list) => {
             const listTasks = tasks.filter((t) => t.list_id === list.id);
             return (
-              <div key={list.id} className="rounded-lg border border-zinc-200 dark:border-zinc-800">
+              <div key={list.id} className="min-w-[280px] flex-shrink-0 rounded-lg border border-zinc-200 dark:border-zinc-800">
                 <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
                   <h3 className="text-sm font-semibold">{list.title}</h3>
                   <span className="text-xs text-zinc-400">{listTasks.length} tasks</span>
@@ -601,6 +602,7 @@ export default function DashboardPage() {
               </div>
             );
           })}
+          </div>
         </div>
       )}
 
