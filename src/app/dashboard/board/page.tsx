@@ -494,7 +494,7 @@ export default function DashboardPage() {
               <div key={list.id} className="w-[300px] flex-shrink-0 rounded-xl bg-zinc-100/50 dark:bg-zinc-800/30 flex flex-col max-h-[calc(100vh-220px)]">
                 <div className="flex-shrink-0 px-3 pt-3 pb-1.5">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{list.title}</h3>
+                    <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{list.title === "Done" ? "Completed" : list.title}</h3>
                     <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-zinc-200/60 px-1.5 text-[10px] font-medium text-zinc-500 dark:bg-zinc-700/50 dark:text-zinc-500">
                       {listTasks.length}
                     </span>

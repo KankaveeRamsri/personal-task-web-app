@@ -189,7 +189,7 @@ export function useBoardData() {
       setSelectedBoardId(board.id);
 
       // Create default lists for the new board
-      const listNames = ["To Do", "In Progress", "Done"];
+      const listNames = ["To Do", "In Progress", "Completed"];
       const createdLists: List[] = [];
       for (let i = 0; i < listNames.length; i++) {
         const { data: listData } = await supabase

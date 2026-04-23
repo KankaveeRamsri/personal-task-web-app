@@ -36,6 +36,7 @@ function statusDot(status: string) {
     "To Do": "bg-zinc-400",
     "In Progress": "bg-amber-500",
     "Done": "bg-emerald-500",
+    "Completed": "bg-emerald-500",
   };
   return styles[status] ?? "bg-zinc-300";
 }
@@ -171,9 +172,10 @@ export default function DashboardPage() {
       "To Do": "bg-zinc-400",
       "In Progress": "bg-amber-500",
       "Done": "bg-emerald-500",
+      "Completed": "bg-emerald-500",
     };
     return lists.map((l) => ({
-      label: l.title,
+      label: l.title === "Done" ? "Completed" : l.title,
       count: tasksByListTitle[l.title] ?? 0,
       total: totalTasks,
       color: colors[l.title] ?? "bg-zinc-400",
@@ -288,7 +290,7 @@ export default function DashboardPage() {
           {recentTasks.length > 0 ? (
             <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {recentTasks.map((task) => {
-                const taskStatus = listTitleMap.get(task.list_id) ?? "To Do";
+                const taskStatus = (listTitleMap.get(task.list_id) ?? "To Do") === "Done" ? "Completed" : (listTitleMap.get(task.list_id) ?? "To Do");
                 return (
                   <li key={task.id}>
                     <Link
