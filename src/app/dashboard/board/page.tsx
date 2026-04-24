@@ -6,6 +6,7 @@ import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
 import type { List, Task, WorkspaceRole } from "@/types/database";
 import type { MenuPosition } from "@/components/board/TaskCard";
 import BoardColumn from "@/components/board/BoardColumn";
+import BoardToolbar from "@/components/board/BoardToolbar";
 
 export default function DashboardPage() {
   const {
@@ -66,6 +67,25 @@ export default function DashboardPage() {
     setSuccessMsg(msg);
     setTimeout(() => setSuccessMsg(""), 3000);
   }, []);
+
+  // Toolbar toggle handlers
+  const toggleNewWorkspace = () => {
+    const next = !showNewWorkspace;
+    setShowNewWorkspace(next);
+    if (next) { setShowNewBoard(false); setShowMembers(false); }
+  };
+
+  const toggleNewBoard = () => {
+    const next = !showNewBoard;
+    setShowNewBoard(next);
+    if (next) { setShowNewWorkspace(false); setShowMembers(false); }
+  };
+
+  const toggleMembers = () => {
+    const next = !showMembers;
+    setShowMembers(next);
+    if (next) { setShowNewWorkspace(false); setShowNewBoard(false); }
+  };
 
   const handleCreateWorkspace = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,7 +205,6 @@ export default function DashboardPage() {
     }
   };
 
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -209,228 +228,41 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Navigation toolbar */}
-      <div className="flex items-center justify-between gap-4">
-        {/* Left: context selectors */}
-        <div className="flex items-center gap-2">
-          {workspaces.length > 0 ? (
-            <select
-              value={selectedWorkspaceId ?? ""}
-              onChange={(e) => setSelectedWorkspaceId(e.target.value)}
-              className="rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:focus:ring-zinc-600"
-            >
-              {workspaces.map((ws) => (
-                <option key={ws.id} value={ws.id}>
-                  {ws.icon} {ws.name}
-                </option>
-              ))}
-            </select>
-          ) : null}
-          {selectedWorkspaceId && (
-            <>
-              <span className="text-zinc-300 dark:text-zinc-700">/</span>
-              {boards.length > 0 ? (
-                <select
-                  value={selectedBoardId ?? ""}
-                  onChange={(e) => setSelectedBoardId(e.target.value)}
-                  className="rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:focus:ring-zinc-600"
-                >
-                  {boards.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.title}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <span className="text-sm text-zinc-400">No boards</span>
-              )}
-            </>
-          )}
-        </div>
-        {/* Right: actions */}
-        <div className="flex items-center gap-2">
-          {selectedWorkspaceId && (
-            <button
-              onClick={() => {
-                const next = !showMembers;
-                setShowMembers(next);
-                if (next) { setShowNewWorkspace(false); setShowNewBoard(false); }
-              }}
-              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-zinc-50 active:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:bg-zinc-800 dark:active:bg-zinc-700 dark:focus:ring-zinc-600"
-            >
-              Members
-            </button>
-          )}
-          <button
-            onClick={() => {
-              const next = !showNewWorkspace;
-              setShowNewWorkspace(next);
-              if (next) { setShowNewBoard(false); setShowMembers(false); }
-            }}
-            className="text-sm text-zinc-400 transition-colors hover:text-zinc-600 active:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300 dark:active:text-zinc-200"
-          >
-            + Workspace
-          </button>
-          {selectedWorkspaceId && (
-            <button
-              onClick={() => {
-                const next = !showNewBoard;
-                setShowNewBoard(next);
-                if (next) { setShowNewWorkspace(false); setShowMembers(false); }
-              }}
-              className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 active:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:focus:ring-zinc-600"
-            >
-              + Board
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* New workspace form */}
-      {showNewWorkspace && (
-        <form onSubmit={handleCreateWorkspace} className="flex gap-2 items-center max-w-sm">
-          <input
-            type="text"
-            placeholder="Workspace name"
-            autoFocus
-            value={newWorkspaceName}
-            onChange={(e) => setNewWorkspaceName(e.target.value)}
-            className="flex-1 rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 dark:focus:ring-zinc-700/50 dark:border-zinc-700 dark:focus:border-zinc-600"
-          />
-          <button
-            type="submit"
-            disabled={!newWorkspaceName.trim()}
-            className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 active:bg-zinc-800 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:focus:ring-zinc-600"
-          >
-            Create
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowNewWorkspace(false)}
-            className="text-sm text-zinc-400 transition-colors hover:text-zinc-600 active:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300 dark:active:text-zinc-200"
-          >
-            Cancel
-          </button>
-        </form>
-      )}
-
-      {/* Members panel */}
-      {showMembers && selectedWorkspaceId && (
-        <div className="rounded-xl border border-zinc-200 p-4 shadow-sm dark:border-zinc-800">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold">
-              Members ({members.length})
-            </h3>
-            <button
-              onClick={() => setShowMembers(false)}
-              className="text-lg leading-none text-zinc-400 transition-colors hover:text-zinc-600"
-            >
-              &times;
-            </button>
-          </div>
-
-          {/* Member list */}
-          <ul className="mb-3 space-y-2">
-            {members.map((m) => (
-              <li
-                key={m.id}
-                className="flex items-center gap-3 text-sm"
-              >
-                <span className="min-w-0 flex-1 truncate">
-                  {m.display_name || m.email}
-                </span>
-                {m.role === "owner" ? (
-                  <span className="shrink-0 text-xs font-medium text-amber-600 dark:text-amber-400">
-                    owner
-                  </span>
-                ) : isManager ? (
-                  <>
-                    <select
-                      value={m.role}
-                      onChange={(e) =>
-                        handleRoleChange(
-                          m.user_id,
-                          e.target.value as WorkspaceRole
-                        )
-                      }
-                      className="shrink-0 rounded border border-zinc-300 px-1 py-0.5 text-xs dark:border-zinc-700 dark:bg-zinc-900"
-                    >
-                      <option value="admin">admin</option>
-                      <option value="member">member</option>
-                      <option value="viewer">viewer</option>
-                    </select>
-                    {confirmRemoveId === m.user_id ? (
-                      <span className="flex shrink-0 items-center gap-1">
-                        <button
-                          onClick={() => handleRemoveMember(m.user_id)}
-                          className="text-xs font-medium text-red-600 hover:text-red-700"
-                        >
-                          Confirm
-                        </button>
-                        <button
-                          onClick={() => setConfirmRemoveId(null)}
-                          className="text-xs text-zinc-400"
-                        >
-                          Cancel
-                        </button>
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => setConfirmRemoveId(m.user_id)}
-                        className="shrink-0 text-xs text-zinc-400 hover:text-red-500"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <span className="shrink-0 text-xs text-zinc-500">
-                    {m.role}
-                  </span>
-                )}
-              </li>
-            ))}
-            {members.length === 0 && (
-              <li className="py-2 text-xs text-zinc-400">No members</li>
-            )}
-          </ul>
-
-          {/* Invite form — owner/admin only */}
-          {isManager && (
-            <form
-              onSubmit={handleInvite}
-              className="flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800"
-            >
-              <input
-                type="email"
-                placeholder="Email"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                required
-                className="min-w-[150px] flex-1 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-              />
-              <select
-                value={inviteRole}
-                onChange={(e) =>
-                  setInviteRole(e.target.value as WorkspaceRole)
-                }
-                className="rounded-lg border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-              >
-                <option value="admin">admin</option>
-                <option value="member">member</option>
-                <option value="viewer">viewer</option>
-              </select>
-              <button
-                type="submit"
-                disabled={inviting || !inviteEmail.trim()}
-                className="rounded-lg bg-black px-3 py-1.5 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
-              >
-                {inviting ? "..." : "Invite"}
-              </button>
-            </form>
-          )}
-        </div>
-      )}
+      <BoardToolbar
+        workspaces={workspaces}
+        selectedWorkspaceId={selectedWorkspaceId}
+        boards={boards}
+        selectedBoardId={selectedBoardId}
+        members={members}
+        isManager={isManager}
+        showNewWorkspace={showNewWorkspace}
+        showNewBoard={showNewBoard}
+        showMembers={showMembers}
+        newWorkspaceName={newWorkspaceName}
+        newBoardTitle={newBoardTitle}
+        inviteEmail={inviteEmail}
+        inviteRole={inviteRole}
+        inviting={inviting}
+        confirmRemoveId={confirmRemoveId}
+        onWorkspaceChange={setSelectedWorkspaceId}
+        onBoardChange={setSelectedBoardId}
+        onToggleNewWorkspace={toggleNewWorkspace}
+        onToggleNewBoard={toggleNewBoard}
+        onToggleMembers={toggleMembers}
+        onCloseMembers={() => setShowMembers(false)}
+        onNewWorkspaceNameChange={setNewWorkspaceName}
+        onNewBoardTitleChange={setNewBoardTitle}
+        onInviteEmailChange={setInviteEmail}
+        onInviteRoleChange={setInviteRole}
+        onCreateWorkspace={handleCreateWorkspace}
+        onCreateBoard={handleCreateBoard}
+        onInvite={handleInvite}
+        onCancelNewWorkspace={() => setShowNewWorkspace(false)}
+        onCancelNewBoard={() => setShowNewBoard(false)}
+        onRemoveMember={handleRemoveMember}
+        onRoleChange={handleRoleChange}
+        onSetConfirmRemoveId={setConfirmRemoveId}
+      />
 
       {/* No workspaces at all */}
       {workspaces.length === 0 && !showNewWorkspace && (
@@ -449,34 +281,6 @@ export default function DashboardPage() {
             Create workspace
           </button>
         </div>
-      )}
-
-      {/* New board form */}
-      {showNewBoard && (
-        <form onSubmit={handleCreateBoard} className="flex gap-2 items-center max-w-sm">
-          <input
-            type="text"
-            placeholder="Board title"
-            autoFocus
-            value={newBoardTitle}
-            onChange={(e) => setNewBoardTitle(e.target.value)}
-            className="flex-1 rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 dark:focus:ring-zinc-700/50 dark:border-zinc-700 dark:focus:border-zinc-600"
-          />
-          <button
-            type="submit"
-            disabled={!newBoardTitle.trim()}
-            className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 active:bg-zinc-800 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:focus:ring-zinc-600"
-          >
-            Create
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowNewBoard(false)}
-            className="text-sm text-zinc-400 transition-colors hover:text-zinc-600 active:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300 dark:active:text-zinc-200"
-          >
-            Cancel
-          </button>
-        </form>
       )}
 
       {/* No boards in workspace */}
