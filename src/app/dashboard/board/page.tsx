@@ -37,6 +37,7 @@ export default function DashboardPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState("");
+  const [menuOpen, setMenuOpen] = useState<{ taskId: string; top: number; left: number } | null>(null);
 
   // Workspace creation
   const [showNewWorkspace, setShowNewWorkspace] = useState(false);
@@ -589,7 +590,7 @@ export default function DashboardPage() {
                     {listTasks.map((task) => (
                       <li
                         key={task.id}
-                        className="group relative rounded-lg border border-zinc-100 bg-white px-3 py-2.5 shadow-sm transition-all duration-150 hover:shadow-md hover:border-zinc-200 dark:border-zinc-700/50 dark:bg-zinc-800/80 dark:hover:shadow-lg dark:hover:border-zinc-600/50"
+                        className="group relative rounded-lg border border-zinc-100 bg-white px-3 py-2.5 shadow-sm transition-all duration-150 hover:shadow-md hover:border-zinc-200 hover:bg-zinc-50/50 dark:border-zinc-700/50 dark:bg-zinc-800/80 dark:hover:shadow-lg dark:hover:border-zinc-600/50 dark:hover:bg-zinc-800"
                       >
                         {/* Editing mode */}
                         {editingId === task.id ? (
@@ -630,14 +631,14 @@ export default function DashboardPage() {
                               checked={task.is_completed}
                               onChange={() => handleToggleComplete(task)}
                               disabled={updatingId === task.id || !canEditTasks}
-                              className="mt-0.5 h-4 w-4 rounded accent-black dark:accent-white cursor-pointer disabled:cursor-not-allowed"
+                              className="mt-[3px] h-3.5 w-3.5 rounded accent-black dark:accent-white cursor-pointer disabled:cursor-not-allowed shrink-0"
                             />
                             <div className="flex-1 min-w-0">
                               <span
-                                className={`block text-[13px] leading-snug ${
+                                className={`block text-[13px] leading-snug font-medium ${
                                   task.is_completed
                                     ? "line-through text-zinc-400 dark:text-zinc-500"
-                                    : "font-medium text-zinc-900 dark:text-zinc-100"
+                                    : "text-zinc-900 dark:text-zinc-100"
                                 }`}
                               >
                                 {task.title}
@@ -680,44 +681,27 @@ export default function DashboardPage() {
                                 </div>
                               ) : null}
                             </div>
-                            <div className="flex items-center gap-0.5 shrink-0">
-                              <span className="flex items-center gap-1 opacity-100 sm:opacity-0 transition-all duration-150 sm:group-hover:opacity-100">
-                              {canEditTasks && (
-                              <>
-                              {moveForward && (
+                            {canEditTasks && (
                               <button
-                                onClick={() => handleMoveTask(task.id, moveForward.target)}
-                                disabled={updatingId === task.id}
-                                className="rounded-md px-1.5 py-1 text-xs text-emerald-600 transition-colors hover:bg-emerald-50 hover:text-emerald-700 active:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-300 dark:text-emerald-400 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-300 dark:active:bg-emerald-900/50 dark:focus:ring-emerald-900"
+                                onClick={(e) => {
+                                  if (menuOpen?.taskId === task.id) {
+                                    setMenuOpen(null);
+                                  } else {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    setMenuOpen({
+                                      taskId: task.id,
+                                      top: rect.bottom + 4,
+                                      left: Math.max(8, rect.right - 160),
+                                    });
+                                  }
+                                }}
+                                className="shrink-0 flex items-center justify-center h-6 w-6 rounded-md text-zinc-300 transition-colors hover:bg-zinc-100 hover:text-zinc-600 active:bg-zinc-200 dark:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-300 dark:active:bg-zinc-600"
                               >
-                                {moveForward.label}
+                                <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                  <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                                </svg>
                               </button>
-                              )}
-                              {moveBackward && (
-                              <button
-                                onClick={() => handleMoveTask(task.id, moveBackward.target)}
-                                disabled={updatingId === task.id}
-                                className="rounded-md px-1.5 py-1 text-xs text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 active:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:hover:bg-zinc-700 dark:hover:text-zinc-300 dark:active:bg-zinc-600 dark:focus:ring-zinc-600"
-                              >
-                                {moveBackward.label}
-                              </button>
-                              )}
-                              <button
-                                onClick={() => startEdit(task)}
-                                className="rounded-md px-1.5 py-1 text-xs text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 active:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:hover:bg-zinc-700 dark:hover:text-zinc-200 dark:active:bg-zinc-600 dark:focus:ring-zinc-600"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => setConfirmDeleteId(task.id)}
-                                className="rounded-md px-1.5 py-1 text-xs text-zinc-400 transition-colors hover:bg-red-100 hover:text-red-600 active:bg-red-200 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:hover:bg-red-900/30 dark:hover:text-red-400 dark:active:bg-red-900/50 dark:focus:ring-zinc-600"
-                              >
-                                Delete
-                              </button>
-                              </>
-                              )}
-                              </span>
-                            </div>
+                            )}
                           </div>
                         )}
 
@@ -739,6 +723,52 @@ export default function DashboardPage() {
                               Cancel
                             </button>
                           </div>
+                        )}
+
+                        {/* Action menu */}
+                        {menuOpen?.taskId === task.id && (
+                          <>
+                            <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(null)} />
+                            <div
+                              className="fixed z-50 w-40 rounded-lg bg-white shadow-lg border border-zinc-200 py-1 dark:bg-zinc-800 dark:border-zinc-700"
+                              style={{ top: menuOpen.top, left: menuOpen.left }}
+                            >
+                              <div className="px-3 py-1.5 border-b border-zinc-100 dark:border-zinc-700/50">
+                                <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300 truncate">{task.title}</p>
+                              </div>
+                              {moveForward && (
+                                <button
+                                  onClick={() => { setMenuOpen(null); handleMoveTask(task.id, moveForward.target); }}
+                                  disabled={updatingId === task.id}
+                                  className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 dark:text-emerald-400 dark:hover:bg-emerald-900/30 transition-colors"
+                                >
+                                  → {moveForward.label}
+                                </button>
+                              )}
+                              {moveBackward && (
+                                <button
+                                  onClick={() => { setMenuOpen(null); handleMoveTask(task.id, moveBackward.target); }}
+                                  disabled={updatingId === task.id}
+                                  className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50 disabled:opacity-50 dark:text-zinc-300 dark:hover:bg-zinc-700/50 transition-colors"
+                                >
+                                  ← {moveBackward.label}
+                                </button>
+                              )}
+                              <div className="my-1 border-t border-zinc-100 dark:border-zinc-700/50" />
+                              <button
+                                onClick={() => { setMenuOpen(null); startEdit(task); }}
+                                className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-700/50 transition-colors"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => { setMenuOpen(null); setConfirmDeleteId(task.id); }}
+                                className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </>
                         )}
                       </li>
                     ))}
