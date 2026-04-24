@@ -4,8 +4,8 @@ import { useState, useCallback } from "react";
 import { useBoardData } from "@/hooks/useBoardData";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
 import type { List, Task, WorkspaceRole } from "@/types/database";
-import TaskCard from "@/components/board/TaskCard";
 import type { MenuPosition } from "@/components/board/TaskCard";
+import BoardColumn from "@/components/board/BoardColumn";
 
 export default function DashboardPage() {
   const {
@@ -183,18 +183,6 @@ export default function DashboardPage() {
     } else {
       setErrorMsg(result.error ?? "ไม่สามารถเปลี่ยน role ได้");
     }
-  };
-
-  // Visual helpers
-  const getColumnBarColor = (title: string, color: string) => {
-    if (color) return color;
-    const defaults: Record<string, string> = {
-      "To Do": "#a1a1aa",
-      "In Progress": "#3b82f6",
-      "Completed": "#10b981",
-      "Done": "#10b981",
-    };
-    return defaults[title] ?? "#a1a1aa";
   };
 
 
@@ -516,131 +504,37 @@ export default function DashboardPage() {
 
           {/* Lists — Kanban columns */}
           <div className="flex gap-5 overflow-x-auto pb-6 items-start -mx-1 px-1">
-          {lists.map((list) => {
-            const listTasks = tasks.filter((t) => t.list_id === list.id);
-            const moveForward =
-              list.title === "To Do"
-                ? { label: "Start", target: "In Progress" }
-                : list.title === "In Progress"
-                ? { label: "Complete", target: "Completed" }
-                : null;
-            const moveBackward =
-              list.title === "In Progress"
-                ? { label: "Back", target: "To Do" }
-                : list.title === "Completed" || list.title === "Done"
-                ? { label: "Reopen", target: "In Progress" }
-                : null;
-            return (
-              <div key={list.id} className="w-[300px] flex-shrink-0 rounded-xl bg-zinc-100/50 dark:bg-zinc-800/30 flex flex-col max-h-[calc(100vh-220px)] overflow-hidden">
-                <div
-                  className="h-1 rounded-t-xl"
-                  style={{ backgroundColor: getColumnBarColor(list.title, list.color) }}
-                />
-                <div className="flex-shrink-0 px-3 pt-3 pb-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="h-2 w-2 rounded-full shrink-0"
-                        style={{ backgroundColor: getColumnBarColor(list.title, list.color) }}
-                      />
-                      <h3 className="text-[13px] font-semibold tracking-tight text-zinc-700 dark:text-zinc-300">{list.title === "Done" ? "Completed" : list.title}</h3>
-                    </div>
-                    <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-zinc-200/80 px-1.5 text-[11px] font-semibold text-zinc-500 dark:bg-zinc-700/60 dark:text-zinc-400">
-                      {listTasks.length}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex-1 overflow-y-auto px-2.5 pb-2.5">
-                {listTasks.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-zinc-200/60 py-8 px-3 dark:border-zinc-700/40">
-                    <svg className="mb-2 h-5 w-5 text-zinc-300 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                    <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500 mb-2">No tasks yet</p>
-                    {canEditTasks && (
-                      <button
-                        onClick={() => setAddingToListId(list.id)}
-                        className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300 transition-colors"
-                      >
-                        Add your first task
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <ul className="space-y-2">
-                    {listTasks.map((task) => (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        isEditing={editingId === task.id}
-                        editTitle={editTitle}
-                        editDescription={editDescription}
-                        isUpdating={updatingId === task.id}
-                        isDeleting={deletingId === task.id}
-                        isConfirmDelete={confirmDeleteId === task.id}
-                        menuOpen={menuOpen?.taskId === task.id ? menuOpen : null}
-                        canEditTasks={canEditTasks}
-                        moveForward={moveForward}
-                        moveBackward={moveBackward}
-                        onToggleComplete={handleToggleComplete}
-                        onStartEdit={startEdit}
-                        onSaveEdit={saveEdit}
-                        onCancelEdit={cancelEdit}
-                        onDelete={handleDelete}
-                        onConfirmDelete={setConfirmDeleteId}
-                        onSetMenuOpen={setMenuOpen}
-                        onMoveTask={handleMoveTask}
-                        onEditTitleChange={setEditTitle}
-                        onEditDescriptionChange={setEditDescription}
-                      />
-                    ))}
-                  </ul>
-                )}
-                </div>
-                {/* Per-column add task */}
-                {canEditTasks && (
-                  addingToListId === list.id ? (
-                    <form
-                      onSubmit={(e) => handleAddTask(e, list.id)}
-                      className="flex-shrink-0 border-t border-zinc-200/60 px-2.5 pt-2.5 pb-2.5 dark:border-zinc-700/40"
-                    >
-                      <input
-                        type="text"
-                        placeholder="Task title..."
-                        autoFocus
-                        value={newTaskTitle}
-                        onChange={(e) => setNewTaskTitle(e.target.value)}
-                        className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 dark:border-zinc-700 dark:bg-zinc-800/80 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 dark:focus:ring-zinc-700/50"
-                      />
-                      <div className="mt-2 flex items-center gap-2">
-                        <button
-                          type="submit"
-                          disabled={adding || !newTaskTitle.trim()}
-                          className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-700 active:bg-zinc-800 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:focus:ring-zinc-600"
-                        >
-                          {adding ? "Adding..." : "Add"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setAddingToListId(null); setNewTaskTitle(""); }}
-                          className="text-xs text-zinc-400 transition-colors hover:text-zinc-600 active:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300 dark:active:text-zinc-200"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    <button
-                      onClick={() => setAddingToListId(list.id)}
-                      className="flex-shrink-0 w-full rounded-lg px-3 py-2 text-left text-xs text-zinc-400 transition-colors hover:bg-zinc-200/40 hover:text-zinc-600 dark:text-zinc-500 dark:hover:bg-zinc-700/30 dark:hover:text-zinc-300"
-                    >
-                      + Add task
-                    </button>
-                  )
-                )}
-              </div>
-            );
-          })}
+          {lists.map((list) => (
+            <BoardColumn
+              key={list.id}
+              list={list}
+              tasks={tasks.filter((t) => t.list_id === list.id)}
+              canEditTasks={canEditTasks}
+              addingToListId={addingToListId}
+              newTaskTitle={newTaskTitle}
+              adding={adding}
+              editingId={editingId}
+              editTitle={editTitle}
+              editDescription={editDescription}
+              updatingId={updatingId}
+              deletingId={deletingId}
+              confirmDeleteId={confirmDeleteId}
+              menuOpen={menuOpen}
+              onAddTask={handleAddTask}
+              onToggleComplete={handleToggleComplete}
+              onStartEdit={startEdit}
+              onSaveEdit={saveEdit}
+              onCancelEdit={cancelEdit}
+              onDelete={handleDelete}
+              onConfirmDelete={setConfirmDeleteId}
+              onSetMenuOpen={setMenuOpen}
+              onMoveTask={handleMoveTask}
+              onEditTitleChange={setEditTitle}
+              onEditDescriptionChange={setEditDescription}
+              onSetAddingToListId={setAddingToListId}
+              onSetNewTaskTitle={setNewTaskTitle}
+            />
+          ))}
           </div>
         </div>
       )}

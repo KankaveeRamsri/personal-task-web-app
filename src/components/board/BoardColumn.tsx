@@ -1,0 +1,209 @@
+"use client";
+
+import type { List, Task } from "@/types/database";
+import TaskCard from "@/components/board/TaskCard";
+import type { MenuPosition, MoveAction } from "@/components/board/TaskCard";
+
+const getColumnBarColor = (title: string, color: string) => {
+  if (color) return color;
+  const defaults: Record<string, string> = {
+    "To Do": "#a1a1aa",
+    "In Progress": "#3b82f6",
+    "Completed": "#10b981",
+    "Done": "#10b981",
+  };
+  return defaults[title] ?? "#a1a1aa";
+};
+
+const getMoveForward = (listTitle: string): MoveAction | null => {
+  if (listTitle === "To Do") return { label: "Start", target: "In Progress" };
+  if (listTitle === "In Progress") return { label: "Complete", target: "Completed" };
+  return null;
+};
+
+const getMoveBackward = (listTitle: string): MoveAction | null => {
+  if (listTitle === "In Progress") return { label: "Back", target: "To Do" };
+  if (listTitle === "Completed" || listTitle === "Done") return { label: "Reopen", target: "In Progress" };
+  return null;
+};
+
+export interface BoardColumnProps {
+  list: List;
+  tasks: Task[];
+  canEditTasks: boolean;
+  addingToListId: string | null;
+  newTaskTitle: string;
+  adding: boolean;
+  editingId: string | null;
+  editTitle: string;
+  editDescription: string;
+  updatingId: string | null;
+  deletingId: string | null;
+  confirmDeleteId: string | null;
+  menuOpen: MenuPosition | null;
+  onAddTask: (e: React.FormEvent, listId: string) => void;
+  onToggleComplete: (task: Task) => void;
+  onStartEdit: (task: Task) => void;
+  onSaveEdit: (id: string) => void;
+  onCancelEdit: () => void;
+  onDelete: (id: string) => void;
+  onConfirmDelete: (id: string | null) => void;
+  onSetMenuOpen: (menu: MenuPosition | null) => void;
+  onMoveTask: (taskId: string, target: string) => void;
+  onEditTitleChange: (value: string) => void;
+  onEditDescriptionChange: (value: string) => void;
+  onSetAddingToListId: (id: string | null) => void;
+  onSetNewTaskTitle: (value: string) => void;
+}
+
+export default function BoardColumn({
+  list,
+  tasks,
+  canEditTasks,
+  addingToListId,
+  newTaskTitle,
+  adding,
+  editingId,
+  editTitle,
+  editDescription,
+  updatingId,
+  deletingId,
+  confirmDeleteId,
+  menuOpen,
+  onAddTask,
+  onToggleComplete,
+  onStartEdit,
+  onSaveEdit,
+  onCancelEdit,
+  onDelete,
+  onConfirmDelete,
+  onSetMenuOpen,
+  onMoveTask,
+  onEditTitleChange,
+  onEditDescriptionChange,
+  onSetAddingToListId,
+  onSetNewTaskTitle,
+}: BoardColumnProps) {
+  const barColor = getColumnBarColor(list.title, list.color);
+  const moveForward = getMoveForward(list.title);
+  const moveBackward = getMoveBackward(list.title);
+
+  return (
+    <div className="w-[300px] flex-shrink-0 rounded-xl bg-zinc-100/50 dark:bg-zinc-800/30 flex flex-col max-h-[calc(100vh-220px)] overflow-hidden">
+      {/* Color bar */}
+      <div
+        className="h-1 rounded-t-xl"
+        style={{ backgroundColor: barColor }}
+      />
+
+      {/* Header */}
+      <div className="flex-shrink-0 px-3 pt-3 pb-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span
+              className="h-2 w-2 rounded-full shrink-0"
+              style={{ backgroundColor: barColor }}
+            />
+            <h3 className="text-[13px] font-semibold tracking-tight text-zinc-700 dark:text-zinc-300">
+              {list.title === "Done" ? "Completed" : list.title}
+            </h3>
+          </div>
+          <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-zinc-200/80 px-1.5 text-[11px] font-semibold text-zinc-500 dark:bg-zinc-700/60 dark:text-zinc-400">
+            {tasks.length}
+          </span>
+        </div>
+      </div>
+
+      {/* Task list */}
+      <div className="flex-1 overflow-y-auto px-2.5 pb-2.5">
+        {tasks.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-zinc-200/60 py-8 px-3 dark:border-zinc-700/40">
+            <svg className="mb-2 h-5 w-5 text-zinc-300 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500 mb-2">No tasks yet</p>
+            {canEditTasks && (
+              <button
+                onClick={() => onSetAddingToListId(list.id)}
+                className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300 transition-colors"
+              >
+                Add your first task
+              </button>
+            )}
+          </div>
+        ) : (
+          <ul className="space-y-2">
+            {tasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                isEditing={editingId === task.id}
+                editTitle={editTitle}
+                editDescription={editDescription}
+                isUpdating={updatingId === task.id}
+                isDeleting={deletingId === task.id}
+                isConfirmDelete={confirmDeleteId === task.id}
+                menuOpen={menuOpen?.taskId === task.id ? menuOpen : null}
+                canEditTasks={canEditTasks}
+                moveForward={moveForward}
+                moveBackward={moveBackward}
+                onToggleComplete={onToggleComplete}
+                onStartEdit={onStartEdit}
+                onSaveEdit={onSaveEdit}
+                onCancelEdit={onCancelEdit}
+                onDelete={onDelete}
+                onConfirmDelete={onConfirmDelete}
+                onSetMenuOpen={onSetMenuOpen}
+                onMoveTask={onMoveTask}
+                onEditTitleChange={onEditTitleChange}
+                onEditDescriptionChange={onEditDescriptionChange}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Add task area */}
+      {canEditTasks && (
+        addingToListId === list.id ? (
+          <form
+            onSubmit={(e) => onAddTask(e, list.id)}
+            className="flex-shrink-0 border-t border-zinc-200/60 px-2.5 pt-2.5 pb-2.5 dark:border-zinc-700/40"
+          >
+            <input
+              type="text"
+              placeholder="Task title..."
+              autoFocus
+              value={newTaskTitle}
+              onChange={(e) => onSetNewTaskTitle(e.target.value)}
+              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 dark:border-zinc-700 dark:bg-zinc-800/80 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 dark:focus:ring-zinc-700/50"
+            />
+            <div className="mt-2 flex items-center gap-2">
+              <button
+                type="submit"
+                disabled={adding || !newTaskTitle.trim()}
+                className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-700 active:bg-zinc-800 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:focus:ring-zinc-600"
+              >
+                {adding ? "Adding..." : "Add"}
+              </button>
+              <button
+                type="button"
+                onClick={() => { onSetAddingToListId(null); onSetNewTaskTitle(""); }}
+                className="text-xs text-zinc-400 transition-colors hover:text-zinc-600 active:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300 dark:active:text-zinc-200"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        ) : (
+          <button
+            onClick={() => onSetAddingToListId(list.id)}
+            className="flex-shrink-0 w-full rounded-lg px-3 py-2 text-left text-xs text-zinc-400 transition-colors hover:bg-zinc-200/40 hover:text-zinc-600 dark:text-zinc-500 dark:hover:bg-zinc-700/30 dark:hover:text-zinc-300"
+          >
+            + Add task
+          </button>
+        )
+      )}
+    </div>
+  );
+}
