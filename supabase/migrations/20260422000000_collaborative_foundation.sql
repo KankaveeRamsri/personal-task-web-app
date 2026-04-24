@@ -9,12 +9,13 @@
 -- 0. Enable required extensions
 -- ----------------------------------------------------------
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ----------------------------------------------------------
 -- 1. WORKSPACES
 -- ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.workspaces (
-  id          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name        text NOT NULL,
   description text DEFAULT '',
   icon        text DEFAULT '📋',
@@ -30,7 +31,7 @@ CREATE INDEX idx_workspaces_owner_id ON public.workspaces(owner_id);
 -- 2. WORKSPACE MEMBERS
 -- ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.workspace_members (
-  id           uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
   user_id      uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   role         text NOT NULL DEFAULT 'member'
@@ -47,7 +48,7 @@ CREATE INDEX idx_workspace_members_user_id ON public.workspace_members(user_id);
 -- 3. BOARDS
 -- ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.boards (
-  id           uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
   title        text NOT NULL,
   description  text DEFAULT '',
@@ -65,7 +66,7 @@ CREATE INDEX idx_boards_created_by ON public.boards(created_by);
 -- 4. LISTS
 -- ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.lists (
-  id          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   board_id    uuid NOT NULL REFERENCES public.boards(id) ON DELETE CASCADE,
   title       text NOT NULL,
   position    int4 NOT NULL DEFAULT 0,
@@ -81,7 +82,7 @@ CREATE INDEX idx_lists_board_id ON public.lists(board_id);
 -- 5. TASKS (new collaborative schema)
 -- ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.tasks (
-  id           uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   list_id      uuid NOT NULL REFERENCES public.lists(id) ON DELETE CASCADE,
   title        text NOT NULL,
   description  text DEFAULT '',
