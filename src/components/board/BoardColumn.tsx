@@ -35,9 +35,6 @@ export interface BoardColumnProps {
   addingToListId: string | null;
   newTaskTitle: string;
   adding: boolean;
-  editingId: string | null;
-  editTitle: string;
-  editDescription: string;
   updatingId: string | null;
   deletingId: string | null;
   confirmDeleteId: string | null;
@@ -45,24 +42,16 @@ export interface BoardColumnProps {
   onAddTask: (e: React.FormEvent, listId: string) => void;
   onToggleComplete: (task: Task) => void;
   onStartEdit: (task: Task) => void;
-  onSaveEdit: (id: string) => void;
-  onCancelEdit: () => void;
   onDelete: (id: string) => void;
   onConfirmDelete: (id: string | null) => void;
   onSetMenuOpen: (menu: MenuPosition | null) => void;
   onMoveTask: (taskId: string, target: string) => void;
-  onEditTitleChange: (value: string) => void;
-  onEditDescriptionChange: (value: string) => void;
   onSetAddingToListId: (id: string | null) => void;
   onSetNewTaskTitle: (value: string) => void;
   newTaskPriority: TaskPriority;
   newTaskDueDate: string;
-  editPriority: TaskPriority;
-  editDueDate: string;
   onNewTaskPriorityChange: (value: TaskPriority) => void;
   onNewTaskDueDateChange: (value: string) => void;
-  onEditPriorityChange: (value: TaskPriority) => void;
-  onEditDueDateChange: (value: string) => void;
 }
 
 export default function BoardColumn({
@@ -72,9 +61,6 @@ export default function BoardColumn({
   addingToListId,
   newTaskTitle,
   adding,
-  editingId,
-  editTitle,
-  editDescription,
   updatingId,
   deletingId,
   confirmDeleteId,
@@ -82,24 +68,16 @@ export default function BoardColumn({
   onAddTask,
   onToggleComplete,
   onStartEdit,
-  onSaveEdit,
-  onCancelEdit,
   onDelete,
   onConfirmDelete,
   onSetMenuOpen,
   onMoveTask,
-  onEditTitleChange,
-  onEditDescriptionChange,
   onSetAddingToListId,
   onSetNewTaskTitle,
   newTaskPriority,
   newTaskDueDate,
-  editPriority,
-  editDueDate,
   onNewTaskPriorityChange,
   onNewTaskDueDateChange,
-  onEditPriorityChange,
-  onEditDueDateChange,
 }: BoardColumnProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const barColor = getColumnBarColor(list.title, list.color);
@@ -161,9 +139,6 @@ export default function BoardColumn({
               <TaskCard
                 key={task.id}
                 task={task}
-                isEditing={editingId === task.id}
-                editTitle={editTitle}
-                editDescription={editDescription}
                 isUpdating={updatingId === task.id}
                 isDeleting={deletingId === task.id}
                 isConfirmDelete={confirmDeleteId === task.id}
@@ -173,18 +148,10 @@ export default function BoardColumn({
                 moveBackward={moveBackward}
                 onToggleComplete={onToggleComplete}
                 onStartEdit={onStartEdit}
-                onSaveEdit={onSaveEdit}
-                onCancelEdit={onCancelEdit}
                 onDelete={onDelete}
                 onConfirmDelete={onConfirmDelete}
                 onSetMenuOpen={onSetMenuOpen}
                 onMoveTask={onMoveTask}
-                onEditTitleChange={onEditTitleChange}
-                onEditDescriptionChange={onEditDescriptionChange}
-                editPriority={editPriority}
-                editDueDate={editDueDate}
-                onEditPriorityChange={onEditPriorityChange}
-                onEditDueDateChange={onEditDueDateChange}
               />
             ))}
           </ul>

@@ -7,6 +7,7 @@ import type { List, Task, WorkspaceRole, TaskPriority } from "@/types/database";
 import type { MenuPosition } from "@/components/board/TaskCard";
 import BoardColumn from "@/components/board/BoardColumn";
 import BoardToolbar from "@/components/board/BoardToolbar";
+import TaskDetailPanel from "@/components/board/TaskDetailPanel";
 
 export default function DashboardPage() {
   const {
@@ -331,9 +332,6 @@ export default function DashboardPage() {
               addingToListId={addingToListId}
               newTaskTitle={newTaskTitle}
               adding={adding}
-              editingId={editingId}
-              editTitle={editTitle}
-              editDescription={editDescription}
               updatingId={updatingId}
               deletingId={deletingId}
               confirmDeleteId={confirmDeleteId}
@@ -341,24 +339,16 @@ export default function DashboardPage() {
               onAddTask={handleAddTask}
               onToggleComplete={handleToggleComplete}
               onStartEdit={startEdit}
-              onSaveEdit={saveEdit}
-              onCancelEdit={cancelEdit}
               onDelete={handleDelete}
               onConfirmDelete={setConfirmDeleteId}
               onSetMenuOpen={setMenuOpen}
               onMoveTask={handleMoveTask}
-              onEditTitleChange={setEditTitle}
-              onEditDescriptionChange={setEditDescription}
               onSetAddingToListId={setAddingToListId}
               onSetNewTaskTitle={setNewTaskTitle}
               newTaskPriority={newTaskPriority}
               newTaskDueDate={newTaskDueDate}
-              editPriority={editPriority}
-              editDueDate={editDueDate}
               onNewTaskPriorityChange={setNewTaskPriority}
               onNewTaskDueDateChange={setNewTaskDueDate}
-              onEditPriorityChange={setEditPriority}
-              onEditDueDateChange={setEditDueDate}
             />
           ))}
           </div>
@@ -377,6 +367,22 @@ export default function DashboardPage() {
           <p className="text-xs text-zinc-400 dark:text-zinc-500 max-w-[260px]">Something went wrong. Try creating a new board to get started.</p>
         </div>
       )}
+
+      <TaskDetailPanel
+        open={editingId !== null}
+        task={editingId ? tasks.find((t) => t.id === editingId) ?? null : null}
+        editTitle={editTitle}
+        editDescription={editDescription}
+        editPriority={editPriority}
+        editDueDate={editDueDate}
+        isUpdating={updatingId !== null && updatingId === editingId}
+        onTitleChange={setEditTitle}
+        onDescriptionChange={setEditDescription}
+        onPriorityChange={setEditPriority}
+        onDueDateChange={setEditDueDate}
+        onSave={() => { if (editingId) saveEdit(editingId); }}
+        onClose={cancelEdit}
+      />
     </div>
   );
 }
