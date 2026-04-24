@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useBoardData } from "@/hooks/useBoardData";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
-import type { Task, WorkspaceRole } from "@/types/database";
+import type { List, Task, WorkspaceRole } from "@/types/database";
 
 export default function DashboardPage() {
   const {
@@ -180,6 +180,40 @@ export default function DashboardPage() {
     } else {
       setErrorMsg(result.error ?? "ไม่สามารถเปลี่ยน role ได้");
     }
+  };
+
+  // Visual helpers
+  const getColumnBarColor = (title: string, color: string) => {
+    if (color) return color;
+    const defaults: Record<string, string> = {
+      "To Do": "#a1a1aa",
+      "In Progress": "#3b82f6",
+      "Completed": "#10b981",
+      "Done": "#10b981",
+    };
+    return defaults[title] ?? "#a1a1aa";
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "high": return "#ef4444";
+      case "medium": return "#f59e0b";
+      case "low": return "#3b82f6";
+      default: return "#a1a1aa";
+    }
+  };
+
+  const formatDueDate = (dateStr: string) => {
+    const date = new Date(dateStr + "T00:00:00");
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const diffDays = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) return `${Math.abs(diffDays)}d overdue`;
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Tomorrow";
+    if (diffDays <= 7) return `${diffDays}d`;
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
   if (loading) {
@@ -515,29 +549,47 @@ export default function DashboardPage() {
                 ? { label: "Reopen", target: "In Progress" }
                 : null;
             return (
-              <div key={list.id} className="w-[300px] flex-shrink-0 rounded-xl bg-zinc-100/50 dark:bg-zinc-800/30 flex flex-col max-h-[calc(100vh-220px)]">
-                <div className="flex-shrink-0 px-3 pt-3 pb-1.5">
+              <div key={list.id} className="w-[300px] flex-shrink-0 rounded-xl bg-zinc-100/50 dark:bg-zinc-800/30 flex flex-col max-h-[calc(100vh-220px)] overflow-hidden">
+                <div
+                  className="h-1 rounded-t-xl"
+                  style={{ backgroundColor: getColumnBarColor(list.title, list.color) }}
+                />
+                <div className="flex-shrink-0 px-3 pt-3 pb-2">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{list.title === "Done" ? "Completed" : list.title}</h3>
-                    <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-zinc-200/60 px-1.5 text-[10px] font-medium text-zinc-500 dark:bg-zinc-700/50 dark:text-zinc-500">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="h-2 w-2 rounded-full shrink-0"
+                        style={{ backgroundColor: getColumnBarColor(list.title, list.color) }}
+                      />
+                      <h3 className="text-[13px] font-semibold tracking-tight text-zinc-700 dark:text-zinc-300">{list.title === "Done" ? "Completed" : list.title}</h3>
+                    </div>
+                    <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-zinc-200/80 px-1.5 text-[11px] font-semibold text-zinc-500 dark:bg-zinc-700/60 dark:text-zinc-400">
                       {listTasks.length}
                     </span>
                   </div>
                 </div>
                 <div className="flex-1 overflow-y-auto px-2.5 pb-2.5">
                 {listTasks.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-zinc-200/60 py-8 dark:border-zinc-700/40">
-                    <svg className="mb-2 h-4 w-4 text-zinc-300 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15a2.25 2.25 0 0 1 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
+                  <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-zinc-200/60 py-8 px-3 dark:border-zinc-700/40">
+                    <svg className="mb-2 h-5 w-5 text-zinc-300 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                     </svg>
-                    <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500">No tasks</p>
+                    <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500 mb-2">No tasks yet</p>
+                    {canEditTasks && (
+                      <button
+                        onClick={() => setAddingToListId(list.id)}
+                        className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300 transition-colors"
+                      >
+                        Add your first task
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <ul className="space-y-2">
                     {listTasks.map((task) => (
                       <li
                         key={task.id}
-                        className="group relative rounded-lg bg-white px-3 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-150 hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:bg-zinc-800/80 dark:hover:shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
+                        className="group relative rounded-lg border border-zinc-100 bg-white px-3 py-2.5 shadow-sm transition-all duration-150 hover:shadow-md hover:border-zinc-200 dark:border-zinc-700/50 dark:bg-zinc-800/80 dark:hover:shadow-lg dark:hover:border-zinc-600/50"
                       >
                         {/* Editing mode */}
                         {editingId === task.id ? (
@@ -572,7 +624,7 @@ export default function DashboardPage() {
                             </div>
                           </div>
                         ) : (
-                          <div className={`flex items-start gap-3 ${task.is_completed ? "opacity-50" : ""}`}>
+                          <div className={`flex items-start gap-2.5 ${task.is_completed ? "opacity-50" : ""}`}>
                             <input
                               type="checkbox"
                               checked={task.is_completed}
@@ -582,7 +634,7 @@ export default function DashboardPage() {
                             />
                             <div className="flex-1 min-w-0">
                               <span
-                                className={`block text-sm leading-snug ${
+                                className={`block text-[13px] leading-snug ${
                                   task.is_completed
                                     ? "line-through text-zinc-400 dark:text-zinc-500"
                                     : "font-medium text-zinc-900 dark:text-zinc-100"
@@ -601,20 +653,35 @@ export default function DashboardPage() {
                                   {task.description}
                                 </p>
                               )}
+                              {/* Metadata: priority dot + due date */}
+                              {(task.priority && task.priority !== "none") || task.due_date ? (
+                                <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                                  {task.priority && task.priority !== "none" && (
+                                    <span className="flex items-center gap-1">
+                                      <span
+                                        className="h-1.5 w-1.5 rounded-full"
+                                        style={{ backgroundColor: getPriorityColor(task.priority) }}
+                                      />
+                                      <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 capitalize">{task.priority}</span>
+                                    </span>
+                                  )}
+                                  {task.due_date && (
+                                    <span className={`flex items-center gap-1 text-[11px] font-medium ${
+                                      new Date(task.due_date + "T23:59:59") < new Date() && !task.is_completed
+                                        ? "text-red-500 dark:text-red-400"
+                                        : "text-zinc-400 dark:text-zinc-500"
+                                    }`}>
+                                      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+                                      </svg>
+                                      {formatDueDate(task.due_date)}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : null}
                             </div>
                             <div className="flex items-center gap-0.5 shrink-0">
-                              {task.priority && task.priority !== "none" && (
-                                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                                  task.priority === "high"
-                                    ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
-                                    : task.priority === "medium"
-                                    ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
-                                    : "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400"
-                                }`}>
-                                  {task.priority}
-                                </span>
-                              )}
-                              <span className="flex items-center gap-1 opacity-0 transition-all duration-150 group-hover:opacity-100">
+                              <span className="flex items-center gap-1 opacity-100 sm:opacity-0 transition-all duration-150 sm:group-hover:opacity-100">
                               {canEditTasks && (
                               <>
                               {moveForward && (
