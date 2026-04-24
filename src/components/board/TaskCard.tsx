@@ -2,7 +2,7 @@
 
 import type { Task } from "@/types/database";
 
-export type MoveAction = { label: string; target: string };
+export type MoveTarget = { title: string; current: boolean };
 
 export type MenuPosition = { taskId: string; top: number; left: number };
 
@@ -13,8 +13,7 @@ export interface TaskCardProps {
   isConfirmDelete: boolean;
   menuOpen: MenuPosition | null;
   canEditTasks: boolean;
-  moveForward: MoveAction | null;
-  moveBackward: MoveAction | null;
+  moveTargets: MoveTarget[];
   onToggleComplete: (task: Task) => void;
   onStartEdit: (task: Task) => void;
   onDelete: (id: string) => void;
@@ -52,8 +51,7 @@ export default function TaskCard({
   isConfirmDelete,
   menuOpen,
   canEditTasks,
-  moveForward,
-  moveBackward,
+  moveTargets,
   onToggleComplete,
   onStartEdit,
   onDelete,
@@ -131,7 +129,7 @@ export default function TaskCard({
                 onSetMenuOpen({
                   taskId: task.id,
                   top: rect.bottom + 4,
-                  left: Math.max(8, rect.right - 160),
+                  left: Math.max(8, rect.right - 192),
                 });
               }
             }}
@@ -169,40 +167,58 @@ export default function TaskCard({
         <>
           <div className="fixed inset-0 z-40" onClick={() => onSetMenuOpen(null)} />
           <div
-            className="fixed z-50 w-40 rounded-lg bg-white shadow-lg border border-zinc-200 py-1 dark:bg-zinc-800 dark:border-zinc-700"
+            className="fixed z-50 w-48 rounded-lg bg-white shadow-lg border border-zinc-200 py-1 dark:bg-zinc-800 dark:border-zinc-700"
             style={{ top: menuOpen.top, left: menuOpen.left }}
           >
             <div className="px-3 py-1.5 border-b border-zinc-100 dark:border-zinc-700/50">
               <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300 truncate">{task.title}</p>
             </div>
-            {moveForward && (
-              <button
-                onClick={() => { onSetMenuOpen(null); onMoveTask(task.id, moveForward.target); }}
-                disabled={isUpdating}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 dark:text-emerald-400 dark:hover:bg-emerald-900/30 transition-colors"
-              >
-                → {moveForward.label}
-              </button>
-            )}
-            {moveBackward && (
-              <button
-                onClick={() => { onSetMenuOpen(null); onMoveTask(task.id, moveBackward.target); }}
-                disabled={isUpdating}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50 disabled:opacity-50 dark:text-zinc-300 dark:hover:bg-zinc-700/50 transition-colors"
-              >
-                ← {moveBackward.label}
-              </button>
-            )}
-            <div className="my-1 border-t border-zinc-100 dark:border-zinc-700/50" />
+
+            {/* Move to section */}
+            <div className="py-1">
+              <p className="px-3 py-1 text-[11px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Move to</p>
+              {moveTargets.map((target) => {
+                const displayTitle = target.title === "Done" ? "Completed" : target.title;
+                return (
+                  <button
+                    key={target.title}
+                    onClick={() => {
+                      if (!target.current && !isUpdating) {
+                        onSetMenuOpen(null);
+                        onMoveTask(task.id, target.title);
+                      }
+                    }}
+                    disabled={target.current || isUpdating}
+                    className={`flex w-full items-center gap-2 px-3 py-1.5 text-xs transition-colors ${
+                      target.current
+                        ? "text-zinc-400 dark:text-zinc-500"
+                        : "text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-700/50"
+                    }`}
+                  >
+                    {target.current ? (
+                      <svg className="h-3 w-3 shrink-0" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z" />
+                      </svg>
+                    ) : (
+                      <span className="w-3 shrink-0" />
+                    )}
+                    {displayTitle}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="border-t border-zinc-100 dark:border-zinc-700/50" />
             <button
               onClick={() => { onSetMenuOpen(null); onStartEdit(task); }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-700/50 transition-colors"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-700/50 transition-colors"
             >
               Edit
             </button>
+            <div className="border-t border-zinc-100 dark:border-zinc-700/50" />
             <button
               onClick={() => { onSetMenuOpen(null); onConfirmDelete(task.id); }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors"
             >
               Delete
             </button>

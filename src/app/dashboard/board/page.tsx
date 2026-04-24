@@ -349,6 +349,7 @@ export default function DashboardPage() {
               newTaskDueDate={newTaskDueDate}
               onNewTaskPriorityChange={setNewTaskPriority}
               onNewTaskDueDateChange={setNewTaskDueDate}
+              allListTitles={lists.map((l) => l.title)}
             />
           ))}
           </div>

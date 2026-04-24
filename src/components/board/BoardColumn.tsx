@@ -3,7 +3,7 @@
 import { useRef, useEffect } from "react";
 import type { List, Task, TaskPriority } from "@/types/database";
 import TaskCard from "@/components/board/TaskCard";
-import type { MenuPosition, MoveAction } from "@/components/board/TaskCard";
+import type { MenuPosition, MoveTarget } from "@/components/board/TaskCard";
 
 const getColumnBarColor = (title: string, color: string) => {
   if (color) return color;
@@ -14,18 +14,6 @@ const getColumnBarColor = (title: string, color: string) => {
     "Done": "#10b981",
   };
   return defaults[title] ?? "#a1a1aa";
-};
-
-const getMoveForward = (listTitle: string): MoveAction | null => {
-  if (listTitle === "To Do") return { label: "Start", target: "In Progress" };
-  if (listTitle === "In Progress") return { label: "Complete", target: "Completed" };
-  return null;
-};
-
-const getMoveBackward = (listTitle: string): MoveAction | null => {
-  if (listTitle === "In Progress") return { label: "Back", target: "To Do" };
-  if (listTitle === "Completed" || listTitle === "Done") return { label: "Reopen", target: "In Progress" };
-  return null;
 };
 
 export interface BoardColumnProps {
@@ -52,6 +40,7 @@ export interface BoardColumnProps {
   newTaskDueDate: string;
   onNewTaskPriorityChange: (value: TaskPriority) => void;
   onNewTaskDueDateChange: (value: string) => void;
+  allListTitles: string[];
 }
 
 export default function BoardColumn({
@@ -78,6 +67,7 @@ export default function BoardColumn({
   newTaskDueDate,
   onNewTaskPriorityChange,
   onNewTaskDueDateChange,
+  allListTitles,
 }: BoardColumnProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const barColor = getColumnBarColor(list.title, list.color);
@@ -87,8 +77,11 @@ export default function BoardColumn({
       inputRef.current.focus();
     }
   }, [addingToListId, list.id, newTaskTitle]);
-  const moveForward = getMoveForward(list.title);
-  const moveBackward = getMoveBackward(list.title);
+
+  const moveTargets: MoveTarget[] = allListTitles.map((title) => ({
+    title,
+    current: title === list.title,
+  }));
 
   return (
     <div className="w-[300px] flex-shrink-0 rounded-xl bg-zinc-100/50 dark:bg-zinc-800/30 flex flex-col max-h-[calc(100vh-220px)] overflow-hidden">
@@ -144,8 +137,7 @@ export default function BoardColumn({
                 isConfirmDelete={confirmDeleteId === task.id}
                 menuOpen={menuOpen?.taskId === task.id ? menuOpen : null}
                 canEditTasks={canEditTasks}
-                moveForward={moveForward}
-                moveBackward={moveBackward}
+                moveTargets={moveTargets}
                 onToggleComplete={onToggleComplete}
                 onStartEdit={onStartEdit}
                 onDelete={onDelete}
