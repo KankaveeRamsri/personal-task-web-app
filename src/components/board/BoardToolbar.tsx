@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import type { Workspace, Board, WorkspaceRole } from "@/types/database";
 import type { MemberWithProfile } from "@/hooks/useWorkspaceMembers";
 
@@ -119,6 +120,22 @@ export default function BoardToolbar({
   selectedWorkspaceName,
   isOwner,
 }: BoardToolbarProps) {
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!moreMenuOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setMoreMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [moreMenuOpen]);
+
+  const hasDeleteOptions = (selectedBoardId && isManager) || (selectedWorkspaceId && isOwner);
+
   return (
     <>
       {/* Navigation toolbar */}
@@ -159,43 +176,9 @@ export default function BoardToolbar({
             </>
           )}
         </div>
+
         {/* Right: actions */}
         <div className="flex items-center gap-2">
-          {selectedWorkspaceId && isOwner && (
-            <button
-              onClick={() => onSetConfirmDeleteWorkspace(true)}
-              className="rounded-lg border border-red-200 px-3 py-1.5 text-sm text-red-500 transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600 active:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200 dark:border-red-900 dark:text-red-500 dark:hover:border-red-800 dark:hover:bg-red-950 dark:hover:text-red-400 dark:active:bg-red-900 dark:focus:ring-red-900"
-            >
-              Delete Workspace
-            </button>
-          )}
-          {selectedBoardId && isManager && (
-            confirmDeleteBoard ? (
-              <span className="flex items-center gap-1.5 text-sm">
-                <span className="text-zinc-500 dark:text-zinc-400">Delete this board?</span>
-                <button
-                  onClick={onDeleteBoard}
-                  disabled={deletingBoard}
-                  className="rounded-lg bg-red-600 px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-red-700 active:bg-red-800 disabled:opacity-50"
-                >
-                  {deletingBoard ? "..." : "Delete"}
-                </button>
-                <button
-                  onClick={() => onSetConfirmDeleteBoard(false)}
-                  className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-                >
-                  Cancel
-                </button>
-              </span>
-            ) : (
-              <button
-                onClick={() => onSetConfirmDeleteBoard(true)}
-                className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-red-500 transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600 active:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200 dark:border-zinc-700 dark:hover:border-red-800 dark:hover:bg-red-950 dark:hover:text-red-400 dark:active:bg-red-900 dark:focus:ring-red-900"
-              >
-                Delete Board
-              </button>
-            )
-          )}
           {selectedWorkspaceId && (
             <button
               onClick={onToggleMembers}
@@ -218,8 +201,63 @@ export default function BoardToolbar({
               + Board
             </button>
           )}
+          {hasDeleteOptions && (
+            <div className="relative" ref={moreMenuRef}>
+              <button
+                onClick={() => setMoreMenuOpen((v) => !v)}
+                className="flex items-center justify-center rounded-lg border border-zinc-200 px-2 py-1.5 text-zinc-500 transition-colors hover:border-zinc-300 hover:bg-zinc-50 active:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:bg-zinc-800 dark:active:bg-zinc-700 dark:focus:ring-zinc-600"
+              >
+                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                </svg>
+              </button>
+              {moreMenuOpen && (
+                <div className="absolute right-0 top-full mt-1 w-48 rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900 z-20">
+                  {selectedBoardId && isManager && (
+                    <button
+                      onClick={() => { setMoreMenuOpen(false); onSetConfirmDeleteBoard(true); }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
+                    >
+                      Delete Board
+                    </button>
+                  )}
+                  {selectedBoardId && isManager && isOwner && (
+                    <div className="my-1 border-t border-zinc-100 dark:border-zinc-800" />
+                  )}
+                  {selectedWorkspaceId && isOwner && (
+                    <button
+                      onClick={() => { setMoreMenuOpen(false); onSetConfirmDeleteWorkspace(true); }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
+                    >
+                      Delete Workspace
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Delete board confirmation (inline) */}
+      {confirmDeleteBoard && selectedBoardId && (
+        <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50/50 px-4 py-2.5 dark:border-red-900 dark:bg-red-950/30">
+          <span className="text-sm text-red-700 dark:text-red-400">Delete this board and all its tasks?</span>
+          <button
+            onClick={onDeleteBoard}
+            disabled={deletingBoard}
+            className="rounded-lg bg-red-600 px-3 py-1 text-sm font-medium text-white transition-colors hover:bg-red-700 active:bg-red-800 disabled:opacity-50"
+          >
+            {deletingBoard ? "..." : "Delete"}
+          </button>
+          <button
+            onClick={() => onSetConfirmDeleteBoard(false)}
+            className="text-sm text-zinc-500 transition-colors hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {/* New workspace form */}
       {showNewWorkspace && (
