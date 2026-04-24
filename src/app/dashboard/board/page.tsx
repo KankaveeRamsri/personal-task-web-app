@@ -26,6 +26,8 @@ export default function DashboardPage() {
     createTask,
     updateTask,
     deleteTask,
+    deleteBoard,
+    deleteWorkspace,
     clearError,
     setErrorMsg,
   } = useBoardData();
@@ -67,6 +69,18 @@ export default function DashboardPage() {
     !currentRole || ["owner", "admin", "member"].includes(currentRole);
   const isManager =
     currentRole === "owner" || currentRole === "admin";
+
+  // Delete board
+  const [confirmDeleteBoard, setConfirmDeleteBoard] = useState(false);
+  const [deletingBoard, setDeletingBoard] = useState(false);
+
+  // Delete workspace
+  const [confirmDeleteWorkspace, setConfirmDeleteWorkspace] = useState(false);
+  const [deletingWorkspace, setDeletingWorkspace] = useState(false);
+  const [deleteWorkspaceConfirmName, setDeleteWorkspaceConfirmName] = useState("");
+
+  const isOwner = currentRole === "owner";
+  const selectedWorkspaceName = workspaces.find((ws) => ws.id === selectedWorkspaceId)?.name ?? "";
 
   const showSuccess = useCallback((msg: string) => {
     setSuccessMsg(msg);
@@ -220,6 +234,27 @@ export default function DashboardPage() {
     }
   };
 
+  const handleDeleteBoard = async () => {
+    if (!selectedBoardId) return;
+    setDeletingBoard(true);
+    const ok = await deleteBoard(selectedBoardId);
+    setDeletingBoard(false);
+    setConfirmDeleteBoard(false);
+    if (ok) showSuccess("ลบบอร์ดสำเร็จ");
+  };
+
+  const handleDeleteWorkspace = async () => {
+    if (!selectedWorkspaceId) return;
+    setDeletingWorkspace(true);
+    const ok = await deleteWorkspace(selectedWorkspaceId);
+    setDeletingWorkspace(false);
+    if (ok) {
+      setConfirmDeleteWorkspace(false);
+      setDeleteWorkspaceConfirmName("");
+      showSuccess("ลบ workspace สำเร็จ");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -289,6 +324,18 @@ export default function DashboardPage() {
         onRemoveMember={handleRemoveMember}
         onRoleChange={handleRoleChange}
         onSetConfirmRemoveId={setConfirmRemoveId}
+        confirmDeleteBoard={confirmDeleteBoard}
+        deletingBoard={deletingBoard}
+        onDeleteBoard={handleDeleteBoard}
+        onSetConfirmDeleteBoard={setConfirmDeleteBoard}
+        confirmDeleteWorkspace={confirmDeleteWorkspace}
+        deletingWorkspace={deletingWorkspace}
+        deleteWorkspaceConfirmName={deleteWorkspaceConfirmName}
+        onDeleteWorkspaceConfirmNameChange={setDeleteWorkspaceConfirmName}
+        onDeleteWorkspace={handleDeleteWorkspace}
+        onSetConfirmDeleteWorkspace={setConfirmDeleteWorkspace}
+        selectedWorkspaceName={selectedWorkspaceName}
+        isOwner={isOwner}
       />
 
       {/* No workspaces at all */}

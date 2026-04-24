@@ -297,6 +297,52 @@ export function useBoardData() {
     setTasks((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  const deleteBoard = useCallback(async (boardId: string) => {
+    const supabase = createClient();
+    const { error } = await supabase.from("boards").delete().eq("id", boardId);
+
+    if (error) {
+      setErrorMsg(error.message);
+      return false;
+    }
+
+    const remaining = boards.filter((b) => b.id !== boardId);
+    setBoards(remaining);
+
+    if (remaining.length > 0) {
+      setSelectedBoardId(remaining[0].id);
+    } else {
+      setSelectedBoardId(null);
+      setLists([]);
+      setTasks([]);
+    }
+    return true;
+  }, [boards]);
+
+  const deleteWorkspace = useCallback(async (workspaceId: string) => {
+    const supabase = createClient();
+    const { error } = await supabase.from("workspaces").delete().eq("id", workspaceId);
+
+    if (error) {
+      setErrorMsg(error.message);
+      return false;
+    }
+
+    const remaining = workspaces.filter((ws) => ws.id !== workspaceId);
+    setWorkspaces(remaining);
+
+    if (remaining.length > 0) {
+      setSelectedWorkspaceId(remaining[0].id);
+    } else {
+      setSelectedWorkspaceId(null);
+      setBoards([]);
+      setSelectedBoardId(null);
+      setLists([]);
+      setTasks([]);
+    }
+    return true;
+  }, [workspaces]);
+
   const clearError = useCallback(() => setErrorMsg(""), []);
 
   return {
@@ -317,6 +363,8 @@ export function useBoardData() {
     createTask,
     updateTask,
     deleteTask,
+    deleteBoard,
+    deleteWorkspace,
     fetchTasks,
     clearError,
     setErrorMsg,

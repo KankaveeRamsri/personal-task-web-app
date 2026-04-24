@@ -54,6 +54,22 @@ export interface BoardToolbarProps {
   onRemoveMember: (userId: string) => void;
   onRoleChange: (userId: string, role: WorkspaceRole) => void;
   onSetConfirmRemoveId: (id: string | null) => void;
+
+  // Delete board
+  confirmDeleteBoard: boolean;
+  deletingBoard: boolean;
+  onDeleteBoard: () => void;
+  onSetConfirmDeleteBoard: (v: boolean) => void;
+
+  // Delete workspace
+  confirmDeleteWorkspace: boolean;
+  deletingWorkspace: boolean;
+  deleteWorkspaceConfirmName: string;
+  onDeleteWorkspaceConfirmNameChange: (v: string) => void;
+  onDeleteWorkspace: () => void;
+  onSetConfirmDeleteWorkspace: (v: boolean) => void;
+  selectedWorkspaceName: string;
+  isOwner: boolean;
 }
 
 export default function BoardToolbar({
@@ -90,6 +106,18 @@ export default function BoardToolbar({
   onRemoveMember,
   onRoleChange,
   onSetConfirmRemoveId,
+  confirmDeleteBoard,
+  deletingBoard,
+  onDeleteBoard,
+  onSetConfirmDeleteBoard,
+  confirmDeleteWorkspace,
+  deletingWorkspace,
+  deleteWorkspaceConfirmName,
+  onDeleteWorkspaceConfirmNameChange,
+  onDeleteWorkspace,
+  onSetConfirmDeleteWorkspace,
+  selectedWorkspaceName,
+  isOwner,
 }: BoardToolbarProps) {
   return (
     <>
@@ -133,6 +161,41 @@ export default function BoardToolbar({
         </div>
         {/* Right: actions */}
         <div className="flex items-center gap-2">
+          {selectedWorkspaceId && isOwner && (
+            <button
+              onClick={() => onSetConfirmDeleteWorkspace(true)}
+              className="rounded-lg border border-red-200 px-3 py-1.5 text-sm text-red-500 transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600 active:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200 dark:border-red-900 dark:text-red-500 dark:hover:border-red-800 dark:hover:bg-red-950 dark:hover:text-red-400 dark:active:bg-red-900 dark:focus:ring-red-900"
+            >
+              Delete Workspace
+            </button>
+          )}
+          {selectedBoardId && isManager && (
+            confirmDeleteBoard ? (
+              <span className="flex items-center gap-1.5 text-sm">
+                <span className="text-zinc-500 dark:text-zinc-400">Delete this board?</span>
+                <button
+                  onClick={onDeleteBoard}
+                  disabled={deletingBoard}
+                  className="rounded-lg bg-red-600 px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-red-700 active:bg-red-800 disabled:opacity-50"
+                >
+                  {deletingBoard ? "..." : "Delete"}
+                </button>
+                <button
+                  onClick={() => onSetConfirmDeleteBoard(false)}
+                  className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                >
+                  Cancel
+                </button>
+              </span>
+            ) : (
+              <button
+                onClick={() => onSetConfirmDeleteBoard(true)}
+                className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-red-500 transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600 active:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200 dark:border-zinc-700 dark:hover:border-red-800 dark:hover:bg-red-950 dark:hover:text-red-400 dark:active:bg-red-900 dark:focus:ring-red-900"
+              >
+                Delete Board
+              </button>
+            )
+          )}
           {selectedWorkspaceId && (
             <button
               onClick={onToggleMembers}
@@ -184,6 +247,45 @@ export default function BoardToolbar({
             Cancel
           </button>
         </form>
+      )}
+
+      {/* Delete workspace confirmation */}
+      {confirmDeleteWorkspace && selectedWorkspaceId && (
+        <div className="rounded-xl border border-red-200 bg-red-50/50 p-4 shadow-sm dark:border-red-900 dark:bg-red-950/30">
+          <div className="mb-3">
+            <h3 className="text-sm font-semibold text-red-700 dark:text-red-400">
+              Delete &quot;{selectedWorkspaceName}&quot;?
+            </h3>
+            <p className="mt-1 text-xs text-red-600/80 dark:text-red-400/70">
+              This will permanently delete all boards and tasks in this workspace. This action cannot be undone.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 max-w-sm">
+            <input
+              type="text"
+              placeholder={`Type "${selectedWorkspaceName}" to confirm`}
+              autoFocus
+              value={deleteWorkspaceConfirmName}
+              onChange={(e) => onDeleteWorkspaceConfirmNameChange(e.target.value)}
+              className="w-full rounded-lg border border-red-300 bg-transparent px-3 py-1.5 text-sm placeholder:text-red-300 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200/50 dark:border-red-800 dark:placeholder:text-red-700 dark:focus:ring-red-900/50 dark:focus:border-red-700"
+            />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onDeleteWorkspace}
+                disabled={deletingWorkspace || deleteWorkspaceConfirmName !== selectedWorkspaceName}
+                className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-700 active:bg-red-800 disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-red-200"
+              >
+                {deletingWorkspace ? "Deleting..." : "Delete Workspace"}
+              </button>
+              <button
+                onClick={() => onSetConfirmDeleteWorkspace(false)}
+                className="rounded-lg px-3 py-1.5 text-sm text-zinc-500 transition-colors hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Members panel */}
