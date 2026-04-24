@@ -1,6 +1,6 @@
 "use client";
 
-import type { Task } from "@/types/database";
+import type { Task, TaskPriority } from "@/types/database";
 
 export type MoveAction = { label: string; target: string };
 
@@ -28,6 +28,10 @@ export interface TaskCardProps {
   onMoveTask: (taskId: string, target: string) => void;
   onEditTitleChange: (value: string) => void;
   onEditDescriptionChange: (value: string) => void;
+  editPriority: TaskPriority;
+  editDueDate: string;
+  onEditPriorityChange: (value: TaskPriority) => void;
+  onEditDueDateChange: (value: string) => void;
 }
 
 const getPriorityColor = (priority: string) => {
@@ -74,6 +78,10 @@ export default function TaskCard({
   onMoveTask,
   onEditTitleChange,
   onEditDescriptionChange,
+  editPriority,
+  editDueDate,
+  onEditPriorityChange,
+  onEditDueDateChange,
 }: TaskCardProps) {
   return (
     <li
@@ -95,6 +103,24 @@ export default function TaskCard({
             placeholder="Description (optional)"
             className="rounded-lg border border-zinc-300 px-3 py-2 text-sm resize-none focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 dark:focus:ring-zinc-700/50 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-600"
           />
+          <div className="flex items-center gap-2">
+            <select
+              value={editPriority}
+              onChange={(e) => onEditPriorityChange(e.target.value as TaskPriority)}
+              className="rounded-md border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+            >
+              <option value="none">No priority</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+            <input
+              type="date"
+              value={editDueDate}
+              onChange={(e) => onEditDueDateChange(e.target.value)}
+              className="flex-1 min-w-0 rounded-md border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+            />
+          </div>
           <div className="flex gap-2">
             <button
               onClick={() => onSaveEdit(task.id)}

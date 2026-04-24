@@ -222,7 +222,11 @@ export function useBoardData() {
   );
 
   const createTask = useCallback(
-    async (listId: string, title: string, description?: string) => {
+    async (
+      listId: string,
+      title: string,
+      metadata?: { description?: string; priority?: string; due_date?: string | null }
+    ) => {
       const supabase = createClient();
       const {
         data: { user },
@@ -244,7 +248,9 @@ export function useBoardData() {
         .insert({
           list_id: listId,
           title,
-          description: description || "",
+          description: metadata?.description || "",
+          priority: metadata?.priority || "none",
+          due_date: metadata?.due_date || null,
           created_by: user.id,
           position: nextPos,
         })

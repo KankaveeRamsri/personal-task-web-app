@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import type { List, Task } from "@/types/database";
+import type { List, Task, TaskPriority } from "@/types/database";
 import TaskCard from "@/components/board/TaskCard";
 import type { MenuPosition, MoveAction } from "@/components/board/TaskCard";
 
@@ -55,6 +55,14 @@ export interface BoardColumnProps {
   onEditDescriptionChange: (value: string) => void;
   onSetAddingToListId: (id: string | null) => void;
   onSetNewTaskTitle: (value: string) => void;
+  newTaskPriority: TaskPriority;
+  newTaskDueDate: string;
+  editPriority: TaskPriority;
+  editDueDate: string;
+  onNewTaskPriorityChange: (value: TaskPriority) => void;
+  onNewTaskDueDateChange: (value: string) => void;
+  onEditPriorityChange: (value: TaskPriority) => void;
+  onEditDueDateChange: (value: string) => void;
 }
 
 export default function BoardColumn({
@@ -84,6 +92,14 @@ export default function BoardColumn({
   onEditDescriptionChange,
   onSetAddingToListId,
   onSetNewTaskTitle,
+  newTaskPriority,
+  newTaskDueDate,
+  editPriority,
+  editDueDate,
+  onNewTaskPriorityChange,
+  onNewTaskDueDateChange,
+  onEditPriorityChange,
+  onEditDueDateChange,
 }: BoardColumnProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const barColor = getColumnBarColor(list.title, list.color);
@@ -165,6 +181,10 @@ export default function BoardColumn({
                 onMoveTask={onMoveTask}
                 onEditTitleChange={onEditTitleChange}
                 onEditDescriptionChange={onEditDescriptionChange}
+                editPriority={editPriority}
+                editDueDate={editDueDate}
+                onEditPriorityChange={onEditPriorityChange}
+                onEditDueDateChange={onEditDueDateChange}
               />
             ))}
           </ul>
@@ -189,10 +209,30 @@ export default function BoardColumn({
                 if (e.key === "Escape") {
                   onSetAddingToListId(null);
                   onSetNewTaskTitle("");
+                  onNewTaskPriorityChange("none");
+                  onNewTaskDueDateChange("");
                 }
               }}
               className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 dark:border-zinc-700 dark:bg-zinc-800/80 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 dark:focus:ring-zinc-700/50"
             />
+            <div className="mt-1.5 flex items-center gap-2">
+              <select
+                value={newTaskPriority}
+                onChange={(e) => onNewTaskPriorityChange(e.target.value as TaskPriority)}
+                className="rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-600 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-400 dark:focus:border-zinc-600"
+              >
+                <option value="none">Priority</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+              <input
+                type="date"
+                value={newTaskDueDate}
+                onChange={(e) => onNewTaskDueDateChange(e.target.value)}
+                className="flex-1 min-w-0 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-600 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-400 dark:focus:border-zinc-600"
+              />
+            </div>
             <div className="mt-2 flex items-center gap-2">
               <button
                 type="submit"
@@ -203,7 +243,12 @@ export default function BoardColumn({
               </button>
               <button
                 type="button"
-                onClick={() => { onSetAddingToListId(null); onSetNewTaskTitle(""); }}
+                onClick={() => {
+                  onSetAddingToListId(null);
+                  onSetNewTaskTitle("");
+                  onNewTaskPriorityChange("none");
+                  onNewTaskDueDateChange("");
+                }}
                 className="text-xs text-zinc-400 transition-colors hover:text-zinc-600 active:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300 dark:active:text-zinc-200"
               >
                 Cancel

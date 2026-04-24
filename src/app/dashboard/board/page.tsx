@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useBoardData } from "@/hooks/useBoardData";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
-import type { List, Task, WorkspaceRole } from "@/types/database";
+import type { List, Task, WorkspaceRole, TaskPriority } from "@/types/database";
 import type { MenuPosition } from "@/components/board/TaskCard";
 import BoardColumn from "@/components/board/BoardColumn";
 import BoardToolbar from "@/components/board/BoardToolbar";
@@ -41,6 +41,10 @@ export default function DashboardPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState("");
   const [menuOpen, setMenuOpen] = useState<MenuPosition | null>(null);
+  const [newTaskPriority, setNewTaskPriority] = useState<TaskPriority>("none");
+  const [newTaskDueDate, setNewTaskDueDate] = useState("");
+  const [editPriority, setEditPriority] = useState<TaskPriority>("none");
+  const [editDueDate, setEditDueDate] = useState("");
 
   // Workspace creation
   const [showNewWorkspace, setShowNewWorkspace] = useState(false);
@@ -109,8 +113,13 @@ export default function DashboardPage() {
     e.preventDefault();
     if (!newTaskTitle.trim() || !listId) return;
     setAdding(true);
-    await createTask(listId, newTaskTitle.trim());
+    await createTask(listId, newTaskTitle.trim(), {
+      priority: newTaskPriority,
+      due_date: newTaskDueDate || null,
+    });
     setNewTaskTitle("");
+    setNewTaskPriority("none");
+    setNewTaskDueDate("");
     setAdding(false);
     showSuccess("Task added");
   };
@@ -126,6 +135,8 @@ export default function DashboardPage() {
     setEditingId(task.id);
     setEditTitle(task.title);
     setEditDescription(task.description ?? "");
+    setEditPriority(task.priority ?? "none");
+    setEditDueDate(task.due_date ?? "");
     setConfirmDeleteId(null);
   };
 
@@ -133,6 +144,8 @@ export default function DashboardPage() {
     setEditingId(null);
     setEditTitle("");
     setEditDescription("");
+    setEditPriority("none");
+    setEditDueDate("");
   };
 
   const saveEdit = async (id: string) => {
@@ -141,6 +154,8 @@ export default function DashboardPage() {
     await updateTask(id, {
       title: editTitle.trim(),
       description: editDescription.trim(),
+      priority: editPriority,
+      due_date: editDueDate || null,
     } as Partial<Task>);
     setUpdatingId(null);
     setEditingId(null);
@@ -336,6 +351,14 @@ export default function DashboardPage() {
               onEditDescriptionChange={setEditDescription}
               onSetAddingToListId={setAddingToListId}
               onSetNewTaskTitle={setNewTaskTitle}
+              newTaskPriority={newTaskPriority}
+              newTaskDueDate={newTaskDueDate}
+              editPriority={editPriority}
+              editDueDate={editDueDate}
+              onNewTaskPriorityChange={setNewTaskPriority}
+              onNewTaskDueDateChange={setNewTaskDueDate}
+              onEditPriorityChange={setEditPriority}
+              onEditDueDateChange={setEditDueDate}
             />
           ))}
           </div>
