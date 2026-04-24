@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useEffect } from "react";
 import type { List, Task } from "@/types/database";
 import TaskCard from "@/components/board/TaskCard";
 import type { MenuPosition, MoveAction } from "@/components/board/TaskCard";
@@ -84,7 +85,14 @@ export default function BoardColumn({
   onSetAddingToListId,
   onSetNewTaskTitle,
 }: BoardColumnProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
   const barColor = getColumnBarColor(list.title, list.color);
+
+  useEffect(() => {
+    if (addingToListId === list.id && newTaskTitle === "" && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [addingToListId, list.id, newTaskTitle]);
   const moveForward = getMoveForward(list.title);
   const moveBackward = getMoveBackward(list.title);
 
@@ -171,11 +179,18 @@ export default function BoardColumn({
             className="flex-shrink-0 border-t border-zinc-200/60 px-2.5 pt-2.5 pb-2.5 dark:border-zinc-700/40"
           >
             <input
+              ref={inputRef}
               type="text"
               placeholder="Task title..."
               autoFocus
               value={newTaskTitle}
               onChange={(e) => onSetNewTaskTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  onSetAddingToListId(null);
+                  onSetNewTaskTitle("");
+                }
+              }}
               className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 dark:border-zinc-700 dark:bg-zinc-800/80 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 dark:focus:ring-zinc-700/50"
             />
             <div className="mt-2 flex items-center gap-2">

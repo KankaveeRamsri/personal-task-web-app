@@ -111,7 +111,6 @@ export default function DashboardPage() {
     setAdding(true);
     await createTask(listId, newTaskTitle.trim());
     setNewTaskTitle("");
-    setAddingToListId(null);
     setAdding(false);
     showSuccess("Task added");
   };
