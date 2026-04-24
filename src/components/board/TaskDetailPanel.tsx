@@ -56,8 +56,12 @@ export default function TaskDetailPanel({
       <div
         className="fixed inset-0 z-50 bg-black/20 backdrop-blur-[2px]"
         onClick={onClose}
+        style={{ animation: "fade-in 0.15s ease-out" }}
       />
-      <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md bg-white shadow-xl border-l border-zinc-200 dark:bg-zinc-900 dark:border-zinc-700 flex flex-col">
+      <div
+        className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md bg-white shadow-xl border-l border-zinc-200 dark:bg-zinc-900 dark:border-zinc-700 flex flex-col"
+        style={{ animation: "panel-in 0.2s ease-out" }}
+      >
         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100 dark:border-zinc-800">
           <h2 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Edit task</h2>
           <button
@@ -131,7 +135,12 @@ export default function TaskDetailPanel({
             disabled={isUpdating || !editTitle.trim()}
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 active:bg-zinc-800 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:focus:ring-zinc-600"
           >
-            {isUpdating ? "Saving..." : "Save changes"}
+            {isUpdating ? (
+              <span className="flex items-center gap-2">
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                Saving...
+              </span>
+            ) : "Save changes"}
           </button>
           <button
             onClick={onClose}

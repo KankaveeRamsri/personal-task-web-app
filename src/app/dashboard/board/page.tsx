@@ -230,16 +230,28 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      {/* Feedback messages */}
-      {errorMsg && (
-        <div className="flex items-center justify-between rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
-          <span>{errorMsg}</span>
-          <button onClick={clearError} className="ml-2 font-bold">&times;</button>
+      {/* Feedback toasts */}
+      {successMsg && (
+        <div
+          className="fixed top-4 right-4 z-30 flex items-center gap-2 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-600 shadow-lg border border-green-200/50 dark:bg-green-950 dark:text-green-400 dark:border-green-800"
+          style={{ animation: "toast-in 0.2s ease-out" }}
+        >
+          <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+          </svg>
+          {successMsg}
         </div>
       )}
-      {successMsg && (
-        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-600 dark:bg-green-950 dark:text-green-400">
-          {successMsg}
+      {errorMsg && (
+        <div
+          className="fixed top-4 right-4 z-30 flex items-center gap-2 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 shadow-lg border border-red-200/50 dark:bg-red-950 dark:text-red-400 dark:border-red-800"
+          style={{ animation: "toast-in 0.2s ease-out" }}
+        >
+          <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+          </svg>
+          <span>{errorMsg}</span>
+          <button onClick={clearError} className="ml-1 font-bold opacity-60 hover:opacity-100">&times;</button>
         </div>
       )}
 
@@ -288,7 +300,7 @@ export default function DashboardPage() {
             </svg>
           </div>
           <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">No workspaces yet</h3>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-5 max-w-[240px]">Create your first workspace to start organizing tasks with your team.</p>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-5 max-w-[240px]">Create a workspace to organize tasks and collaborate with your team.</p>
           <button
             onClick={() => setShowNewWorkspace(true)}
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 active:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:focus:ring-zinc-600"
@@ -307,7 +319,7 @@ export default function DashboardPage() {
             </svg>
           </div>
           <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">No boards yet</h3>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-5 max-w-[240px]">Create a board to organize your tasks into lists.</p>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-5 max-w-[240px]">Add a board to track tasks across To Do, In Progress, and Completed.</p>
           <button
             onClick={() => setShowNewBoard(true)}
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 active:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:focus:ring-zinc-600"
