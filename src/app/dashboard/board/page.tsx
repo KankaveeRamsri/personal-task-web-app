@@ -36,6 +36,7 @@ export default function DashboardPage() {
     createTask,
     updateTask,
     deleteTask,
+    moveTask,
     deleteBoard,
     deleteWorkspace,
     clearError,
@@ -103,9 +104,36 @@ export default function DashboardPage() {
     setActiveTaskId(event.active.id as string);
   };
 
-  const handleDragEnd = (_event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
     setActiveTaskId(null);
-    // Foundation step: do NOT persist drag result
+
+    if (!over || !canEditTasks) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    let targetListId: string | null = null;
+    if (lists.some((l) => l.id === overId)) {
+      targetListId = overId;
+    } else {
+      const overTask = tasks.find((t) => t.id === overId);
+      if (overTask) targetListId = overTask.list_id;
+    }
+    if (!targetListId) return;
+
+    const activeTaskData = tasks.find((t) => t.id === activeId);
+    if (!activeTaskData) return;
+
+    if (activeTaskData.list_id === targetListId) return;
+
+    const ok = await moveTask(activeId, targetListId, activeTaskData.list_id);
+    if (ok) {
+      const targetList = lists.find((l) => l.id === targetListId);
+      const displayTitle =
+        targetList?.title === "Done" ? "Completed" : targetList?.title ?? "column";
+      showSuccess(`Moved to ${displayTitle}`);
+    }
   };
 
   const showSuccess = useCallback((msg: string) => {

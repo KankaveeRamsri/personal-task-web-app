@@ -286,6 +286,35 @@ export function useBoardData() {
     return updated;
   }, []);
 
+  const moveTask = useCallback(
+    async (taskId: string, targetListId: string, originalListId: string) => {
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, list_id: targetListId } : t))
+      );
+
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("tasks")
+        .update({ list_id: targetListId })
+        .eq("id", taskId)
+        .select()
+        .single();
+
+      if (error) {
+        setTasks((prev) =>
+          prev.map((t) => (t.id === taskId ? { ...t, list_id: originalListId } : t))
+        );
+        setErrorMsg(error.message);
+        return false;
+      }
+
+      const updated = data as Task;
+      setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
+      return true;
+    },
+    []
+  );
+
   const deleteTask = useCallback(async (id: string) => {
     const supabase = createClient();
     const { error } = await supabase.from("tasks").delete().eq("id", id);
@@ -363,6 +392,7 @@ export function useBoardData() {
     createTask,
     updateTask,
     deleteTask,
+    moveTask,
     deleteBoard,
     deleteWorkspace,
     fetchTasks,
