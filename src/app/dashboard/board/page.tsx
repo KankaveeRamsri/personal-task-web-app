@@ -250,6 +250,35 @@ export default function DashboardPage() {
     }
   }, [lists, tasks, selectedTaskIds, updateTask, clearSelection, showSuccess, setErrorMsg]);
 
+  // Bulk delete
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedTaskIds.size === 0) return;
+    setBulkDeleting(true);
+
+    const selectedIds = Array.from(selectedTaskIds);
+    let errorOccurred = false;
+
+    for (const id of selectedIds) {
+      try {
+        await deleteTask(id);
+      } catch {
+        errorOccurred = true;
+        break;
+      }
+    }
+
+    setBulkDeleting(false);
+
+    if (errorOccurred) {
+      setErrorMsg("Failed to delete some tasks. Please try again.");
+    } else {
+      clearSelection();
+      showSuccess(`Deleted ${selectedIds.length} task${selectedIds.length > 1 ? "s" : ""}`);
+    }
+  }, [selectedTaskIds, deleteTask, clearSelection, showSuccess, setErrorMsg]);
+
   // Toolbar toggle handlers
   const toggleNewWorkspace = () => {
     const next = !showNewWorkspace;
@@ -651,6 +680,8 @@ export default function DashboardPage() {
         listTitles={lists.map((l) => l.title)}
         onBulkMove={handleBulkMove}
         moving={bulkMoving}
+        onBulkDelete={handleBulkDelete}
+        deleting={bulkDeleting}
         onClearSelection={clearSelection}
       />
     </div>
