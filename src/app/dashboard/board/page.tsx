@@ -207,6 +207,49 @@ export default function DashboardPage() {
     setTimeout(() => setSuccessMsg(""), 3000);
   }, []);
 
+  // Bulk move
+  const [bulkMoving, setBulkMoving] = useState(false);
+
+  const handleBulkMove = useCallback(async (targetTitle: string) => {
+    const targetList =
+      lists.find((l) => l.title === targetTitle) ||
+      (targetTitle === "Completed" ? lists.find((l) => l.title === "Done") : undefined);
+    if (!targetList || selectedTaskIds.size === 0) return;
+
+    setBulkMoving(true);
+
+    const targetTasks = tasks
+      .filter((t) => t.list_id === targetList.id)
+      .sort((a, b) => a.position - b.position);
+    const maxPosition = targetTasks.length > 0
+      ? Math.max(...targetTasks.map((t) => t.position))
+      : 0;
+
+    const selectedIds = Array.from(selectedTaskIds);
+    let failed = false;
+
+    for (let i = 0; i < selectedIds.length; i++) {
+      const result = await updateTask(selectedIds[i], {
+        list_id: targetList.id,
+        position: maxPosition + (i + 1) * 1000,
+      } as Partial<Task>);
+      if (!result) {
+        failed = true;
+        break;
+      }
+    }
+
+    setBulkMoving(false);
+
+    if (failed) {
+      setErrorMsg("Failed to move some tasks. Please try again.");
+    } else {
+      clearSelection();
+      const title = targetList.title === "Done" ? "Completed" : targetList.title;
+      showSuccess(`Moved ${selectedIds.length} task${selectedIds.length > 1 ? "s" : ""} to ${title}`);
+    }
+  }, [lists, tasks, selectedTaskIds, updateTask, clearSelection, showSuccess, setErrorMsg]);
+
   // Toolbar toggle handlers
   const toggleNewWorkspace = () => {
     const next = !showNewWorkspace;
@@ -605,6 +648,9 @@ export default function DashboardPage() {
 
       <BulkActionToolbar
         selectedCount={selectedTaskIds.size}
+        listTitles={lists.map((l) => l.title)}
+        onBulkMove={handleBulkMove}
+        moving={bulkMoving}
         onClearSelection={clearSelection}
       />
     </div>

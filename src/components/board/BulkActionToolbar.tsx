@@ -1,14 +1,39 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
+
 export interface BulkActionToolbarProps {
   selectedCount: number;
+  listTitles: string[];
+  onBulkMove: (targetTitle: string) => void;
+  moving: boolean;
   onClearSelection: () => void;
 }
 
+const displayTitle = (title: string) =>
+  title === "Done" ? "Completed" : title;
+
 export default function BulkActionToolbar({
   selectedCount,
+  listTitles,
+  onBulkMove,
+  moving,
   onClearSelection,
 }: BulkActionToolbarProps) {
+  const [moveMenuOpen, setMoveMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!moveMenuOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMoveMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [moveMenuOpen]);
+
   if (selectedCount === 0) return null;
 
   return (
@@ -22,16 +47,44 @@ export default function BulkActionToolbar({
 
       <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-700" />
 
-      <button
-        disabled
-        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-zinc-400 cursor-not-allowed dark:text-zinc-500"
-      >
-        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-        </svg>
-        Move
-      </button>
+      {/* Move dropdown */}
+      <div className="relative" ref={menuRef}>
+        <button
+          onClick={() => setMoveMenuOpen((v) => !v)}
+          disabled={moving}
+          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-800 active:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed dark:text-zinc-300 dark:hover:bg-zinc-700 dark:hover:text-zinc-100 dark:active:bg-zinc-600"
+        >
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+          </svg>
+          {moving ? "Moving..." : "Move"}
+          <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" />
+          </svg>
+        </button>
+        {moveMenuOpen && (
+          <div className="absolute bottom-full left-0 mb-2 w-40 rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
+            <p className="px-3 py-1 text-[11px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
+              Move to
+            </p>
+            {listTitles.map((title) => (
+              <button
+                key={title}
+                onClick={() => {
+                  setMoveMenuOpen(false);
+                  onBulkMove(title);
+                }}
+                disabled={moving}
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:text-zinc-300 dark:hover:bg-zinc-700/50"
+              >
+                {displayTitle(title)}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
+      {/* Delete placeholder */}
       <button
         disabled
         className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-zinc-400 cursor-not-allowed dark:text-zinc-500"
