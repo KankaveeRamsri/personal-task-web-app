@@ -12,6 +12,7 @@ export type MenuPosition = { taskId: string; top: number; left: number };
 export interface TaskCardProps {
   task: Task;
   members: MemberWithProfile[];
+  listTitle: string;
   isUpdating: boolean;
   isDeleting: boolean;
   isConfirmDelete: boolean;
@@ -45,22 +46,28 @@ const getPriorityColor = (priority: string) => {
   }
 };
 
-const formatDueDate = (dateStr: string) => {
-  const date = new Date(dateStr + "T00:00:00");
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+function getLocalDate(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function getDueDateInfo(dateStr: string): { label: string; diffDays: number } {
+  const target = getLocalDate(new Date(dateStr + "T00:00:00"));
+  const today = getLocalDate(new Date());
   const diffDays = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) return `${Math.abs(diffDays)}d overdue`;
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Tomorrow";
-  if (diffDays <= 7) return `${diffDays}d`;
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-};
+  if (diffDays < 0) return { label: `${Math.abs(diffDays)}d overdue`, diffDays };
+  if (diffDays === 0) return { label: "Today", diffDays };
+  if (diffDays === 1) return { label: "Tomorrow", diffDays };
+  if (diffDays <= 7) return { label: `${diffDays}d`, diffDays };
+  return {
+    label: target.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    diffDays,
+  };
+}
 
 export default function TaskCard({
   task,
   members,
+  listTitle,
   isUpdating,
   isDeleting,
   isConfirmDelete,
@@ -145,18 +152,44 @@ export default function TaskCard({
                   <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 capitalize">{task.priority}</span>
                 </span>
               )}
-              {task.due_date && (
-                <span className={`flex items-center gap-1 text-[11px] font-medium ${
-                  new Date(task.due_date + "T23:59:59") < new Date() && !task.is_completed
-                    ? "text-red-500 dark:text-red-400"
-                    : "text-zinc-400 dark:text-zinc-500"
-                }`}>
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
-                  </svg>
-                  {formatDueDate(task.due_date)}
-                </span>
-              )}
+              {task.due_date && (() => {
+                const { diffDays } = getDueDateInfo(task.due_date);
+                const isOverdue = diffDays < 0;
+                const isToday = diffDays === 0;
+                const isCompletedColumn = listTitle === "Completed" || listTitle === "Done";
+                const muted = task.is_completed || isCompletedColumn;
+
+                let chipClass: string;
+                let displayLabel: string;
+                if (muted) {
+                  chipClass = "bg-zinc-100 text-zinc-400 dark:bg-zinc-700/50 dark:text-zinc-500";
+                  const date = new Date(task.due_date + "T00:00:00");
+                  displayLabel = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                } else if (isOverdue) {
+                  chipClass = "bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400";
+                  displayLabel = `${Math.abs(diffDays)}d overdue`;
+                } else if (isToday) {
+                  chipClass = "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400";
+                  displayLabel = "Today";
+                } else {
+                  chipClass = "bg-zinc-100 text-zinc-500 dark:bg-zinc-700/50 dark:text-zinc-400";
+                  if (diffDays === 1) displayLabel = "Tomorrow";
+                  else if (diffDays <= 7) displayLabel = `${diffDays}d`;
+                  else {
+                    const date = new Date(task.due_date + "T00:00:00");
+                    displayLabel = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                  }
+                }
+
+                return (
+                  <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ${chipClass}`}>
+                    <svg className="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+                    </svg>
+                    {displayLabel}
+                  </span>
+                );
+              })()}
               {task.assignee_id && (() => {
                 const assignee = members.find((m) => m.user_id === task.assignee_id);
                 if (!assignee) return null;
