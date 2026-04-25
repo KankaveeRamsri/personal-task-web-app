@@ -63,6 +63,21 @@ export default function DashboardPage() {
     setSelectedTaskIds(new Set());
   }, []);
 
+  const handleSelectAllInColumn = useCallback((listId: string) => {
+    setSelectedTaskIds((prev) => {
+      const columnIds = tasks.filter((t) => t.list_id === listId).map((t) => t.id);
+      if (columnIds.length === 0) return prev;
+      const allSelected = columnIds.every((id) => prev.has(id));
+      const next = new Set(prev);
+      if (allSelected) {
+        columnIds.forEach((id) => next.delete(id));
+      } else {
+        columnIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  }, [tasks]);
+
   // Esc key clears selection
   useEffect(() => {
     if (selectedTaskIds.size === 0) return;
@@ -72,6 +87,20 @@ export default function DashboardPage() {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [selectedTaskIds.size, clearSelection]);
+
+  // Cmd/Ctrl+A selects all visible tasks
+  useEffect(() => {
+    if (!selectedBoardId || lists.length === 0) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key !== "a") return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      e.preventDefault();
+      setSelectedTaskIds(new Set(tasks.map((t) => t.id)));
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [selectedBoardId, lists.length, tasks]);
 
   // Task form state
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -374,6 +403,12 @@ export default function DashboardPage() {
     await deleteTask(id);
     setDeletingId(null);
     setConfirmDeleteId(null);
+    setSelectedTaskIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
     showSuccess("Task deleted");
   };
 
@@ -596,6 +631,7 @@ export default function DashboardPage() {
               menuOpen={menuOpen}
               selectedTaskIds={selectedTaskIds}
               onToggleSelect={handleToggleSelect}
+              onSelectAllInColumn={handleSelectAllInColumn}
               onAddTask={handleAddTask}
               onStartEdit={startEdit}
               onDelete={handleDelete}
@@ -677,6 +713,7 @@ export default function DashboardPage() {
 
       <BulkActionToolbar
         selectedCount={selectedTaskIds.size}
+        totalTaskCount={tasks.length}
         listTitles={lists.map((l) => l.title)}
         onBulkMove={handleBulkMove}
         moving={bulkMoving}

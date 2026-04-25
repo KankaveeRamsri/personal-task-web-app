@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 
 export interface BulkActionToolbarProps {
   selectedCount: number;
+  totalTaskCount: number;
   listTitles: string[];
   onBulkMove: (targetTitle: string) => void;
   moving: boolean;
@@ -17,6 +18,7 @@ const displayTitle = (title: string) =>
 
 export default function BulkActionToolbar({
   selectedCount,
+  totalTaskCount,
   listTitles,
   onBulkMove,
   moving,
@@ -93,11 +95,16 @@ export default function BulkActionToolbar({
 
       {/* Toolbar */}
       <div
-        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-800"
+        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 shadow-lg max-w-[calc(100vw-2rem)] dark:border-zinc-700 dark:bg-zinc-800"
         style={{ animation: "toolbar-in 0.15s ease-out" }}
       >
-        <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 px-1.5">
-          {selectedCount} selected
+        <span className="flex items-center gap-1.5 shrink-0">
+          <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-blue-500 px-1.5 text-[11px] font-semibold text-white">
+            {selectedCount}
+          </span>
+          <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            of {totalTaskCount}
+          </span>
         </span>
 
         <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-700" />

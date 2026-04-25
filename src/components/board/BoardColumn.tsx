@@ -31,6 +31,7 @@ export interface BoardColumnProps {
   menuOpen: MenuPosition | null;
   selectedTaskIds: Set<string>;
   onToggleSelect: (taskId: string) => void;
+  onSelectAllInColumn: (listId: string) => void;
   onAddTask: (e: React.FormEvent, listId: string) => void;
   onStartEdit: (task: Task) => void;
   onDelete: (id: string) => void;
@@ -59,6 +60,7 @@ export default function BoardColumn({
   menuOpen,
   selectedTaskIds,
   onToggleSelect,
+  onSelectAllInColumn,
   onAddTask,
   onStartEdit,
   onDelete,
@@ -89,6 +91,10 @@ export default function BoardColumn({
     current: title === list.title,
   }));
 
+  const selectedInColumn = tasks.filter((t) => selectedTaskIds.has(t.id)).length;
+  const allSelected = tasks.length > 0 && selectedInColumn === tasks.length;
+  const someSelected = selectedInColumn > 0 && !allSelected;
+
   return (
     <div
       ref={setNodeRef}
@@ -116,9 +122,19 @@ export default function BoardColumn({
               {list.title === "Done" ? "Completed" : list.title}
             </h3>
           </div>
-          <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-zinc-200/80 px-1.5 text-[11px] font-semibold text-zinc-500 dark:bg-zinc-700/60 dark:text-zinc-400">
+          <button
+            onClick={() => onSelectAllInColumn(list.id)}
+            title={allSelected ? "Deselect all" : "Select all"}
+            className={`flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold transition-colors ${
+              allSelected
+                ? "bg-blue-500 text-white"
+                : someSelected
+                  ? "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400"
+                  : "bg-zinc-200/80 text-zinc-500 cursor-pointer hover:bg-zinc-300/80 dark:bg-zinc-700/60 dark:text-zinc-400 dark:hover:bg-zinc-600/60"
+            }`}
+          >
             {tasks.length}
-          </span>
+          </button>
         </div>
       </div>
 
