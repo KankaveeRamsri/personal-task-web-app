@@ -22,6 +22,7 @@ import BoardToolbar from "@/components/board/BoardToolbar";
 import TaskDetailPanel from "@/components/board/TaskDetailPanel";
 import BulkActionToolbar from "@/components/board/BulkActionToolbar";
 import BoardFilterBar from "@/components/board/BoardFilterBar";
+import { logActivity } from "@/lib/activity-log";
 
 export default function DashboardPage() {
   const {
@@ -309,8 +310,18 @@ export default function DashboardPage() {
       const ok = await moveTask(activeId, targetListId, activeTaskData.list_id);
       if (ok) {
         const targetList = lists.find((l) => l.id === targetListId);
+        const fromList = lists.find((l) => l.id === activeTaskData.list_id);
         const displayTitle =
           targetList?.title === "Done" ? "Completed" : targetList?.title ?? "column";
+        if (selectedWorkspaceId && selectedBoardId) {
+          logActivity({
+            workspaceId: selectedWorkspaceId,
+            boardId: selectedBoardId,
+            taskId: activeId,
+            action: "task_moved",
+            metadata: { task_title: activeTaskData.title, from: fromList?.title ?? "", to: targetList?.title ?? "" },
+          });
+        }
         showSuccess(`Moved to ${displayTitle}`);
       }
     } finally {
@@ -362,9 +373,17 @@ export default function DashboardPage() {
     } else {
       clearSelection();
       const title = targetList.title === "Done" ? "Completed" : targetList.title;
+      if (selectedWorkspaceId && selectedBoardId) {
+        logActivity({
+          workspaceId: selectedWorkspaceId,
+          boardId: selectedBoardId,
+          action: "bulk_moved",
+          metadata: { count: selectedIds.length, to: targetList.title },
+        });
+      }
       showSuccess(`Moved ${selectedIds.length} task${selectedIds.length > 1 ? "s" : ""} to ${title}`);
     }
-  }, [lists, tasks, selectedTaskIds, updateTask, clearSelection, showSuccess, setErrorMsg]);
+  }, [lists, tasks, selectedTaskIds, updateTask, clearSelection, showSuccess, setErrorMsg, selectedWorkspaceId, selectedBoardId]);
 
   // Bulk delete
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -391,9 +410,17 @@ export default function DashboardPage() {
       setErrorMsg("Failed to delete some tasks. Please try again.");
     } else {
       clearSelection();
+      if (selectedWorkspaceId && selectedBoardId) {
+        logActivity({
+          workspaceId: selectedWorkspaceId,
+          boardId: selectedBoardId,
+          action: "bulk_deleted",
+          metadata: { count: selectedIds.length },
+        });
+      }
       showSuccess(`Deleted ${selectedIds.length} task${selectedIds.length > 1 ? "s" : ""}`);
     }
-  }, [selectedTaskIds, deleteTask, clearSelection, showSuccess, setErrorMsg]);
+  }, [selectedTaskIds, deleteTask, clearSelection, showSuccess, setErrorMsg, selectedWorkspaceId, selectedBoardId]);
 
   // Toolbar toggle handlers
   const toggleNewWorkspace = () => {
@@ -436,11 +463,20 @@ export default function DashboardPage() {
     e.preventDefault();
     if (!newTaskTitle.trim() || !listId) return;
     setAdding(true);
-    await createTask(listId, newTaskTitle.trim(), {
+    const task = await createTask(listId, newTaskTitle.trim(), {
       priority: newTaskPriority,
       due_date: newTaskDueDate || null,
       assignee_id: newTaskAssigneeId || null,
     });
+    if (task && selectedWorkspaceId && selectedBoardId) {
+      logActivity({
+        workspaceId: selectedWorkspaceId,
+        boardId: selectedBoardId,
+        taskId: task.id,
+        action: "task_created",
+        metadata: { task_title: task.title },
+      });
+    }
     setNewTaskTitle("");
     setNewTaskPriority("none");
     setNewTaskDueDate("");
@@ -477,6 +513,7 @@ export default function DashboardPage() {
 
   const saveEdit = async (id: string) => {
     if (!editTitle.trim()) return;
+    const original = tasks.find((t) => t.id === id);
     setUpdatingId(id);
     await updateTask(id, {
       title: editTitle.trim(),
@@ -485,14 +522,55 @@ export default function DashboardPage() {
       due_date: editDueDate || null,
       assignee_id: editAssigneeId || null,
     } as Partial<Task>);
+
+    if (original && selectedWorkspaceId && selectedBoardId) {
+      const newAssigneeId = editAssigneeId || null;
+      const newDueDate = editDueDate || null;
+      if (original.assignee_id !== newAssigneeId) {
+        const assignee = newAssigneeId ? members.find((m) => m.user_id === newAssigneeId) : null;
+        logActivity({
+          workspaceId: selectedWorkspaceId,
+          boardId: selectedBoardId,
+          taskId: id,
+          action: "task_assigned",
+          metadata: { task_title: editTitle.trim(), assignee_name: assignee ? (assignee.display_name || assignee.email) : null },
+        });
+      } else if (original.due_date !== newDueDate) {
+        logActivity({
+          workspaceId: selectedWorkspaceId,
+          boardId: selectedBoardId,
+          taskId: id,
+          action: "due_date_changed",
+          metadata: { task_title: editTitle.trim(), due_date: newDueDate },
+        });
+      } else {
+        logActivity({
+          workspaceId: selectedWorkspaceId,
+          boardId: selectedBoardId,
+          taskId: id,
+          action: "task_updated",
+          metadata: { task_title: editTitle.trim() },
+        });
+      }
+    }
+
     setUpdatingId(null);
     setEditingId(null);
     showSuccess("Task updated");
   };
 
   const handleDelete = async (id: string) => {
+    const task = tasks.find((t) => t.id === id);
     setDeletingId(id);
     await deleteTask(id);
+    if (task && selectedWorkspaceId && selectedBoardId) {
+      logActivity({
+        workspaceId: selectedWorkspaceId,
+        boardId: selectedBoardId,
+        action: "task_deleted",
+        metadata: { task_title: task.title },
+      });
+    }
     setDeletingId(null);
     setConfirmDeleteId(null);
     setSelectedTaskIds((prev) => {
@@ -510,8 +588,19 @@ export default function DashboardPage() {
       (targetTitle === "Completed" ? lists.find((l) => l.title === "Done") : undefined);
     if (!targetList) return;
 
+    const task = tasks.find((t) => t.id === taskId);
+    const fromList = task ? lists.find((l) => l.id === task.list_id) : undefined;
     setUpdatingId(taskId);
     await updateTask(taskId, { list_id: targetList.id } as Partial<Task>);
+    if (task && selectedWorkspaceId && selectedBoardId) {
+      logActivity({
+        workspaceId: selectedWorkspaceId,
+        boardId: selectedBoardId,
+        taskId,
+        action: "task_moved",
+        metadata: { task_title: task.title, from: fromList?.title ?? "", to: targetList.title },
+      });
+    }
     setUpdatingId(null);
     showSuccess(`Moved to ${targetTitle}`);
   };

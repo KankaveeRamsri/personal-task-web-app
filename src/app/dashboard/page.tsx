@@ -5,6 +5,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { useBoardData } from "@/hooks/useBoardData";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
+import { useRecentActivities } from "@/hooks/useRecentActivities";
+import type { Activity } from "@/hooks/useRecentActivities";
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -52,6 +54,59 @@ function isCompletedTask(task: { is_completed: boolean; list_id: string }, listT
   return title === "Completed" || title === "Done";
 }
 
+function formatActivityLine(a: Activity): string {
+  const name = a.actor_display_name || a.actor_email || "Someone";
+  const m = a.metadata ?? {};
+  const title = (m.task_title as string) ?? "a task";
+  const fmt = (col: string) => col === "Done" ? "Completed" : col;
+
+  switch (a.action) {
+    case "task_created":
+      return `${name} created "${title}"`;
+    case "task_updated":
+      return `${name} updated "${title}"`;
+    case "task_moved":
+      return `${name} moved "${title}" to ${fmt((m.to as string) ?? "")}`;
+    case "task_assigned":
+      return m.assignee_name
+        ? `${name} assigned "${title}" to ${m.assignee_name}`
+        : `${name} unassigned "${title}"`;
+    case "due_date_changed":
+      return `${name} changed due date of "${title}"`;
+    case "task_deleted":
+      return `${name} deleted "${title}"`;
+    case "bulk_moved":
+      return `${name} moved ${m.count} task${(m.count as number) > 1 ? "s" : ""} to ${fmt((m.to as string) ?? "")}`;
+    case "bulk_deleted":
+      return `${name} deleted ${m.count} task${(m.count as number) > 1 ? "s" : ""}`;
+    default:
+      return `${name} ${a.action}`;
+  }
+}
+
+function timeAgo(dateStr: string): string {
+  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+const actionIcon: Record<string, string> = {
+  task_created: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400",
+  task_updated: "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400",
+  task_moved: "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400",
+  task_assigned: "bg-violet-100 text-violet-600 dark:bg-violet-900/40 dark:text-violet-400",
+  due_date_changed: "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400",
+  task_deleted: "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400",
+  bulk_moved: "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400",
+  bulk_deleted: "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400",
+};
+
 // ── Dashboard Page ───────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -85,6 +140,7 @@ export default function DashboardPage() {
   } = useBoardData();
 
   const { members } = useWorkspaceMembers(selectedWorkspaceId);
+  const { activities } = useRecentActivities(selectedWorkspaceId, selectedBoardId);
 
   const displayName = userName || userEmail.split("@")[0] || "there";
 
@@ -529,6 +585,43 @@ export default function DashboardPage() {
                 Open Board
               </Link>
             </div>
+          </div>
+
+          {/* Recent Activity */}
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                Recent Activity
+              </h2>
+              {activities.length > 0 && (
+                <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                  Latest {activities.length}
+                </span>
+              )}
+            </div>
+            {activities.length > 0 ? (
+              <ul className="space-y-3">
+                {activities.map((a) => (
+                  <li key={a.id} className="flex items-start gap-3">
+                    <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${actionIcon[a.action] ?? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
+                      {(a.actor_display_name || a.actor_email || "?").slice(0, 1).toUpperCase()}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] leading-snug text-zinc-700 dark:text-zinc-300">
+                        {formatActivityLine(a)}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-zinc-400 dark:text-zinc-500">
+                        {timeAgo(a.created_at)}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-zinc-400 dark:text-zinc-500">
+                {selectedBoardId ? "No activity yet" : "Select a board to see activity"}
+              </p>
+            )}
           </div>
         </div>
       </section>
