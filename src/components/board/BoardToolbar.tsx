@@ -146,7 +146,7 @@ export default function BoardToolbar({
             <select
               value={selectedWorkspaceId ?? ""}
               onChange={(e) => onWorkspaceChange(e.target.value)}
-              className="rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:focus:ring-zinc-600"
+              className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-semibold text-zinc-900 shadow-md ring-1 ring-zinc-900/[0.08] transition-all hover:shadow-lg hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/[0.06] dark:hover:border-zinc-500 dark:focus:ring-zinc-500"
             >
               {workspaces.map((ws) => (
                 <option key={ws.id} value={ws.id}>
@@ -157,12 +157,12 @@ export default function BoardToolbar({
           ) : null}
           {selectedWorkspaceId && (
             <>
-              <span className="text-zinc-300 dark:text-zinc-700">/</span>
+              <span className="text-zinc-300 dark:text-zinc-600">/</span>
               {boards.length > 0 ? (
                 <select
                   value={selectedBoardId ?? ""}
                   onChange={(e) => onBoardChange(e.target.value)}
-                  className="rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:focus:ring-zinc-600"
+                  className="rounded-lg border border-zinc-200/60 bg-zinc-50/50 px-3 py-1.5 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700 hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700/30 dark:bg-zinc-800/30 dark:text-zinc-400 dark:hover:bg-zinc-700/50 dark:hover:text-zinc-300 dark:focus:ring-zinc-600"
                 >
                   {boards.map((b) => (
                     <option key={b.id} value={b.id}>
@@ -182,21 +182,22 @@ export default function BoardToolbar({
           {selectedWorkspaceId && (
             <button
               onClick={onToggleMembers}
-              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-zinc-50 active:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:bg-zinc-800 dark:active:bg-zinc-700 dark:focus:ring-zinc-600"
+              className="rounded-lg px-3 py-1.5 text-sm text-zinc-500 transition-colors hover:text-zinc-700 hover:bg-zinc-100 active:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-200 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-700/60 dark:active:bg-zinc-700 dark:focus:ring-zinc-600"
             >
               Members
             </button>
           )}
+          <div className="w-px h-5 bg-zinc-200 dark:bg-zinc-700/50" />
           <button
             onClick={onToggleNewWorkspace}
-            className="text-sm text-zinc-400 transition-colors hover:text-zinc-600 active:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300 dark:active:text-zinc-200"
+            className="rounded-lg bg-indigo-50/70 px-3 py-1.5 text-sm font-medium text-indigo-500 transition-colors hover:bg-indigo-100 hover:text-indigo-700 active:bg-indigo-150 dark:bg-indigo-950/20 dark:text-indigo-400/80 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-300 dark:active:bg-indigo-900/50"
           >
             + Workspace
           </button>
           {selectedWorkspaceId && (
             <button
               onClick={onToggleNewBoard}
-              className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 active:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:focus:ring-zinc-600"
+              className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-indigo-500 hover:shadow active:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400/50 dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:active:bg-indigo-600 dark:focus:ring-indigo-400"
             >
               + Board
             </button>
@@ -205,7 +206,7 @@ export default function BoardToolbar({
             <div className="relative" ref={moreMenuRef}>
               <button
                 onClick={() => setMoreMenuOpen((v) => !v)}
-                className="flex items-center justify-center rounded-lg border border-zinc-200 px-2 py-1.5 text-zinc-500 transition-colors hover:border-zinc-300 hover:bg-zinc-50 active:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:bg-zinc-800 dark:active:bg-zinc-700 dark:focus:ring-zinc-600"
+                className="flex items-center justify-center rounded-lg px-2 py-1.5 text-zinc-400 transition-colors hover:text-zinc-600 hover:bg-zinc-100 active:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-200 dark:text-zinc-500 dark:hover:text-zinc-300 dark:hover:bg-zinc-800 dark:active:bg-zinc-700 dark:focus:ring-zinc-600"
               >
                 <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
