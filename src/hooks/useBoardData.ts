@@ -225,7 +225,7 @@ export function useBoardData() {
     async (
       listId: string,
       title: string,
-      metadata?: { description?: string; priority?: string; due_date?: string | null }
+      metadata?: { description?: string; priority?: string; due_date?: string | null; assignee_id?: string | null }
     ) => {
       const supabase = createClient();
       const {
@@ -251,6 +251,7 @@ export function useBoardData() {
           description: metadata?.description || "",
           priority: metadata?.priority || "none",
           due_date: metadata?.due_date || null,
+          assignee_id: metadata?.assignee_id || null,
           created_by: user.id,
           position: nextPos,
         })

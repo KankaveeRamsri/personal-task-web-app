@@ -2,19 +2,23 @@
 
 import { useEffect, useRef } from "react";
 import type { Task, TaskPriority } from "@/types/database";
+import type { MemberWithProfile } from "@/hooks/useWorkspaceMembers";
 
 export interface TaskDetailPanelProps {
   open: boolean;
   task: Task | null;
+  members: MemberWithProfile[];
   editTitle: string;
   editDescription: string;
   editPriority: TaskPriority;
   editDueDate: string;
+  editAssigneeId: string;
   isUpdating: boolean;
   onTitleChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
   onPriorityChange: (value: TaskPriority) => void;
   onDueDateChange: (value: string) => void;
+  onAssigneeIdChange: (value: string) => void;
   onSave: () => void;
   onClose: () => void;
 }
@@ -22,15 +26,18 @@ export interface TaskDetailPanelProps {
 export default function TaskDetailPanel({
   open,
   task,
+  members,
   editTitle,
   editDescription,
   editPriority,
   editDueDate,
+  editAssigneeId,
   isUpdating,
   onTitleChange,
   onDescriptionChange,
   onPriorityChange,
   onDueDateChange,
+  onAssigneeIdChange,
   onSave,
   onClose,
 }: TaskDetailPanelProps) {
@@ -126,6 +133,23 @@ export default function TaskDetailPanel({
                 className="w-full rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 dark:focus:ring-zinc-700/50 dark:border-zinc-700 dark:focus:border-zinc-600"
               />
             </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">
+              Assignee
+            </label>
+            <select
+              value={editAssigneeId}
+              onChange={(e) => onAssigneeIdChange(e.target.value)}
+              className="w-full rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 dark:focus:ring-zinc-700/50 dark:border-zinc-700 dark:focus:border-zinc-600"
+            >
+              <option value="">Unassigned</option>
+              {members.map((m) => (
+                <option key={m.user_id} value={m.user_id}>
+                  {m.display_name || m.email}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

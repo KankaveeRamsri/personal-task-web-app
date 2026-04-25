@@ -116,8 +116,10 @@ export default function DashboardPage() {
   const [menuOpen, setMenuOpen] = useState<MenuPosition | null>(null);
   const [newTaskPriority, setNewTaskPriority] = useState<TaskPriority>("none");
   const [newTaskDueDate, setNewTaskDueDate] = useState("");
+  const [newTaskAssigneeId, setNewTaskAssigneeId] = useState("");
   const [editPriority, setEditPriority] = useState<TaskPriority>("none");
   const [editDueDate, setEditDueDate] = useState("");
+  const [editAssigneeId, setEditAssigneeId] = useState("");
 
   // Workspace creation
   const [showNewWorkspace, setShowNewWorkspace] = useState(false);
@@ -363,10 +365,12 @@ export default function DashboardPage() {
     await createTask(listId, newTaskTitle.trim(), {
       priority: newTaskPriority,
       due_date: newTaskDueDate || null,
+      assignee_id: newTaskAssigneeId || null,
     });
     setNewTaskTitle("");
     setNewTaskPriority("none");
     setNewTaskDueDate("");
+    setNewTaskAssigneeId("");
     setAdding(false);
     showSuccess("Task added");
   };
@@ -384,6 +388,7 @@ export default function DashboardPage() {
     setEditDescription(task.description ?? "");
     setEditPriority(task.priority ?? "none");
     setEditDueDate(task.due_date ?? "");
+    setEditAssigneeId(task.assignee_id ?? "");
     setConfirmDeleteId(null);
   };
 
@@ -393,6 +398,7 @@ export default function DashboardPage() {
     setEditDescription("");
     setEditPriority("none");
     setEditDueDate("");
+    setEditAssigneeId("");
   };
 
   const saveEdit = async (id: string) => {
@@ -403,6 +409,7 @@ export default function DashboardPage() {
       description: editDescription.trim(),
       priority: editPriority,
       due_date: editDueDate || null,
+      assignee_id: editAssigneeId || null,
     } as Partial<Task>);
     setUpdatingId(null);
     setEditingId(null);
@@ -632,6 +639,7 @@ export default function DashboardPage() {
               key={list.id}
               list={list}
               tasks={tasks.filter((t) => t.list_id === list.id).sort((a, b) => a.position - b.position)}
+              members={members}
               canEditTasks={canEditTasks}
               addingToListId={addingToListId}
               newTaskTitle={newTaskTitle}
@@ -653,8 +661,10 @@ export default function DashboardPage() {
               onSetNewTaskTitle={setNewTaskTitle}
               newTaskPriority={newTaskPriority}
               newTaskDueDate={newTaskDueDate}
+              newTaskAssigneeId={newTaskAssigneeId}
               onNewTaskPriorityChange={setNewTaskPriority}
               onNewTaskDueDateChange={setNewTaskDueDate}
+              onNewTaskAssigneeIdChange={setNewTaskAssigneeId}
               allListTitles={lists.map((l) => l.title)}
             />
           ))}
@@ -709,15 +719,18 @@ export default function DashboardPage() {
       <TaskDetailPanel
         open={editingId !== null}
         task={editingId ? tasks.find((t) => t.id === editingId) ?? null : null}
+        members={members}
         editTitle={editTitle}
         editDescription={editDescription}
         editPriority={editPriority}
         editDueDate={editDueDate}
+        editAssigneeId={editAssigneeId}
         isUpdating={updatingId !== null && updatingId === editingId}
         onTitleChange={setEditTitle}
         onDescriptionChange={setEditDescription}
         onPriorityChange={setEditPriority}
         onDueDateChange={setEditDueDate}
+        onAssigneeIdChange={setEditAssigneeId}
         onSave={() => { if (editingId) saveEdit(editingId); }}
         onClose={cancelEdit}
       />

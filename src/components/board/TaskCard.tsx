@@ -3,6 +3,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Task } from "@/types/database";
+import type { MemberWithProfile } from "@/hooks/useWorkspaceMembers";
 
 export type MoveTarget = { title: string; current: boolean };
 
@@ -10,6 +11,7 @@ export type MenuPosition = { taskId: string; top: number; left: number };
 
 export interface TaskCardProps {
   task: Task;
+  members: MemberWithProfile[];
   isUpdating: boolean;
   isDeleting: boolean;
   isConfirmDelete: boolean;
@@ -23,6 +25,15 @@ export interface TaskCardProps {
   onConfirmDelete: (id: string | null) => void;
   onSetMenuOpen: (menu: MenuPosition | null) => void;
   onMoveTask: (taskId: string, target: string) => void;
+}
+
+function getInitials(email: string, displayName: string): string {
+  if (displayName && displayName.trim()) {
+    const parts = displayName.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  return email.slice(0, 2).toUpperCase();
 }
 
 const getPriorityColor = (priority: string) => {
@@ -49,6 +60,7 @@ const formatDueDate = (dateStr: string) => {
 
 export default function TaskCard({
   task,
+  members,
   isUpdating,
   isDeleting,
   isConfirmDelete,
@@ -121,8 +133,8 @@ export default function TaskCard({
               {task.description}
             </p>
           )}
-          {/* Metadata: priority dot + due date */}
-          {(task.priority && task.priority !== "none") || task.due_date ? (
+          {/* Metadata: priority dot + due date + assignee */}
+          {(task.priority && task.priority !== "none") || task.due_date || task.assignee_id ? (
             <div className="mt-1.5 flex items-center gap-2 flex-wrap">
               {task.priority && task.priority !== "none" && (
                 <span className="flex items-center gap-1">
@@ -145,6 +157,18 @@ export default function TaskCard({
                   {formatDueDate(task.due_date)}
                 </span>
               )}
+              {task.assignee_id && (() => {
+                const assignee = members.find((m) => m.user_id === task.assignee_id);
+                if (!assignee) return null;
+                const initials = getInitials(assignee.email, assignee.display_name);
+                return (
+                  <span className="flex items-center gap-1 text-[11px] font-medium text-zinc-500 dark:text-zinc-400" title={assignee.email}>
+                    <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-zinc-200 text-[8px] font-semibold text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
+                      {initials}
+                    </span>
+                  </span>
+                );
+              })()}
             </div>
           ) : null}
         </div>

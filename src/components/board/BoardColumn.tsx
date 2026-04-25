@@ -4,6 +4,7 @@ import { useRef, useEffect } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { List, Task, TaskPriority } from "@/types/database";
+import type { MemberWithProfile } from "@/hooks/useWorkspaceMembers";
 import TaskCard from "@/components/board/TaskCard";
 import type { MenuPosition, MoveTarget } from "@/components/board/TaskCard";
 
@@ -21,6 +22,7 @@ const getColumnBarColor = (title: string, color: string) => {
 export interface BoardColumnProps {
   list: List;
   tasks: Task[];
+  members: MemberWithProfile[];
   canEditTasks: boolean;
   addingToListId: string | null;
   newTaskTitle: string;
@@ -42,14 +44,17 @@ export interface BoardColumnProps {
   onSetNewTaskTitle: (value: string) => void;
   newTaskPriority: TaskPriority;
   newTaskDueDate: string;
+  newTaskAssigneeId: string;
   onNewTaskPriorityChange: (value: TaskPriority) => void;
   onNewTaskDueDateChange: (value: string) => void;
+  onNewTaskAssigneeIdChange: (value: string) => void;
   allListTitles: string[];
 }
 
 export default function BoardColumn({
   list,
   tasks,
+  members,
   canEditTasks,
   addingToListId,
   newTaskTitle,
@@ -71,8 +76,10 @@ export default function BoardColumn({
   onSetNewTaskTitle,
   newTaskPriority,
   newTaskDueDate,
+  newTaskAssigneeId,
   onNewTaskPriorityChange,
   onNewTaskDueDateChange,
+  onNewTaskAssigneeIdChange,
   allListTitles,
 }: BoardColumnProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -162,6 +169,7 @@ export default function BoardColumn({
                 <TaskCard
                   key={task.id}
                   task={task}
+                  members={members}
                   isUpdating={updatingId === task.id}
                   isDeleting={deletingId === task.id}
                   isConfirmDelete={confirmDeleteId === task.id}
@@ -202,6 +210,7 @@ export default function BoardColumn({
                   onSetNewTaskTitle("");
                   onNewTaskPriorityChange("none");
                   onNewTaskDueDateChange("");
+                  onNewTaskAssigneeIdChange("");
                 }
               }}
               className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 dark:border-zinc-700 dark:bg-zinc-800/80 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 dark:focus:ring-zinc-700/50"
@@ -224,6 +233,22 @@ export default function BoardColumn({
                 className="flex-1 min-w-0 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-600 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-400 dark:focus:border-zinc-600"
               />
             </div>
+            {members.length > 0 && (
+              <div className="mt-1.5">
+                <select
+                  value={newTaskAssigneeId}
+                  onChange={(e) => onNewTaskAssigneeIdChange(e.target.value)}
+                  className="w-full rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-600 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-400 dark:focus:border-zinc-600"
+                >
+                  <option value="">Unassigned</option>
+                  {members.map((m) => (
+                    <option key={m.user_id} value={m.user_id}>
+                      {m.display_name || m.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="mt-2 flex items-center gap-2">
               <button
                 type="submit"
@@ -239,6 +264,7 @@ export default function BoardColumn({
                   onSetNewTaskTitle("");
                   onNewTaskPriorityChange("none");
                   onNewTaskDueDateChange("");
+                  onNewTaskAssigneeIdChange("");
                 }}
                 className="text-xs text-zinc-400 transition-colors hover:text-zinc-600 active:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300 dark:active:text-zinc-200"
               >
