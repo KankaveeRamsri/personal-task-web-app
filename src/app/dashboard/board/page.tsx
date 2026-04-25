@@ -11,6 +11,7 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 import { useBoardData } from "@/hooks/useBoardData";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
 import type { List, Task, WorkspaceRole, TaskPriority } from "@/types/database";
@@ -37,6 +38,7 @@ export default function DashboardPage() {
     updateTask,
     deleteTask,
     moveTask,
+    reorderTasks,
     deleteBoard,
     deleteWorkspace,
     clearError,
@@ -113,6 +115,10 @@ export default function DashboardPage() {
     const activeId = active.id as string;
     const overId = over.id as string;
 
+    const activeTaskData = tasks.find((t) => t.id === activeId);
+    if (!activeTaskData) return;
+
+    // Determine which column the drop target belongs to
     let targetListId: string | null = null;
     if (lists.some((l) => l.id === overId)) {
       targetListId = overId;
@@ -122,11 +128,27 @@ export default function DashboardPage() {
     }
     if (!targetListId) return;
 
-    const activeTaskData = tasks.find((t) => t.id === activeId);
-    if (!activeTaskData) return;
+    // Same column — reorder within column
+    if (activeTaskData.list_id === targetListId) {
+      if (activeId === overId) return;
 
-    if (activeTaskData.list_id === targetListId) return;
+      const columnTasks = tasks
+        .filter((t) => t.list_id === targetListId)
+        .sort((a, b) => a.position - b.position);
 
+      const oldIndex = columnTasks.findIndex((t) => t.id === activeId);
+      const newIndex = columnTasks.findIndex((t) => t.id === overId);
+      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+
+      const reordered = arrayMove(columnTasks, oldIndex, newIndex).map(
+        (task, i) => ({ ...task, position: (i + 1) * 1000 })
+      );
+
+      await reorderTasks(reordered, columnTasks);
+      return;
+    }
+
+    // Cross-column move
     const ok = await moveTask(activeId, targetListId, activeTaskData.list_id);
     if (ok) {
       const targetList = lists.find((l) => l.id === targetListId);
@@ -446,7 +468,7 @@ export default function DashboardPage() {
             <BoardColumn
               key={list.id}
               list={list}
-              tasks={tasks.filter((t) => t.list_id === list.id)}
+              tasks={tasks.filter((t) => t.list_id === list.id).sort((a, b) => a.position - b.position)}
               canEditTasks={canEditTasks}
               addingToListId={addingToListId}
               newTaskTitle={newTaskTitle}

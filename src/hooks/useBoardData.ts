@@ -315,6 +315,34 @@ export function useBoardData() {
     []
   );
 
+  const reorderTasks = useCallback(
+    async (reordered: Task[], original: Task[]) => {
+      const originalMap = new Map(original.map((t) => [t.id, t]));
+      const changed = reordered.filter(
+        (t) => t.position !== originalMap.get(t.id)?.position
+      );
+      if (changed.length === 0) return;
+
+      const reorderedMap = new Map(reordered.map((t) => [t.id, t]));
+      setTasks((prev) => prev.map((t) => reorderedMap.get(t.id) ?? t));
+
+      const supabase = createClient();
+      for (const task of changed) {
+        const { error } = await supabase
+          .from("tasks")
+          .update({ position: task.position })
+          .eq("id", task.id);
+        if (error) {
+          const revertMap = new Map(original.map((t) => [t.id, t]));
+          setTasks((prev) => prev.map((t) => revertMap.get(t.id) ?? t));
+          setErrorMsg(error.message);
+          return;
+        }
+      }
+    },
+    []
+  );
+
   const deleteTask = useCallback(async (id: string) => {
     const supabase = createClient();
     const { error } = await supabase.from("tasks").delete().eq("id", id);
@@ -393,6 +421,7 @@ export function useBoardData() {
     updateTask,
     deleteTask,
     moveTask,
+    reorderTasks,
     deleteBoard,
     deleteWorkspace,
     fetchTasks,
