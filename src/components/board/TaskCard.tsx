@@ -82,10 +82,10 @@ export default function TaskCard({
       style={dragStyle}
       {...attributes}
       {...listeners}
-      className={`group relative rounded-lg border px-3 py-2.5 shadow-sm transition-all duration-150 ${
+      className={`group relative rounded-lg border px-3 py-2.5 transition-all duration-200 select-none ${
         isDragging
-          ? "opacity-40 shadow-xl border-zinc-300 dark:border-zinc-500 bg-white dark:bg-zinc-800"
-          : "border-zinc-100 bg-white hover:shadow-md hover:border-zinc-200 hover:bg-zinc-50/50 dark:border-zinc-700/50 dark:bg-zinc-800/80 dark:hover:shadow-lg dark:hover:border-zinc-600/50 dark:hover:bg-zinc-800"
+          ? "opacity-50 scale-[0.98] shadow-2xl ring-2 ring-zinc-200 border-zinc-200 bg-white dark:ring-zinc-700 dark:border-zinc-600 dark:bg-zinc-800 z-50"
+          : "cursor-grab shadow-sm border-zinc-100 bg-white hover:shadow-md hover:border-zinc-200 hover:bg-zinc-50/50 dark:border-zinc-700/50 dark:bg-zinc-800/80 dark:hover:shadow-lg dark:hover:border-zinc-600/50 dark:hover:bg-zinc-800"
       }`}
     >
       <div className={`flex items-start gap-2.5 ${task.is_completed ? "opacity-50" : ""}`}>
@@ -94,7 +94,7 @@ export default function TaskCard({
           checked={task.is_completed}
           onChange={() => onToggleComplete(task)}
           disabled={isUpdating || !canEditTasks}
-          className="mt-[3px] h-3.5 w-3.5 rounded accent-black dark:accent-white cursor-pointer disabled:cursor-not-allowed shrink-0"
+          className="mt-[3px] h-3.5 w-3.5 rounded accent-black dark:accent-white cursor-pointer disabled:cursor-not-allowed shrink-0 touch-manipulation"
         />
         <div className="flex-1 min-w-0">
           <span
@@ -158,7 +158,7 @@ export default function TaskCard({
                 });
               }
             }}
-            className="shrink-0 flex items-center justify-center h-6 w-6 rounded-md text-zinc-300 transition-colors hover:bg-zinc-100 hover:text-zinc-600 active:bg-zinc-200 dark:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-300 dark:active:bg-zinc-600"
+            className="shrink-0 flex items-center justify-center h-6 w-6 rounded-md text-zinc-300 transition-colors hover:bg-zinc-100 hover:text-zinc-600 active:bg-zinc-200 cursor-pointer dark:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-300 dark:active:bg-zinc-600"
           >
             <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />

@@ -6,6 +6,7 @@ import {
   DragOverlay,
   closestCorners,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragStartEvent,
@@ -100,16 +101,24 @@ export default function DashboardPage() {
   const dragSavingRef = useRef(false);
   const activeTask = activeTaskId ? tasks.find((t) => t.id === activeTaskId) ?? null : null;
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
   );
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveTaskId(event.active.id as string);
+    document.body.style.cursor = "grabbing";
+  };
+
+  const handleDragCancel = () => {
+    setActiveTaskId(null);
+    document.body.style.cursor = "";
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveTaskId(null);
+    document.body.style.cursor = "";
 
     if (!over || !canEditTasks) return;
     if (dragSavingRef.current) return;
@@ -470,6 +479,7 @@ export default function DashboardPage() {
             collisionDetection={closestCorners}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
           >
           <div className="flex gap-5 overflow-x-auto pb-6 items-start -mx-1 px-1">
           {lists.map((list) => (
@@ -502,9 +512,12 @@ export default function DashboardPage() {
             />
           ))}
           </div>
-          <DragOverlay dropAnimation={null}>
+          <DragOverlay dropAnimation={{ duration: 200, easing: "ease" }}>
             {activeTask ? (
-              <div className="w-[275px] rounded-lg border border-zinc-200 bg-white px-3 py-2.5 shadow-xl dark:border-zinc-600 dark:bg-zinc-800">
+              <div
+                className="w-[275px] rounded-lg border border-zinc-200 bg-white px-3 py-2.5 shadow-2xl ring-1 ring-black/5 dark:border-zinc-600 dark:bg-zinc-800 dark:ring-white/5"
+                style={{ transform: "rotate(1deg) scale(1.02)", cursor: "grabbing" }}
+              >
                 <div className="flex items-start gap-2.5">
                   <div className="flex-1 min-w-0">
                     <span className="block text-[13px] leading-snug font-medium text-zinc-900 dark:text-zinc-100">
@@ -515,6 +528,15 @@ export default function DashboardPage() {
                         {activeTask.description}
                       </p>
                     )}
+                    {(activeTask.priority && activeTask.priority !== "none") || activeTask.due_date ? (
+                      <div className="mt-1.5 flex items-center gap-2">
+                        {activeTask.priority && activeTask.priority !== "none" && (
+                          <span className="text-[11px] font-medium capitalize text-zinc-500 dark:text-zinc-400">
+                            {activeTask.priority}
+                          </span>
+                        )}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>

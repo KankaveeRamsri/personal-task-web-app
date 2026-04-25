@@ -90,9 +90,9 @@ export default function BoardColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`w-[300px] flex-shrink-0 rounded-xl flex flex-col max-h-[calc(100vh-220px)] overflow-hidden transition-colors duration-200 ${
+      className={`w-[300px] flex-shrink-0 rounded-xl flex flex-col max-h-[calc(100vh-220px)] overflow-hidden transition-all duration-200 ${
         isOver
-          ? "bg-blue-50/60 ring-2 ring-inset ring-blue-300 dark:bg-blue-950/30 dark:ring-blue-700"
+          ? "bg-blue-50/50 ring-2 ring-inset ring-blue-200 shadow-sm dark:bg-blue-950/25 dark:ring-blue-800"
           : "bg-zinc-100/50 dark:bg-zinc-800/30"
       }`}
     >
