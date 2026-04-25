@@ -22,6 +22,7 @@ const getColumnBarColor = (title: string, color: string) => {
 export interface BoardColumnProps {
   list: List;
   tasks: Task[];
+  totalTaskCount: number;
   members: MemberWithProfile[];
   canEditTasks: boolean;
   addingToListId: string | null;
@@ -54,6 +55,7 @@ export interface BoardColumnProps {
 export default function BoardColumn({
   list,
   tasks,
+  totalTaskCount,
   members,
   canEditTasks,
   addingToListId,
@@ -101,6 +103,8 @@ export default function BoardColumn({
   const selectedInColumn = tasks.filter((t) => selectedTaskIds.has(t.id)).length;
   const allSelected = tasks.length > 0 && selectedInColumn === tasks.length;
   const someSelected = selectedInColumn > 0 && !allSelected;
+  const isFiltered = tasks.length !== totalTaskCount;
+  const countLabel = isFiltered ? `${tasks.length}/${totalTaskCount}` : `${tasks.length}`;
 
   return (
     <div
@@ -140,7 +144,7 @@ export default function BoardColumn({
                   : "bg-zinc-200/80 text-zinc-500 cursor-pointer hover:bg-zinc-300/80 dark:bg-zinc-700/60 dark:text-zinc-400 dark:hover:bg-zinc-600/60"
             }`}
           >
-            {tasks.length}
+            {countLabel}
           </button>
         </div>
       </div>
@@ -149,17 +153,28 @@ export default function BoardColumn({
       <div className="flex-1 overflow-y-auto px-2.5 pb-2.5">
         {tasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-zinc-200/60 py-8 px-3 dark:border-zinc-700/40">
-            <svg className="mb-2 h-5 w-5 text-zinc-300 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500 mb-2">No tasks yet</p>
-            {canEditTasks && (
-              <button
-                onClick={() => onSetAddingToListId(list.id)}
-                className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300 transition-colors"
-              >
-                Add your first task
-              </button>
+            {isFiltered ? (
+              <>
+                <svg className="mb-2 h-5 w-5 text-zinc-300 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                </svg>
+                <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500">No matching tasks</p>
+              </>
+            ) : (
+              <>
+                <svg className="mb-2 h-5 w-5 text-zinc-300 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500 mb-2">No tasks yet</p>
+                {canEditTasks && (
+                  <button
+                    onClick={() => onSetAddingToListId(list.id)}
+                    className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300 transition-colors"
+                  >
+                    Add your first task
+                  </button>
+                )}
+              </>
             )}
           </div>
         ) : (

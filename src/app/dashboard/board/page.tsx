@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -21,6 +21,7 @@ import BoardColumn from "@/components/board/BoardColumn";
 import BoardToolbar from "@/components/board/BoardToolbar";
 import TaskDetailPanel from "@/components/board/TaskDetailPanel";
 import BulkActionToolbar from "@/components/board/BulkActionToolbar";
+import BoardFilterBar from "@/components/board/BoardFilterBar";
 
 export default function DashboardPage() {
   const {
@@ -88,20 +89,6 @@ export default function DashboardPage() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [selectedTaskIds.size, clearSelection]);
 
-  // Cmd/Ctrl+A selects all visible tasks
-  useEffect(() => {
-    if (!selectedBoardId || lists.length === 0) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey) || e.key !== "a") return;
-      const tag = (e.target as HTMLElement).tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-      e.preventDefault();
-      setSelectedTaskIds(new Set(tasks.map((t) => t.id)));
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [selectedBoardId, lists.length, tasks]);
-
   // Task form state
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [addingToListId, setAddingToListId] = useState<string | null>(null);
@@ -120,6 +107,12 @@ export default function DashboardPage() {
   const [editPriority, setEditPriority] = useState<TaskPriority>("none");
   const [editDueDate, setEditDueDate] = useState("");
   const [editAssigneeId, setEditAssigneeId] = useState("");
+
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterPriority, setFilterPriority] = useState("all");
+  const [filterAssigneeId, setFilterAssigneeId] = useState("all");
+  const [filterDueDate, setFilterDueDate] = useState("all");
 
   // Workspace creation
   const [showNewWorkspace, setShowNewWorkspace] = useState(false);
@@ -164,6 +157,87 @@ export default function DashboardPage() {
 
   const isOwner = currentRole === "owner";
   const selectedWorkspaceName = workspaces.find((ws) => ws.id === selectedWorkspaceId)?.name ?? "";
+
+  // Reset filters when board changes
+  useEffect(() => {
+    setSearchQuery("");
+    setFilterPriority("all");
+    setFilterAssigneeId("all");
+    setFilterDueDate("all");
+  }, [selectedBoardId]);
+
+  const hasActiveFilters =
+    searchQuery !== "" ||
+    filterPriority !== "all" ||
+    filterAssigneeId !== "all" ||
+    filterDueDate !== "all";
+
+  const clearFilters = useCallback(() => {
+    setSearchQuery("");
+    setFilterPriority("all");
+    setFilterAssigneeId("all");
+    setFilterDueDate("all");
+  }, []);
+
+  // Client-side filtering
+  const filteredTasks = useMemo(() => {
+    if (!hasActiveFilters) return tasks;
+
+    const now = new Date();
+    const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    return tasks.filter((task) => {
+      // Search: match title or description (case-insensitive)
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const matchesTitle = task.title.toLowerCase().includes(q);
+        const matchesDesc = task.description?.toLowerCase().includes(q) ?? false;
+        if (!matchesTitle && !matchesDesc) return false;
+      }
+
+      // Priority filter
+      if (filterPriority !== "all" && task.priority !== filterPriority) return false;
+
+      // Assignee filter
+      if (filterAssigneeId === "unassigned") {
+        if (task.assignee_id !== null) return false;
+      } else if (filterAssigneeId !== "all") {
+        if (task.assignee_id !== filterAssigneeId) return false;
+      }
+
+      // Due date filter
+      if (filterDueDate !== "all") {
+        if (filterDueDate === "no_due_date") {
+          if (task.due_date !== null) return false;
+        } else if (task.due_date === null) {
+          return false;
+        } else {
+          const target = new Date(task.due_date + "T00:00:00");
+          const targetLocal = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+          const diffDays = Math.round((targetLocal.getTime() - todayLocal.getTime()) / (1000 * 60 * 60 * 24));
+          if (filterDueDate === "overdue" && diffDays >= 0) return false;
+          if (filterDueDate === "today" && diffDays !== 0) return false;
+          if (filterDueDate === "upcoming" && diffDays <= 0) return false;
+        }
+      }
+
+      return true;
+    });
+  }, [tasks, searchQuery, filterPriority, filterAssigneeId, filterDueDate, hasActiveFilters]);
+
+  // Cmd/Ctrl+A selects all visible (filtered) tasks
+  useEffect(() => {
+    if (!selectedBoardId || lists.length === 0) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key !== "a") return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      e.preventDefault();
+      setSelectedTaskIds(new Set(filteredTasks.map((t) => t.id)));
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [selectedBoardId, lists.length, filteredTasks]);
 
   // DnD state
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
@@ -623,7 +697,22 @@ export default function DashboardPage() {
 
       {/* Board content: lists with tasks */}
       {selectedBoardId && lists.length > 0 && (
-        <div className="space-y-5">
+        <div className="space-y-4">
+
+          {/* Search & filters */}
+          <BoardFilterBar
+            members={members}
+            searchQuery={searchQuery}
+            filterPriority={filterPriority}
+            filterAssigneeId={filterAssigneeId}
+            filterDueDate={filterDueDate}
+            hasActiveFilters={hasActiveFilters}
+            onSearchChange={setSearchQuery}
+            onPriorityChange={setFilterPriority}
+            onAssigneeChange={setFilterAssigneeId}
+            onDueDateChange={setFilterDueDate}
+            onClearFilters={clearFilters}
+          />
 
           {/* Lists — Kanban columns */}
           <DndContext
@@ -638,7 +727,8 @@ export default function DashboardPage() {
             <BoardColumn
               key={list.id}
               list={list}
-              tasks={tasks.filter((t) => t.list_id === list.id).sort((a, b) => a.position - b.position)}
+              tasks={filteredTasks.filter((t) => t.list_id === list.id).sort((a, b) => a.position - b.position)}
+              totalTaskCount={tasks.filter((t) => t.list_id === list.id).length}
               members={members}
               canEditTasks={canEditTasks}
               addingToListId={addingToListId}
