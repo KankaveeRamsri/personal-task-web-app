@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -97,6 +97,7 @@ export default function DashboardPage() {
 
   // DnD state
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const dragSavingRef = useRef(false);
   const activeTask = activeTaskId ? tasks.find((t) => t.id === activeTaskId) ?? null : null;
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -111,6 +112,7 @@ export default function DashboardPage() {
     setActiveTaskId(null);
 
     if (!over || !canEditTasks) return;
+    if (dragSavingRef.current) return;
 
     const activeId = active.id as string;
     const overId = over.id as string;
@@ -128,33 +130,39 @@ export default function DashboardPage() {
     }
     if (!targetListId) return;
 
-    // Same column — reorder within column
-    if (activeTaskData.list_id === targetListId) {
-      if (activeId === overId) return;
+    dragSavingRef.current = true;
 
-      const columnTasks = tasks
-        .filter((t) => t.list_id === targetListId)
-        .sort((a, b) => a.position - b.position);
+    try {
+      // Same column — reorder within column
+      if (activeTaskData.list_id === targetListId) {
+        if (activeId === overId) return;
 
-      const oldIndex = columnTasks.findIndex((t) => t.id === activeId);
-      const newIndex = columnTasks.findIndex((t) => t.id === overId);
-      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+        const columnTasks = tasks
+          .filter((t) => t.list_id === targetListId)
+          .sort((a, b) => a.position - b.position);
 
-      const reordered = arrayMove(columnTasks, oldIndex, newIndex).map(
-        (task, i) => ({ ...task, position: (i + 1) * 1000 })
-      );
+        const oldIndex = columnTasks.findIndex((t) => t.id === activeId);
+        const newIndex = columnTasks.findIndex((t) => t.id === overId);
+        if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
 
-      await reorderTasks(reordered, columnTasks);
-      return;
-    }
+        const reordered = arrayMove(columnTasks, oldIndex, newIndex).map(
+          (task, i) => ({ ...task, position: (i + 1) * 1000 })
+        );
 
-    // Cross-column move
-    const ok = await moveTask(activeId, targetListId, activeTaskData.list_id);
-    if (ok) {
-      const targetList = lists.find((l) => l.id === targetListId);
-      const displayTitle =
-        targetList?.title === "Done" ? "Completed" : targetList?.title ?? "column";
-      showSuccess(`Moved to ${displayTitle}`);
+        await reorderTasks(reordered, columnTasks);
+        return;
+      }
+
+      // Cross-column move
+      const ok = await moveTask(activeId, targetListId, activeTaskData.list_id);
+      if (ok) {
+        const targetList = lists.find((l) => l.id === targetListId);
+        const displayTitle =
+          targetList?.title === "Done" ? "Completed" : targetList?.title ?? "column";
+        showSuccess(`Moved to ${displayTitle}`);
+      }
+    } finally {
+      dragSavingRef.current = false;
     }
   };
 

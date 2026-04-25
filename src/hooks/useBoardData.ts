@@ -321,24 +321,29 @@ export function useBoardData() {
       const changed = reordered.filter(
         (t) => t.position !== originalMap.get(t.id)?.position
       );
-      if (changed.length === 0) return;
+      if (changed.length === 0) return true;
 
       const reorderedMap = new Map(reordered.map((t) => [t.id, t]));
       setTasks((prev) => prev.map((t) => reorderedMap.get(t.id) ?? t));
 
       const supabase = createClient();
-      for (const task of changed) {
-        const { error } = await supabase
-          .from("tasks")
-          .update({ position: task.position })
-          .eq("id", task.id);
-        if (error) {
-          const revertMap = new Map(original.map((t) => [t.id, t]));
-          setTasks((prev) => prev.map((t) => revertMap.get(t.id) ?? t));
-          setErrorMsg(error.message);
-          return;
-        }
+      const results = await Promise.all(
+        changed.map((task) =>
+          supabase
+            .from("tasks")
+            .update({ position: task.position })
+            .eq("id", task.id)
+        )
+      );
+
+      const failed = results.find((r) => r.error);
+      if (failed) {
+        const revertMap = new Map(original.map((t) => [t.id, t]));
+        setTasks((prev) => prev.map((t) => revertMap.get(t.id) ?? t));
+        setErrorMsg(failed.error!.message);
+        return false;
       }
+      return true;
     },
     []
   );
