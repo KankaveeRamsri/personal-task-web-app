@@ -327,122 +327,155 @@ export default function BoardToolbar({
         </div>
       )}
 
-      {/* Members panel */}
+      {/* Members drawer */}
       {showMembers && selectedWorkspaceId && (
-        <div className="rounded-xl border border-zinc-200 p-4 shadow-sm dark:border-zinc-800">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold">
-              Members ({members.length})
-            </h3>
-            <button
-              onClick={onCloseMembers}
-              className="text-lg leading-none text-zinc-400 transition-colors hover:text-zinc-600"
-            >
-              &times;
-            </button>
-          </div>
+        <>
+          {/* Overlay */}
+          <div
+            className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px] transition-opacity"
+            onClick={onCloseMembers}
+          />
 
-          {/* Member list */}
-          <ul className="mb-3 space-y-2">
-            {members.map((m) => (
-              <li
-                key={m.id}
-                className="flex items-center gap-3 text-sm"
+          {/* Panel */}
+          <div className="fixed inset-y-0 right-0 z-50 w-[360px] max-w-[calc(100vw-2rem)] bg-white shadow-xl dark:bg-zinc-900 flex flex-col border-l border-zinc-200 dark:border-zinc-700/50"
+            style={{ animation: "drawer-slide-in 0.2s ease-out" }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100 dark:border-zinc-800">
+              <div>
+                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                  Members
+                </h3>
+                <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
+                  {members.length} member{members.length !== 1 ? "s" : ""}
+                </p>
+              </div>
+              <button
+                onClick={onCloseMembers}
+                className="flex items-center justify-center h-7 w-7 rounded-md text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
               >
-                <span className="min-w-0 flex-1 truncate">
-                  {m.display_name || m.email}
-                </span>
-                {m.role === "owner" ? (
-                  <span className="shrink-0 text-xs font-medium text-amber-600 dark:text-amber-400">
-                    owner
-                  </span>
-                ) : isManager ? (
-                  <>
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              {/* Member list */}
+              <ul className="space-y-3">
+                {members.map((m) => (
+                  <li
+                    key={m.id}
+                    className="flex items-center gap-3 text-sm"
+                  >
+                    <span className="min-w-0 flex-1 truncate">
+                      {m.display_name || m.email}
+                    </span>
+                    {m.role === "owner" ? (
+                      <span className="shrink-0 text-xs font-medium text-amber-600 dark:text-amber-400">
+                        owner
+                      </span>
+                    ) : isManager ? (
+                      <>
+                        <select
+                          value={m.role}
+                          onChange={(e) =>
+                            onRoleChange(
+                              m.user_id,
+                              e.target.value as WorkspaceRole
+                            )
+                          }
+                          className="shrink-0 rounded border border-zinc-300 px-1 py-0.5 text-xs dark:border-zinc-700 dark:bg-zinc-800"
+                        >
+                          <option value="admin">admin</option>
+                          <option value="member">member</option>
+                          <option value="viewer">viewer</option>
+                        </select>
+                        {confirmRemoveId === m.user_id ? (
+                          <span className="flex shrink-0 items-center gap-1">
+                            <button
+                              onClick={() => onRemoveMember(m.user_id)}
+                              className="text-xs font-medium text-red-600 hover:text-red-700"
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              onClick={() => onSetConfirmRemoveId(null)}
+                              className="text-xs text-zinc-400"
+                            >
+                              Cancel
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => onSetConfirmRemoveId(m.user_id)}
+                            className="shrink-0 text-xs text-zinc-400 hover:text-red-500"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <span className="shrink-0 text-xs text-zinc-500">
+                        {m.role}
+                      </span>
+                    )}
+                  </li>
+                ))}
+                {members.length === 0 && (
+                  <li className="py-4 text-center text-xs text-zinc-400">No members</li>
+                )}
+              </ul>
+            </div>
+
+            {/* Invite form — owner/admin only */}
+            {isManager && (
+              <div className="border-t border-zinc-100 dark:border-zinc-800 px-5 py-4">
+                <form
+                  onSubmit={onInvite}
+                  className="space-y-2"
+                >
+                  <input
+                    type="email"
+                    placeholder="Email address"
+                    value={inviteEmail}
+                    onChange={(e) => onInviteEmailChange(e.target.value)}
+                    required
+                    className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 dark:border-zinc-700 dark:bg-zinc-800 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 dark:focus:ring-zinc-700/50"
+                  />
+                  <div className="flex items-center gap-2">
                     <select
-                      value={m.role}
+                      value={inviteRole}
                       onChange={(e) =>
-                        onRoleChange(
-                          m.user_id,
-                          e.target.value as WorkspaceRole
-                        )
+                        onInviteRoleChange(e.target.value as WorkspaceRole)
                       }
-                      className="shrink-0 rounded border border-zinc-300 px-1 py-0.5 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+                      className="flex-1 rounded-lg border border-zinc-200 bg-white px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400"
                     >
                       <option value="admin">admin</option>
                       <option value="member">member</option>
                       <option value="viewer">viewer</option>
                     </select>
-                    {confirmRemoveId === m.user_id ? (
-                      <span className="flex shrink-0 items-center gap-1">
-                        <button
-                          onClick={() => onRemoveMember(m.user_id)}
-                          className="text-xs font-medium text-red-600 hover:text-red-700"
-                        >
-                          Confirm
-                        </button>
-                        <button
-                          onClick={() => onSetConfirmRemoveId(null)}
-                          className="text-xs text-zinc-400"
-                        >
-                          Cancel
-                        </button>
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => onSetConfirmRemoveId(m.user_id)}
-                        className="shrink-0 text-xs text-zinc-400 hover:text-red-500"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <span className="shrink-0 text-xs text-zinc-500">
-                    {m.role}
-                  </span>
-                )}
-              </li>
-            ))}
-            {members.length === 0 && (
-              <li className="py-2 text-xs text-zinc-400">No members</li>
+                    <button
+                      type="submit"
+                      disabled={inviting || !inviteEmail.trim()}
+                      className="rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 active:bg-zinc-800 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:focus:ring-zinc-600"
+                    >
+                      {inviting ? "..." : "Invite"}
+                    </button>
+                  </div>
+                </form>
+              </div>
             )}
-          </ul>
+          </div>
 
-          {/* Invite form — owner/admin only */}
-          {isManager && (
-            <form
-              onSubmit={onInvite}
-              className="flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800"
-            >
-              <input
-                type="email"
-                placeholder="Email"
-                value={inviteEmail}
-                onChange={(e) => onInviteEmailChange(e.target.value)}
-                required
-                className="min-w-[150px] flex-1 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-              />
-              <select
-                value={inviteRole}
-                onChange={(e) =>
-                  onInviteRoleChange(e.target.value as WorkspaceRole)
-                }
-                className="rounded-lg border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-              >
-                <option value="admin">admin</option>
-                <option value="member">member</option>
-                <option value="viewer">viewer</option>
-              </select>
-              <button
-                type="submit"
-                disabled={inviting || !inviteEmail.trim()}
-                className="rounded-lg bg-black px-3 py-1.5 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
-              >
-                {inviting ? "..." : "Invite"}
-              </button>
-            </form>
-          )}
-        </div>
+          <style jsx>{`
+            @keyframes drawer-slide-in {
+              from { transform: translateX(100%); }
+              to { transform: translateX(0); }
+            }
+          `}</style>
+        </>
       )}
 
       {/* New board form */}

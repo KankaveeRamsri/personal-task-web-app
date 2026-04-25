@@ -131,6 +131,17 @@ export default function DashboardPage() {
   const { members, currentRole, invite, remove, updateRole } =
     useWorkspaceMembers(selectedWorkspaceId);
   const [showMembers, setShowMembers] = useState(false);
+
+  // Esc closes members drawer
+  useEffect(() => {
+    if (!showMembers) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowMembers(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [showMembers]);
+
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<WorkspaceRole>("member");
   const [inviting, setInviting] = useState(false);
