@@ -29,8 +29,9 @@ export interface BoardColumnProps {
   deletingId: string | null;
   confirmDeleteId: string | null;
   menuOpen: MenuPosition | null;
+  selectedTaskIds: Set<string>;
+  onToggleSelect: (taskId: string) => void;
   onAddTask: (e: React.FormEvent, listId: string) => void;
-  onToggleComplete: (task: Task) => void;
   onStartEdit: (task: Task) => void;
   onDelete: (id: string) => void;
   onConfirmDelete: (id: string | null) => void;
@@ -56,8 +57,9 @@ export default function BoardColumn({
   deletingId,
   confirmDeleteId,
   menuOpen,
+  selectedTaskIds,
+  onToggleSelect,
   onAddTask,
-  onToggleComplete,
   onStartEdit,
   onDelete,
   onConfirmDelete,
@@ -150,7 +152,8 @@ export default function BoardColumn({
                   menuOpen={menuOpen?.taskId === task.id ? menuOpen : null}
                   canEditTasks={canEditTasks}
                   moveTargets={moveTargets}
-                  onToggleComplete={onToggleComplete}
+                  isSelected={selectedTaskIds.has(task.id)}
+                  onToggleSelect={onToggleSelect}
                   onStartEdit={onStartEdit}
                   onDelete={onDelete}
                   onConfirmDelete={onConfirmDelete}

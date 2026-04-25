@@ -16,7 +16,8 @@ export interface TaskCardProps {
   menuOpen: MenuPosition | null;
   canEditTasks: boolean;
   moveTargets: MoveTarget[];
-  onToggleComplete: (task: Task) => void;
+  isSelected: boolean;
+  onToggleSelect: (taskId: string) => void;
   onStartEdit: (task: Task) => void;
   onDelete: (id: string) => void;
   onConfirmDelete: (id: string | null) => void;
@@ -54,7 +55,8 @@ export default function TaskCard({
   menuOpen,
   canEditTasks,
   moveTargets,
-  onToggleComplete,
+  isSelected,
+  onToggleSelect,
   onStartEdit,
   onDelete,
   onConfirmDelete,
@@ -85,16 +87,18 @@ export default function TaskCard({
       className={`group relative rounded-lg border px-3 py-2.5 transition-all duration-200 select-none ${
         isDragging
           ? "opacity-50 scale-[0.98] shadow-2xl ring-2 ring-zinc-200 border-zinc-200 bg-white dark:ring-zinc-700 dark:border-zinc-600 dark:bg-zinc-800 z-50"
-          : "cursor-grab shadow-sm border-zinc-100 bg-white hover:shadow-md hover:border-zinc-200 hover:bg-zinc-50/50 dark:border-zinc-700/50 dark:bg-zinc-800/80 dark:hover:shadow-lg dark:hover:border-zinc-600/50 dark:hover:bg-zinc-800"
+          : isSelected
+            ? "cursor-grab shadow-sm ring-2 ring-blue-400/50 border-blue-200 bg-blue-50/40 hover:shadow-md dark:ring-blue-500/40 dark:border-blue-800/50 dark:bg-blue-950/30"
+            : "cursor-grab shadow-sm border-zinc-100 bg-white hover:shadow-md hover:border-zinc-200 hover:bg-zinc-50/50 dark:border-zinc-700/50 dark:bg-zinc-800/80 dark:hover:shadow-lg dark:hover:border-zinc-600/50 dark:hover:bg-zinc-800"
       }`}
     >
       <div className={`flex items-start gap-2.5 ${task.is_completed ? "opacity-50" : ""}`}>
         <input
           type="checkbox"
-          checked={task.is_completed}
-          onChange={() => onToggleComplete(task)}
-          disabled={isUpdating || !canEditTasks}
-          className="mt-[3px] h-3.5 w-3.5 rounded accent-black dark:accent-white cursor-pointer disabled:cursor-not-allowed shrink-0 touch-manipulation"
+          checked={isSelected}
+          onChange={() => onToggleSelect(task.id)}
+          onPointerDown={(e) => e.stopPropagation()}
+          className="mt-[3px] h-3.5 w-3.5 rounded accent-blue-500 dark:accent-blue-400 cursor-pointer shrink-0 touch-manipulation"
         />
         <div className="flex-1 min-w-0">
           <span

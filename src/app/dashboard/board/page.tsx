@@ -46,6 +46,22 @@ export default function DashboardPage() {
     setErrorMsg,
   } = useBoardData();
 
+  // Selection state (bulk actions foundation)
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+
+  const handleToggleSelect = useCallback((taskId: string) => {
+    setSelectedTaskIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedTaskIds(new Set());
+  }, []);
+
   // Task form state
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [addingToListId, setAddingToListId] = useState<string | null>(null);
@@ -495,8 +511,9 @@ export default function DashboardPage() {
               deletingId={deletingId}
               confirmDeleteId={confirmDeleteId}
               menuOpen={menuOpen}
+              selectedTaskIds={selectedTaskIds}
+              onToggleSelect={handleToggleSelect}
               onAddTask={handleAddTask}
-              onToggleComplete={handleToggleComplete}
               onStartEdit={startEdit}
               onDelete={handleDelete}
               onConfirmDelete={setConfirmDeleteId}
