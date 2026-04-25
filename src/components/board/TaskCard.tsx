@@ -1,5 +1,7 @@
 "use client";
 
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type { Task } from "@/types/database";
 
 export type MoveTarget = { title: string; current: boolean };
@@ -59,9 +61,32 @@ export default function TaskCard({
   onSetMenuOpen,
   onMoveTask,
 }: TaskCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id, data: { task } });
+
+  const dragStyle: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    touchAction: "none",
+  };
+
   return (
     <li
-      className="group relative rounded-lg border border-zinc-100 bg-white px-3 py-2.5 shadow-sm transition-all duration-150 hover:shadow-md hover:border-zinc-200 hover:bg-zinc-50/50 dark:border-zinc-700/50 dark:bg-zinc-800/80 dark:hover:shadow-lg dark:hover:border-zinc-600/50 dark:hover:bg-zinc-800"
+      ref={setNodeRef}
+      style={dragStyle}
+      {...attributes}
+      {...listeners}
+      className={`group relative rounded-lg border px-3 py-2.5 shadow-sm transition-all duration-150 ${
+        isDragging
+          ? "opacity-40 shadow-xl border-zinc-300 dark:border-zinc-500 bg-white dark:bg-zinc-800"
+          : "border-zinc-100 bg-white hover:shadow-md hover:border-zinc-200 hover:bg-zinc-50/50 dark:border-zinc-700/50 dark:bg-zinc-800/80 dark:hover:shadow-lg dark:hover:border-zinc-600/50 dark:hover:bg-zinc-800"
+      }`}
     >
       <div className={`flex items-start gap-2.5 ${task.is_completed ? "opacity-50" : ""}`}>
         <input

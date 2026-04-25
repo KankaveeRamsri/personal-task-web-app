@@ -1,6 +1,16 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  closestCorners,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+} from "@dnd-kit/core";
 import { useBoardData } from "@/hooks/useBoardData";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
 import type { List, Task, WorkspaceRole, TaskPriority } from "@/types/database";
@@ -81,6 +91,22 @@ export default function DashboardPage() {
 
   const isOwner = currentRole === "owner";
   const selectedWorkspaceName = workspaces.find((ws) => ws.id === selectedWorkspaceId)?.name ?? "";
+
+  // DnD state
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const activeTask = activeTaskId ? tasks.find((t) => t.id === activeTaskId) ?? null : null;
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveTaskId(event.active.id as string);
+  };
+
+  const handleDragEnd = (_event: DragEndEvent) => {
+    setActiveTaskId(null);
+    // Foundation step: do NOT persist drag result
+  };
 
   const showSuccess = useCallback((msg: string) => {
     setSuccessMsg(msg);
@@ -381,6 +407,12 @@ export default function DashboardPage() {
         <div className="space-y-5">
 
           {/* Lists — Kanban columns */}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
           <div className="flex gap-5 overflow-x-auto pb-6 items-start -mx-1 px-1">
           {lists.map((list) => (
             <BoardColumn
@@ -412,6 +444,25 @@ export default function DashboardPage() {
             />
           ))}
           </div>
+          <DragOverlay dropAnimation={null}>
+            {activeTask ? (
+              <div className="w-[275px] rounded-lg border border-zinc-200 bg-white px-3 py-2.5 shadow-xl dark:border-zinc-600 dark:bg-zinc-800">
+                <div className="flex items-start gap-2.5">
+                  <div className="flex-1 min-w-0">
+                    <span className="block text-[13px] leading-snug font-medium text-zinc-900 dark:text-zinc-100">
+                      {activeTask.title}
+                    </span>
+                    {activeTask.description && (
+                      <p className="mt-1 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400 line-clamp-2">
+                        {activeTask.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </DragOverlay>
+          </DndContext>
         </div>
       )}
 

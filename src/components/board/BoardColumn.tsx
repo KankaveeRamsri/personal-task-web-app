@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useEffect } from "react";
+import { useDroppable } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { List, Task, TaskPriority } from "@/types/database";
 import TaskCard from "@/components/board/TaskCard";
 import type { MenuPosition, MoveTarget } from "@/components/board/TaskCard";
@@ -71,6 +73,8 @@ export default function BoardColumn({
 }: BoardColumnProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const barColor = getColumnBarColor(list.title, list.color);
+  const { setNodeRef, isOver } = useDroppable({ id: list.id });
+  const taskIds = tasks.map((t) => t.id);
 
   useEffect(() => {
     if (addingToListId === list.id && newTaskTitle === "" && inputRef.current) {
@@ -84,7 +88,14 @@ export default function BoardColumn({
   }));
 
   return (
-    <div className="w-[300px] flex-shrink-0 rounded-xl bg-zinc-100/50 dark:bg-zinc-800/30 flex flex-col max-h-[calc(100vh-220px)] overflow-hidden">
+    <div
+      ref={setNodeRef}
+      className={`w-[300px] flex-shrink-0 rounded-xl flex flex-col max-h-[calc(100vh-220px)] overflow-hidden transition-colors duration-200 ${
+        isOver
+          ? "bg-blue-50/60 ring-2 ring-inset ring-blue-300 dark:bg-blue-950/30 dark:ring-blue-700"
+          : "bg-zinc-100/50 dark:bg-zinc-800/30"
+      }`}
+    >
       {/* Color bar */}
       <div
         className="h-1 rounded-t-xl"
@@ -127,26 +138,28 @@ export default function BoardColumn({
             )}
           </div>
         ) : (
-          <ul className="space-y-2">
-            {tasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                isUpdating={updatingId === task.id}
-                isDeleting={deletingId === task.id}
-                isConfirmDelete={confirmDeleteId === task.id}
-                menuOpen={menuOpen?.taskId === task.id ? menuOpen : null}
-                canEditTasks={canEditTasks}
-                moveTargets={moveTargets}
-                onToggleComplete={onToggleComplete}
-                onStartEdit={onStartEdit}
-                onDelete={onDelete}
-                onConfirmDelete={onConfirmDelete}
-                onSetMenuOpen={onSetMenuOpen}
-                onMoveTask={onMoveTask}
-              />
-            ))}
-          </ul>
+          <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+            <ul className="space-y-2">
+              {tasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  isUpdating={updatingId === task.id}
+                  isDeleting={deletingId === task.id}
+                  isConfirmDelete={confirmDeleteId === task.id}
+                  menuOpen={menuOpen?.taskId === task.id ? menuOpen : null}
+                  canEditTasks={canEditTasks}
+                  moveTargets={moveTargets}
+                  onToggleComplete={onToggleComplete}
+                  onStartEdit={onStartEdit}
+                  onDelete={onDelete}
+                  onConfirmDelete={onConfirmDelete}
+                  onSetMenuOpen={onSetMenuOpen}
+                  onMoveTask={onMoveTask}
+                />
+              ))}
+            </ul>
+          </SortableContext>
         )}
       </div>
 
