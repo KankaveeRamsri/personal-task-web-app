@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -20,6 +20,7 @@ import type { MenuPosition } from "@/components/board/TaskCard";
 import BoardColumn from "@/components/board/BoardColumn";
 import BoardToolbar from "@/components/board/BoardToolbar";
 import TaskDetailPanel from "@/components/board/TaskDetailPanel";
+import BulkActionToolbar from "@/components/board/BulkActionToolbar";
 
 export default function DashboardPage() {
   const {
@@ -61,6 +62,16 @@ export default function DashboardPage() {
   const clearSelection = useCallback(() => {
     setSelectedTaskIds(new Set());
   }, []);
+
+  // Esc key clears selection
+  useEffect(() => {
+    if (selectedTaskIds.size === 0) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") clearSelection();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [selectedTaskIds.size, clearSelection]);
 
   // Task form state
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -590,6 +601,11 @@ export default function DashboardPage() {
         onDueDateChange={setEditDueDate}
         onSave={() => { if (editingId) saveEdit(editingId); }}
         onClose={cancelEdit}
+      />
+
+      <BulkActionToolbar
+        selectedCount={selectedTaskIds.size}
+        onClearSelection={clearSelection}
       />
     </div>
   );
