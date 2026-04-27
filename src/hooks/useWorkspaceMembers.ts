@@ -3,10 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase";
 import {
-  inviteMemberAction,
   removeMemberAction,
   updateMemberRoleAction,
 } from "@/app/dashboard/workspace-members-actions";
+import { canInviteMembers } from "@/lib/permissions";
 import type { WorkspaceRole, WorkspaceMember } from "@/types/database";
 
 export type MemberWithProfile = WorkspaceMember & {
@@ -78,10 +78,64 @@ export function useWorkspaceMembers(workspaceId: string | null) {
 
   const invite = useCallback(
     async (email: string, role: WorkspaceRole) => {
-      if (!workspaceId) return { ok: false as const, error: "No workspace" };
-      const result = await inviteMemberAction(workspaceId, email, role);
-      if (result.ok) await fetchMembers();
-      return result;
+      if (!workspaceId)
+        return { ok: false as const, error: "No workspace" };
+
+      const supabase = createClient();
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user)
+        return { ok: false as const, error: "กรุณาเข้าสู่ระบบ" };
+
+      // 1. ตรวจสอบสิทธิ์ผู้เชิญ
+      const { data: myMember } = await supabase
+        .from("workspace_members")
+        .select("role")
+        .eq("workspace_id", workspaceId)
+        .eq("user_id", user.id)
+        .single();
+      const actorRole = myMember?.role as WorkspaceRole | undefined;
+      if (!actorRole || !canInviteMembers(actorRole))
+        return { ok: false as const, error: "คุณไม่มีสิทธิ์เชิญสมาชิก" };
+
+      // 2. ห้ามเชิญด้วย role = owner
+      if (role === "owner")
+        return { ok: false as const, error: "ไม่สามารถเชิญในฐานะ owner ได้" };
+
+      // 3. หา target user จาก email
+      const { data: targetProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", email)
+        .single();
+      if (!targetProfile)
+        return { ok: false as const, error: "ไม่พบผู้ใช้ที่ใช้อีเมลนี้" };
+
+      // 4. ห้ามเชิญตัวเอง
+      if (targetProfile.id === user.id)
+        return { ok: false as const, error: "ไม่สามารถเชิญตัวเองได้" };
+
+      // 5. ตรวจสอบว่ายังไม่เป็นสมาชิก
+      const { data: existing } = await supabase
+        .from("workspace_members")
+        .select("id")
+        .eq("workspace_id", workspaceId)
+        .eq("user_id", targetProfile.id)
+        .maybeSingle();
+      if (existing)
+        return { ok: false as const, error: "ผู้ใช้นี้เป็นสมาชิกอยู่แล้ว" };
+
+      // 6. เพิ่มสมาชิก
+      const { error } = await supabase
+        .from("workspace_members")
+        .insert({ workspace_id: workspaceId, user_id: targetProfile.id, role });
+      if (error)
+        return { ok: false as const, error: error.message };
+
+      await fetchMembers();
+      return { ok: true as const };
     },
     [workspaceId, fetchMembers]
   );
