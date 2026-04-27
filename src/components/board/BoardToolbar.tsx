@@ -12,6 +12,7 @@ export interface BoardToolbarProps {
   selectedBoardId: string | null;
   members: MemberWithProfile[];
   isManager: boolean;
+  currentUserId: string | null;
 
   // Panel visibility
   showNewWorkspace: boolean;
@@ -80,6 +81,7 @@ export default function BoardToolbar({
   selectedBoardId,
   members,
   isManager,
+  currentUserId,
   showNewWorkspace,
   showNewBoard,
   showMembers,
@@ -376,7 +378,7 @@ export default function BoardToolbar({
                       <span className="shrink-0 text-xs font-medium text-amber-600 dark:text-amber-400">
                         owner
                       </span>
-                    ) : isManager ? (
+                    ) : isManager && m.user_id !== currentUserId ? (
                       <>
                         <select
                           value={m.role}

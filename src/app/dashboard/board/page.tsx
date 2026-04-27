@@ -23,6 +23,7 @@ import TaskDetailPanel from "@/components/board/TaskDetailPanel";
 import BulkActionToolbar from "@/components/board/BulkActionToolbar";
 import BoardFilterBar from "@/components/board/BoardFilterBar";
 import { logActivity } from "@/lib/activity-log";
+import { createClient } from "@/lib/supabase";
 
 export default function DashboardPage() {
   const {
@@ -127,6 +128,15 @@ export default function DashboardPage() {
   const { members, currentRole, invite, remove, updateRole } =
     useWorkspaceMembers(selectedWorkspaceId);
   const [showMembers, setShowMembers] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    createClient()
+      .auth.getUser()
+      .then(({ data: { user } }) => {
+        if (user) setCurrentUserId(user.id);
+      });
+  }, []);
 
   // Esc closes members drawer
   useEffect(() => {
@@ -610,13 +620,19 @@ export default function DashboardPage() {
     e.preventDefault();
     if (!inviteEmail.trim()) return;
     setInviting(true);
-    const result = await invite(inviteEmail.trim(), inviteRole);
-    setInviting(false);
-    if (result.ok) {
-      setInviteEmail("");
-      showSuccess("เชิญสมาชิกสำเร็จ");
-    } else {
-      setErrorMsg(result.error ?? "ไม่สามารถเชิญสมาชิกได้");
+    try {
+      const result = await invite(inviteEmail.trim(), inviteRole);
+      if (result.ok) {
+        setInviteEmail("");
+        showSuccess("เชิญสมาชิกสำเร็จ");
+      } else {
+        setErrorMsg(result.error ?? "ไม่สามารถเชิญสมาชิกได้");
+      }
+    } catch (err) {
+      console.error("Invite failed:", err);
+      setErrorMsg("ไม่สามารถเชิญสมาชิกได้");
+    } finally {
+      setInviting(false);
     }
   };
 
@@ -705,6 +721,7 @@ export default function DashboardPage() {
         selectedBoardId={selectedBoardId}
         members={members}
         isManager={isManager}
+        currentUserId={currentUserId}
         showNewWorkspace={showNewWorkspace}
         showNewBoard={showNewBoard}
         showMembers={showMembers}
