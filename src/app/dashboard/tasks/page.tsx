@@ -3,8 +3,11 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useBoardData } from "@/hooks/useBoardData";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
+import { createClient } from "@/lib/supabase";
 import type { Task } from "@/types/database";
 import type { MemberWithProfile } from "@/hooks/useWorkspaceMembers";
+
+type QuickView = "all" | "my_tasks" | "due_today" | "overdue" | "unassigned" | "completed";
 
 // --- Helpers (matching existing patterns) ---
 
@@ -105,6 +108,18 @@ export default function TasksPage() {
 
   const { members } = useWorkspaceMembers(selectedWorkspaceId);
 
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const supabase = createClient();
+      const { data } = await supabase.auth.getUser();
+      if (!cancelled && data.user) setCurrentUserId(data.user.id);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const listMap = useMemo(() => {
     const map = new Map<string, string>();
     for (const l of lists) map.set(l.id, l.title);
@@ -118,6 +133,7 @@ export default function TasksPage() {
   }, [members]);
 
   // Filter & sort state
+  const [activeQuickView, setActiveQuickView] = useState<QuickView>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
@@ -134,6 +150,7 @@ export default function TasksPage() {
     sortBy !== "due_date";
 
   const clearFilters = useCallback(() => {
+    setActiveQuickView("all");
     setSearchQuery("");
     setFilterStatus("all");
     setFilterPriority("all");
@@ -146,6 +163,70 @@ export default function TasksPage() {
   useEffect(() => {
     clearFilters();
   }, [selectedBoardId, clearFilters]);
+
+  // Quick view counts
+  const quickViewCounts = useMemo(() => {
+    const now = new Date();
+    const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const completedListIds = new Set(
+      lists.filter((l) => l.title.toLowerCase() === "done").map((l) => l.id)
+    );
+
+    return {
+      all: tasks.length,
+      my_tasks: tasks.filter((t) => t.assignee_id === currentUserId).length,
+      due_today: tasks.filter((t) => {
+        if (!t.due_date) return false;
+        const d = new Date(t.due_date + "T00:00:00");
+        const dl = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        return Math.round((dl.getTime() - todayLocal.getTime()) / 86400000) === 0;
+      }).length,
+      overdue: tasks.filter((t) => {
+        if (!t.due_date || t.is_completed) return false;
+        if (completedListIds.has(t.list_id)) return false;
+        const d = new Date(t.due_date + "T00:00:00");
+        const dl = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        return Math.round((dl.getTime() - todayLocal.getTime()) / 86400000) < 0;
+      }).length,
+      unassigned: tasks.filter((t) => t.assignee_id === null).length,
+      completed: tasks.filter((t) => t.is_completed || completedListIds.has(t.list_id)).length,
+    };
+  }, [tasks, lists, currentUserId]);
+
+  const matchesQuickView = useCallback(
+    (task: Task): boolean => {
+      if (activeQuickView === "all") return true;
+      const now = new Date();
+      const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const completedListIds = new Set(
+        lists.filter((l) => l.title.toLowerCase() === "done").map((l) => l.id)
+      );
+
+      switch (activeQuickView) {
+        case "my_tasks":
+          return task.assignee_id === currentUserId;
+        case "due_today": {
+          if (!task.due_date) return false;
+          const d = new Date(task.due_date + "T00:00:00");
+          const dl = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+          return Math.round((dl.getTime() - todayLocal.getTime()) / 86400000) === 0;
+        }
+        case "overdue": {
+          if (!task.due_date || task.is_completed || completedListIds.has(task.list_id)) return false;
+          const d = new Date(task.due_date + "T00:00:00");
+          const dl = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+          return Math.round((dl.getTime() - todayLocal.getTime()) / 86400000) < 0;
+        }
+        case "unassigned":
+          return task.assignee_id === null;
+        case "completed":
+          return task.is_completed || completedListIds.has(task.list_id);
+        default:
+          return true;
+      }
+    },
+    [activeQuickView, currentUserId, lists]
+  );
 
   const filteredTasks = useMemo(() => {
     const now = new Date();
@@ -184,9 +265,11 @@ export default function TasksPage() {
         }
       }
 
+      if (!matchesQuickView(task)) return false;
+
       return true;
     });
-  }, [tasks, searchQuery, filterStatus, filterPriority, filterAssigneeId, filterDueDate]);
+  }, [tasks, searchQuery, filterStatus, filterPriority, filterAssigneeId, filterDueDate, matchesQuickView]);
 
   const sortedTasks = useMemo(() => {
     const priorityRank: Record<string, number> = { high: 0, medium: 1, low: 2, none: 3 };
@@ -274,6 +357,45 @@ export default function TasksPage() {
           </>
         )}
       </div>
+
+      {/* Quick view tabs */}
+      {selectedWorkspaceId && tasks.length > 0 && (
+        <div className="mb-3 flex items-center gap-1 flex-wrap">
+          {([
+            { key: "all" as QuickView, label: "All" },
+            { key: "my_tasks" as QuickView, label: "My Tasks" },
+            { key: "due_today" as QuickView, label: "Due Today" },
+            { key: "overdue" as QuickView, label: "Overdue" },
+            { key: "unassigned" as QuickView, label: "Unassigned" },
+            { key: "completed" as QuickView, label: "Completed" },
+          ]).map(({ key, label }) => {
+            const isActive = activeQuickView === key;
+            const count = quickViewCounts[key];
+            return (
+              <button
+                key={key}
+                onClick={() => setActiveQuickView(key)}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  isActive
+                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+                    : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 hover:text-zinc-800 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
+                }`}
+              >
+                {label}
+                <span
+                  className={`inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none ${
+                    isActive
+                      ? "bg-white/20 text-white dark:bg-zinc-900/20 dark:text-zinc-900"
+                      : "bg-zinc-200/80 text-zinc-500 dark:bg-zinc-700/80 dark:text-zinc-400"
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Filter toolbar */}
       {selectedWorkspaceId && tasks.length > 0 && (
