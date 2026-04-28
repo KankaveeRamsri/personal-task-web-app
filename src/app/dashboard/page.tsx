@@ -447,16 +447,22 @@ export default function DashboardPage() {
               })}
             </ul>
           ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <p className="text-sm text-zinc-400 dark:text-zinc-400">No tasks yet</p>
-              <p className="mt-1 text-xs text-zinc-300 dark:text-zinc-600">
-                Create tasks from the board to see them here
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">No recent tasks yet</p>
+              <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-400">
+                Create your first task to get started.
               </p>
+              <Link
+                href="/dashboard/board"
+                className="mt-3 text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+              >
+                Go to board &rarr;
+              </Link>
             </div>
           )}
           <div className="border-t border-zinc-100 px-5 py-3 dark:border-zinc-800">
             <Link
-              href="/dashboard/board"
+              href="/dashboard/tasks"
               className="text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
             >
               View all tasks &rarr;
@@ -467,24 +473,22 @@ export default function DashboardPage() {
         {/* Right: Task Status / Progress (3/5 width) */}
         <div className="lg:col-span-3 space-y-6">
           {/* Completion summary */}
-          {totalTasks > 0 && (
-            <div className="rounded-2xl border border-zinc-200 bg-white px-6 py-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                  Completion
-                </h2>
-                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                  {completedTasks} of {totalTasks} tasks ({completionPct}%)
-                </span>
-              </div>
-              <div className="h-3 rounded-full bg-zinc-100 dark:bg-zinc-800">
-                <div
-                  className="h-3 rounded-full bg-emerald-500 transition-all"
-                  style={{ width: `${completionPct}%` }}
-                />
-              </div>
+          <div className="rounded-2xl border border-zinc-200 bg-white px-6 py-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                Completion
+              </h2>
+              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                {completedTasks} of {totalTasks} tasks ({completionPct}%)
+              </span>
             </div>
-          )}
+            <div className="h-3 rounded-full bg-zinc-100 dark:bg-zinc-800">
+              <div
+                className="h-3 rounded-full bg-emerald-500 transition-all"
+                style={{ width: `${completionPct}%` }}
+              />
+            </div>
+          </div>
 
           {/* Quick actions */}
           <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
@@ -555,11 +559,11 @@ export default function DashboardPage() {
           )}
 
           {/* Assignee summary */}
-          {assigneeSummary.length > 0 && (
-            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-                By Assignee
-              </h2>
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+              By Assignee
+            </h2>
+            {assigneeSummary.length > 0 ? (
               <div className="space-y-3">
                 {assigneeSummary.map((item) => {
                   const pct = totalTasks > 0 ? Math.round((item.count / totalTasks) * 100) : 0;
@@ -584,8 +588,12 @@ export default function DashboardPage() {
                   );
                 })}
               </div>
-            </div>
-          )}
+            ) : (
+              <p className="text-sm text-zinc-400 dark:text-zinc-400">
+                No assignee data yet
+              </p>
+            )}
+          </div>
 
           {/* Recent Activity */}
           <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
@@ -618,9 +626,14 @@ export default function DashboardPage() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-zinc-400 dark:text-zinc-400">
-                {selectedBoardId ? "No activity yet" : "Select a board to see activity"}
-              </p>
+              <div className="flex flex-col items-center justify-center py-6 text-center">
+                <p className="text-sm text-zinc-400 dark:text-zinc-400">
+                  {selectedBoardId ? "No activity yet" : "Select a board to see activity"}
+                </p>
+                <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-400">
+                  Task updates will appear here.
+                </p>
+              </div>
             )}
           </div>
         </div>
