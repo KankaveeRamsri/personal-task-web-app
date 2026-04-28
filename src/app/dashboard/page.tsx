@@ -364,15 +364,37 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
-        <div className="hidden sm:flex items-center gap-1.5">
-          {["bg-violet-500", "bg-sky-500", "bg-emerald-500"].map((bg, i) => (
+        <div className="hidden sm:flex items-center">
+          {members.slice(0, 4).map((m, i) => {
+            const name = m.display_name || m.email;
+            const initials = name.split(/[\s._-]+/).map(w => w[0]).join("").slice(0, 2).toUpperCase() || name[0]?.toUpperCase() || "?";
+            const colors = ["bg-violet-500", "bg-sky-500", "bg-emerald-500", "bg-amber-500"];
+            return (
+              <div
+                key={m.user_id}
+                title={`${m.display_name || m.email}${m.role !== "member" ? ` (${m.role})` : ""}`}
+                className={`flex h-8 w-8 items-center justify-center rounded-full ${colors[i % colors.length]} text-[11px] font-semibold text-white ring-2 ring-white dark:ring-zinc-950 transition-transform hover:scale-110 hover:z-10 cursor-default ${i > 0 ? "-ml-2" : ""}`}
+              >
+                {initials}
+              </div>
+            );
+          })}
+          {members.length > 4 && (
             <div
-              key={i}
-              className={`flex h-8 w-8 items-center justify-center rounded-full ${bg} text-[11px] font-semibold text-white ring-2 ring-white dark:ring-zinc-950 ${i > 0 ? "-ml-2" : ""}`}
+              title={`${members.length - 4} more member${members.length - 4 > 1 ? "s" : ""}`}
+              className="flex h-8 w-8 -ml-2 items-center justify-center rounded-full bg-zinc-200 text-[11px] font-semibold text-zinc-600 ring-2 ring-white dark:bg-zinc-700 dark:text-zinc-300 dark:ring-zinc-950 transition-transform hover:scale-110 hover:z-10 cursor-default"
             >
-              {["A", "B", "C"][i]}
+              +{members.length - 4}
             </div>
-          ))}
+          )}
+          <button
+            title="Invite members"
+            className="flex h-8 w-8 -ml-2 items-center justify-center rounded-full border-2 border-dashed border-zinc-300 text-zinc-400 ring-2 ring-white transition-all hover:scale-110 hover:border-zinc-400 hover:text-zinc-600 dark:border-zinc-600 dark:text-zinc-500 dark:ring-zinc-950 dark:hover:border-zinc-400 dark:hover:text-zinc-300"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+          </button>
         </div>
       </section>
 
