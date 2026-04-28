@@ -364,15 +364,37 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
-        <div className="hidden sm:flex items-center gap-1.5">
-          {["bg-violet-500", "bg-sky-500", "bg-emerald-500"].map((bg, i) => (
+        <div className="hidden sm:flex items-center">
+          {members.slice(0, 4).map((m, i) => {
+            const name = m.display_name || m.email;
+            const initials = name.split(/[\s._-]+/).map(w => w[0]).join("").slice(0, 2).toUpperCase() || name[0]?.toUpperCase() || "?";
+            const colors = ["bg-violet-500", "bg-sky-500", "bg-emerald-500", "bg-amber-500"];
+            return (
+              <div
+                key={m.user_id}
+                title={`${m.display_name || m.email}${m.role !== "member" ? ` (${m.role})` : ""}`}
+                className={`flex h-8 w-8 items-center justify-center rounded-full ${colors[i % colors.length]} text-[11px] font-semibold text-white ring-2 ring-white dark:ring-zinc-950 transition-transform hover:scale-110 hover:z-10 cursor-default ${i > 0 ? "-ml-2" : ""}`}
+              >
+                {initials}
+              </div>
+            );
+          })}
+          {members.length > 4 && (
             <div
-              key={i}
-              className={`flex h-8 w-8 items-center justify-center rounded-full ${bg} text-[11px] font-semibold text-white ring-2 ring-white dark:ring-zinc-950 ${i > 0 ? "-ml-2" : ""}`}
+              title={`${members.length - 4} more member${members.length - 4 > 1 ? "s" : ""}`}
+              className="flex h-8 w-8 -ml-2 items-center justify-center rounded-full bg-zinc-200 text-[11px] font-semibold text-zinc-600 ring-2 ring-white dark:bg-zinc-700 dark:text-zinc-300 dark:ring-zinc-950 transition-transform hover:scale-110 hover:z-10 cursor-default"
             >
-              {["A", "B", "C"][i]}
+              +{members.length - 4}
             </div>
-          ))}
+          )}
+          <button
+            title="Invite members"
+            className="flex h-8 w-8 -ml-2 items-center justify-center rounded-full border-2 border-dashed border-zinc-300 text-zinc-400 ring-2 ring-white transition-all hover:scale-110 hover:border-zinc-400 hover:text-zinc-600 dark:border-zinc-600 dark:text-zinc-500 dark:ring-zinc-950 dark:hover:border-zinc-400 dark:hover:text-zinc-300"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+          </button>
         </div>
       </section>
 
@@ -388,14 +410,14 @@ export default function DashboardPage() {
                 {card.icon}
               </span>
             </div>
-            <p className="mt-3 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+            <p className="mt-3.5 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
               {card.value}
             </p>
             <div className="mt-1 flex items-center justify-between">
-              <span className="text-sm text-zinc-500 dark:text-zinc-400">
+              <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
                 {card.label}
               </span>
-              <span className="text-xs text-zinc-400 dark:text-zinc-500">
+              <span className="text-xs text-zinc-400 dark:text-zinc-400">
                 {card.change}
               </span>
             </div>
@@ -405,18 +427,18 @@ export default function DashboardPage() {
 
       {/* ── C. Main Content — 2 columns ─────────────────────── */}
       <section className="grid gap-6 lg:grid-cols-5">
-        {/* Left: Recent Tasks (3/5 width) */}
-        <div className="lg:col-span-3 rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        {/* Left: Recent Tasks (2/5 width) */}
+        <div className="lg:col-span-2 rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
             <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
               Recent Tasks
             </h2>
-            <span className="text-xs text-zinc-400 dark:text-zinc-500">
+            <span className="text-xs text-zinc-400 dark:text-zinc-400">
               {recentTasks.length} task{recentTasks.length !== 1 ? "s" : ""}
             </span>
           </div>
           {recentTasks.length > 0 ? (
-            <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            <ul className="divide-y divide-zinc-100 dark:divide-zinc-800 max-h-80 overflow-y-auto">
               {recentTasks.map((task) => {
                 const taskStatus = (listTitleMap.get(task.list_id) ?? "To Do") === "Done" ? "Completed" : (listTitleMap.get(task.list_id) ?? "To Do");
                 return (
@@ -427,16 +449,16 @@ export default function DashboardPage() {
                     >
                       <span className={`h-2 w-2 shrink-0 rounded-full ${statusDot(taskStatus)}`} />
                       <div className="min-w-0 flex-1">
-                        <p className={`truncate text-sm font-medium ${task.is_completed ? "line-through text-zinc-400 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}>
+                        <p className={`truncate text-sm font-medium ${task.is_completed ? "line-through text-zinc-400 dark:text-zinc-400" : "text-zinc-800 dark:text-zinc-200"}`}>
                           {task.title}
                         </p>
-                        <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
+                        <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-400">
                           {boardName} &middot; {taskStatus}
                         </p>
                       </div>
                       {task.priority && task.priority !== "none" && (
                         <span
-                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${priorityBadge(task.priority)}`}
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${priorityBadge(task.priority)}`}
                         >
                           {task.priority}
                         </span>
@@ -447,16 +469,22 @@ export default function DashboardPage() {
               })}
             </ul>
           ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <p className="text-sm text-zinc-400 dark:text-zinc-500">No tasks yet</p>
-              <p className="mt-1 text-xs text-zinc-300 dark:text-zinc-600">
-                Create tasks from the board to see them here
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">No recent tasks yet</p>
+              <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-400">
+                Create your first task to get started.
               </p>
+              <Link
+                href="/dashboard/board"
+                className="mt-3 text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+              >
+                Go to board &rarr;
+              </Link>
             </div>
           )}
           <div className="border-t border-zinc-100 px-5 py-3 dark:border-zinc-800">
             <Link
-              href="/dashboard/board"
+              href="/dashboard/tasks"
               className="text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
             >
               View all tasks &rarr;
@@ -464,27 +492,52 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Right: Task Status / Progress (2/5 width) */}
-        <div className="lg:col-span-2 space-y-6">
+        {/* Right: Task Status / Progress (3/5 width) */}
+        <div className="lg:col-span-3 space-y-6">
           {/* Completion summary */}
-          {totalTasks > 0 && (
-            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                  Completion
-                </h2>
-                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                  {completedTasks} of {totalTasks} tasks ({completionPct}%)
-                </span>
-              </div>
-              <div className="h-2.5 rounded-full bg-zinc-100 dark:bg-zinc-800">
-                <div
-                  className="h-2.5 rounded-full bg-emerald-500 transition-all"
-                  style={{ width: `${completionPct}%` }}
-                />
-              </div>
+          <div className="rounded-2xl border border-zinc-200 bg-white px-6 py-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                Completion
+              </h2>
+              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                {completedTasks} of {totalTasks} tasks ({completionPct}%)
+              </span>
             </div>
-          )}
+            <div className="h-3 rounded-full bg-zinc-100 dark:bg-zinc-800">
+              <div
+                className="h-3 rounded-full bg-emerald-500 transition-all"
+                style={{ width: `${completionPct}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Quick actions */}
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+              Quick Actions
+            </h2>
+            <div className="space-y-1.5">
+              <Link
+                href="/dashboard/board"
+                className="flex items-center gap-2.5 rounded-xl bg-zinc-800 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                New Task
+              </Link>
+              <Link
+                href="/dashboard/board"
+                className="flex items-center gap-2.5 rounded-xl border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 hover:border-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:border-zinc-600"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
+                </svg>
+                Open Board
+              </Link>
+            </div>
+          </div>
 
           {/* Progress panel */}
           {progressItems.length > 0 ? (
@@ -498,16 +551,17 @@ export default function DashboardPage() {
                   return (
                     <div key={item.label}>
                       <div className="flex items-center justify-between text-sm mb-1.5">
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                        <span className="flex items-center gap-2 font-medium text-zinc-700 dark:text-zinc-300">
+                          <span className={`h-2 w-2 shrink-0 rounded-full ${item.color}`} />
                           {item.label}
                         </span>
-                        <span className="text-xs text-zinc-400 dark:text-zinc-500">
-                          {item.count} / {item.total}
+                        <span className="text-xs text-zinc-400 dark:text-zinc-400">
+                          {item.count} of {item.total}
                         </span>
                       </div>
-                      <div className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800">
+                      <div className="h-2.5 rounded-full bg-zinc-100 dark:bg-zinc-800">
                         <div
-                          className={`h-2 rounded-full ${item.color} transition-all`}
+                          className={`h-2.5 rounded-full ${item.color} transition-all`}
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -521,35 +575,44 @@ export default function DashboardPage() {
               <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
                 Task Status
               </h2>
-              <p className="text-sm text-zinc-400 dark:text-zinc-500">
+              <p className="text-sm text-zinc-400 dark:text-zinc-400">
                 Select a board to see task status
               </p>
             </div>
           )}
 
           {/* Assignee summary */}
-          {assigneeSummary.length > 0 && (
-            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-                By Assignee
-              </h2>
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+              By Assignee
+            </h2>
+            {assigneeSummary.length > 0 ? (
               <div className="space-y-3">
                 {assigneeSummary.map((item) => {
                   const pct = totalTasks > 0 ? Math.round((item.count / totalTasks) * 100) : 0;
                   const isUnassigned = item.id === "__unassigned__";
                   return (
                     <div key={item.id}>
-                      <div className="flex items-center justify-between text-sm mb-1">
-                        <span className={`font-medium truncate ${isUnassigned ? "text-zinc-400 dark:text-zinc-500" : "text-zinc-700 dark:text-zinc-300"}`}>
-                          {item.name}
+                      <div className="flex items-center justify-between text-sm mb-1.5">
+                        <span className="flex items-center gap-2 min-w-0">
+                          {isUnassigned ? (
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[10px] font-semibold text-zinc-400 dark:bg-zinc-800 dark:text-zinc-400">?</span>
+                          ) : (
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[10px] font-semibold text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">
+                              {item.name.slice(0, 1).toUpperCase()}
+                            </span>
+                          )}
+                          <span className={`font-medium truncate ${isUnassigned ? "text-zinc-400 dark:text-zinc-400" : "text-zinc-700 dark:text-zinc-300"}`}>
+                            {item.name}
+                          </span>
                         </span>
-                        <span className="text-xs text-zinc-400 dark:text-zinc-500 shrink-0 ml-2">
+                        <span className="text-xs text-zinc-400 dark:text-zinc-400 shrink-0 ml-2">
                           {item.count} task{item.count !== 1 ? "s" : ""}
                         </span>
                       </div>
-                      <div className="h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800">
+                      <div className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800">
                         <div
-                          className={`h-1.5 rounded-full transition-all ${isUnassigned ? "bg-zinc-300 dark:bg-zinc-600" : "bg-blue-400 dark:bg-blue-500"}`}
+                          className={`h-2 rounded-full transition-all ${isUnassigned ? "bg-zinc-300 dark:bg-zinc-600" : "bg-blue-400 dark:bg-blue-500"}`}
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -557,34 +620,11 @@ export default function DashboardPage() {
                   );
                 })}
               </div>
-            </div>
-          )}
-
-          {/* Quick actions */}
-          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
-              Quick Actions
-            </h2>
-            <div className="space-y-2">
-              <Link
-                href="/dashboard/board"
-                className="flex items-center gap-2.5 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
-                New Task
-              </Link>
-              <Link
-                href="/dashboard/board"
-                className="flex items-center gap-2.5 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 hover:border-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:border-zinc-600"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
-                </svg>
-                Open Board
-              </Link>
-            </div>
+            ) : (
+              <p className="text-sm text-zinc-400 dark:text-zinc-400">
+                No assignee data yet
+              </p>
+            )}
           </div>
 
           {/* Recent Activity */}
@@ -594,13 +634,13 @@ export default function DashboardPage() {
                 Recent Activity
               </h2>
               {activities.length > 0 && (
-                <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                <span className="text-xs text-zinc-400 dark:text-zinc-400">
                   Latest {activities.length}
                 </span>
               )}
             </div>
             {activities.length > 0 ? (
-              <ul className="space-y-3">
+              <ul className="space-y-2.5 max-h-72 overflow-y-auto">
                 {activities.map((a) => (
                   <li key={a.id} className="flex items-start gap-3">
                     <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${actionIcon[a.action] ?? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
@@ -610,7 +650,7 @@ export default function DashboardPage() {
                       <p className="text-[13px] leading-snug text-zinc-700 dark:text-zinc-300">
                         {formatActivityLine(a)}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-zinc-400 dark:text-zinc-500">
+                      <p className="mt-0.5 text-[11px] text-zinc-400 dark:text-zinc-400">
                         {timeAgo(a.created_at)}
                       </p>
                     </div>
@@ -618,9 +658,14 @@ export default function DashboardPage() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-zinc-400 dark:text-zinc-500">
-                {selectedBoardId ? "No activity yet" : "Select a board to see activity"}
-              </p>
+              <div className="flex flex-col items-center justify-center py-6 text-center">
+                <p className="text-sm text-zinc-400 dark:text-zinc-400">
+                  {selectedBoardId ? "No activity yet" : "Select a board to see activity"}
+                </p>
+                <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-400">
+                  Task updates will appear here.
+                </p>
+              </div>
             )}
           </div>
         </div>

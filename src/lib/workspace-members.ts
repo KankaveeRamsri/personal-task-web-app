@@ -67,7 +67,7 @@ export async function inviteMember(
     .select("id")
     .eq("workspace_id", workspaceId)
     .eq("user_id", targetProfile.id)
-    .single();
+    .maybeSingle();
 
   if (existing)
     return { ok: false, error: "ผู้ใช้นี้เป็นสมาชิกอยู่แล้ว" };
