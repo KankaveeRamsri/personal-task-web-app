@@ -439,6 +439,27 @@ export function useBoardData() {
     return true;
   }, [workspaces]);
 
+  const renameWorkspace = useCallback(
+    async (workspaceId: string, newName: string) => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("workspaces")
+        .update({ name: newName })
+        .eq("id", workspaceId)
+        .select()
+        .single();
+
+      if (error) {
+        setErrorMsg(error.message);
+        return false;
+      }
+      const updated = data as Workspace;
+      setWorkspaces((prev) => prev.map((ws) => (ws.id === workspaceId ? updated : ws)));
+      return true;
+    },
+    [],
+  );
+
   const clearError = useCallback(() => setErrorMsg(""), []);
 
   return {
@@ -463,6 +484,7 @@ export function useBoardData() {
     reorderTasks,
     deleteBoard,
     deleteWorkspace,
+    renameWorkspace,
     fetchTasks,
     clearError,
     setErrorMsg,

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { useBoardData } from "@/hooks/useBoardData";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
+import { canManageMembers } from "@/lib/permissions";
 
 const ROLE_LABELS: Record<string, string> = {
   owner: "Owner",
@@ -35,8 +36,18 @@ export default function SettingsPage() {
     text: string;
   } | null>(null);
 
-  const { workspaces, selectedWorkspaceId, boards, selectedBoardId } = useBoardData();
+  const { workspaces, selectedWorkspaceId, boards, selectedBoardId, renameWorkspace } = useBoardData();
   const { currentRole } = useWorkspaceMembers(selectedWorkspaceId);
+
+  const canRename = currentRole ? canManageMembers(currentRole) : false;
+
+  const [editingWsName, setEditingWsName] = useState("");
+  const [isEditingWs, setIsEditingWs] = useState(false);
+  const [isSavingWs, setIsSavingWs] = useState(false);
+  const [wsMessage, setWsMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   const workspaceName = useMemo(
     () => workspaces.find((w) => w.id === selectedWorkspaceId)?.name ?? "",
@@ -67,6 +78,38 @@ export default function SettingsPage() {
       }
     });
   }, []);
+
+  const handleStartEditWs = () => {
+    setEditingWsName(workspaceName);
+    setIsEditingWs(true);
+    setWsMessage(null);
+  };
+
+  const handleCancelEditWs = () => {
+    setIsEditingWs(false);
+    setEditingWsName("");
+    setWsMessage(null);
+  };
+
+  const handleSaveWsName = async () => {
+    if (!selectedWorkspaceId || isSavingWs) return;
+    const trimmed = editingWsName.trim();
+    if (!trimmed) {
+      setWsMessage({ type: "error", text: "Workspace name cannot be empty." });
+      return;
+    }
+    setIsSavingWs(true);
+    setWsMessage(null);
+    const ok = await renameWorkspace(selectedWorkspaceId, trimmed);
+    setIsSavingWs(false);
+    if (!ok) {
+      setWsMessage({ type: "error", text: "Failed to rename workspace. Check permissions." });
+      return;
+    }
+    setIsEditingWs(false);
+    setEditingWsName("");
+    setWsMessage({ type: "success", text: "Workspace name updated." });
+  };
 
   const handleStartEdit = () => {
     setEditingName(displayName);
@@ -207,11 +250,64 @@ export default function SettingsPage() {
           </h2>
         </div>
         <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-          <div className="flex items-center justify-between px-5 py-4">
-            <span className="text-sm text-zinc-500 dark:text-zinc-400">Workspace</span>
-            <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-              {workspaceName || "—"}
-            </span>
+          <div className="px-5 py-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                Workspace Name
+              </span>
+              {canRename && !isEditingWs && (
+                <button
+                  onClick={handleStartEditWs}
+                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                >
+                  Edit
+                </button>
+              )}
+            </div>
+            {isEditingWs ? (
+              <div className="mt-3 space-y-3">
+                <input
+                  type="text"
+                  value={editingWsName}
+                  onChange={(e) => setEditingWsName(e.target.value)}
+                  placeholder="Enter workspace name"
+                  className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-900 outline-none transition-colors placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 dark:focus:ring-zinc-600"
+                  disabled={isSavingWs}
+                  autoFocus
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleSaveWsName}
+                    disabled={isSavingWs}
+                    className="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                  >
+                    {isSavingWs ? "Saving…" : "Save"}
+                  </button>
+                  <button
+                    onClick={handleCancelEditWs}
+                    disabled={isSavingWs}
+                    className="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="mt-1 text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                {workspaceName || "—"}
+              </p>
+            )}
+            {wsMessage && (
+              <p
+                className={`mt-2 text-xs ${
+                  wsMessage.type === "success"
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-red-600 dark:text-red-400"
+                }`}
+              >
+                {wsMessage.text}
+              </p>
+            )}
           </div>
           <div className="flex items-center justify-between px-5 py-4">
             <span className="text-sm text-zinc-500 dark:text-zinc-400">Board</span>
