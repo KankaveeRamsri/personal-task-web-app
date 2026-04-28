@@ -169,7 +169,12 @@ export default function TasksPage() {
     const now = new Date();
     const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const completedListIds = new Set(
-      lists.filter((l) => l.title.toLowerCase() === "done").map((l) => l.id)
+      lists
+        .filter((l) => {
+          const name = l.title.toLowerCase().trim();
+          return name === "done" || name === "completed";
+        })
+        .map((l) => l.id)
     );
 
     return {
@@ -199,7 +204,12 @@ export default function TasksPage() {
       const now = new Date();
       const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const completedListIds = new Set(
-        lists.filter((l) => l.title.toLowerCase() === "done").map((l) => l.id)
+        lists
+          .filter((l) => {
+            const name = l.title.toLowerCase().trim();
+            return name === "done" || name === "completed";
+          })
+          .map((l) => l.id)
       );
 
       switch (activeQuickView) {
