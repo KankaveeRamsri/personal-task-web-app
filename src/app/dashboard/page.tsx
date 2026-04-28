@@ -388,14 +388,14 @@ export default function DashboardPage() {
                 {card.icon}
               </span>
             </div>
-            <p className="mt-3 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+            <p className="mt-3.5 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
               {card.value}
             </p>
             <div className="mt-1 flex items-center justify-between">
-              <span className="text-sm text-zinc-500 dark:text-zinc-400">
+              <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
                 {card.label}
               </span>
-              <span className="text-xs text-zinc-400 dark:text-zinc-500">
+              <span className="text-xs text-zinc-400 dark:text-zinc-400">
                 {card.change}
               </span>
             </div>
@@ -411,7 +411,7 @@ export default function DashboardPage() {
             <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
               Recent Tasks
             </h2>
-            <span className="text-xs text-zinc-400 dark:text-zinc-500">
+            <span className="text-xs text-zinc-400 dark:text-zinc-400">
               {recentTasks.length} task{recentTasks.length !== 1 ? "s" : ""}
             </span>
           </div>
@@ -427,16 +427,16 @@ export default function DashboardPage() {
                     >
                       <span className={`h-2 w-2 shrink-0 rounded-full ${statusDot(taskStatus)}`} />
                       <div className="min-w-0 flex-1">
-                        <p className={`truncate text-sm font-medium ${task.is_completed ? "line-through text-zinc-400 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}>
+                        <p className={`truncate text-sm font-medium ${task.is_completed ? "line-through text-zinc-400 dark:text-zinc-400" : "text-zinc-800 dark:text-zinc-200"}`}>
                           {task.title}
                         </p>
-                        <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
+                        <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-400">
                           {boardName} &middot; {taskStatus}
                         </p>
                       </div>
                       {task.priority && task.priority !== "none" && (
                         <span
-                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${priorityBadge(task.priority)}`}
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${priorityBadge(task.priority)}`}
                         >
                           {task.priority}
                         </span>
@@ -448,7 +448,7 @@ export default function DashboardPage() {
             </ul>
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <p className="text-sm text-zinc-400 dark:text-zinc-500">No tasks yet</p>
+              <p className="text-sm text-zinc-400 dark:text-zinc-400">No tasks yet</p>
               <p className="mt-1 text-xs text-zinc-300 dark:text-zinc-600">
                 Create tasks from the board to see them here
               </p>
@@ -488,7 +488,7 @@ export default function DashboardPage() {
 
           {/* Quick actions */}
           <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
               Quick Actions
             </h2>
             <div className="space-y-1.5">
@@ -528,7 +528,7 @@ export default function DashboardPage() {
                         <span className="font-medium text-zinc-700 dark:text-zinc-300">
                           {item.label}
                         </span>
-                        <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                        <span className="text-xs text-zinc-400 dark:text-zinc-400">
                           {item.count} / {item.total}
                         </span>
                       </div>
@@ -548,7 +548,7 @@ export default function DashboardPage() {
               <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
                 Task Status
               </h2>
-              <p className="text-sm text-zinc-400 dark:text-zinc-500">
+              <p className="text-sm text-zinc-400 dark:text-zinc-400">
                 Select a board to see task status
               </p>
             </div>
@@ -567,10 +567,10 @@ export default function DashboardPage() {
                   return (
                     <div key={item.id}>
                       <div className="flex items-center justify-between text-sm mb-1">
-                        <span className={`font-medium truncate ${isUnassigned ? "text-zinc-400 dark:text-zinc-500" : "text-zinc-700 dark:text-zinc-300"}`}>
+                        <span className={`font-medium truncate ${isUnassigned ? "text-zinc-400 dark:text-zinc-400" : "text-zinc-700 dark:text-zinc-300"}`}>
                           {item.name}
                         </span>
-                        <span className="text-xs text-zinc-400 dark:text-zinc-500 shrink-0 ml-2">
+                        <span className="text-xs text-zinc-400 dark:text-zinc-400 shrink-0 ml-2">
                           {item.count} task{item.count !== 1 ? "s" : ""}
                         </span>
                       </div>
@@ -594,7 +594,7 @@ export default function DashboardPage() {
                 Recent Activity
               </h2>
               {activities.length > 0 && (
-                <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                <span className="text-xs text-zinc-400 dark:text-zinc-400">
                   Latest {activities.length}
                 </span>
               )}
@@ -610,7 +610,7 @@ export default function DashboardPage() {
                       <p className="text-[13px] leading-snug text-zinc-700 dark:text-zinc-300">
                         {formatActivityLine(a)}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-zinc-400 dark:text-zinc-500">
+                      <p className="mt-0.5 text-[11px] text-zinc-400 dark:text-zinc-400">
                         {timeAgo(a.created_at)}
                       </p>
                     </div>
@@ -618,7 +618,7 @@ export default function DashboardPage() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-zinc-400 dark:text-zinc-500">
+              <p className="text-sm text-zinc-400 dark:text-zinc-400">
                 {selectedBoardId ? "No activity yet" : "Select a board to see activity"}
               </p>
             )}
