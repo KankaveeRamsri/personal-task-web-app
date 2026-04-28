@@ -10,16 +10,83 @@ export default function SettingsPage() {
   const [name, setName] = useState("");
   const [userId, setUserId] = useState("");
 
+  const [displayName, setDisplayName] = useState("");
+  const [editingName, setEditingName] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       if (data.user) {
         setEmail(data.user.email ?? "");
         setName(data.user.user_metadata?.full_name ?? "");
         setUserId(data.user.id);
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("display_name")
+          .eq("id", data.user.id)
+          .single();
+
+        if (profile?.display_name) {
+          setDisplayName(profile.display_name);
+        }
       }
     });
   }, []);
+
+  const handleStartEdit = () => {
+    setEditingName(displayName);
+    setIsEditing(true);
+    setSaveMessage(null);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditingName("");
+    setSaveMessage(null);
+  };
+
+  const handleSaveName = async () => {
+    if (!userId || isSaving) return;
+
+    const trimmed = editingName.trim();
+    if (!trimmed) {
+      setSaveMessage({ type: "error", text: "Display name cannot be empty." });
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveMessage(null);
+
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("profiles")
+      .update({ display_name: trimmed })
+      .eq("id", userId);
+
+    setIsSaving(false);
+
+    if (error) {
+      setSaveMessage({
+        type: "error",
+        text: error.code === "42501"
+          ? "Permission denied — RLS policy blocks profile updates. Contact your admin."
+          : `Failed to save: ${error.message}`,
+      });
+      return;
+    }
+
+    setDisplayName(trimmed);
+    setIsEditing(false);
+    setEditingName("");
+    setSaveMessage({ type: "success", text: "Display name updated." });
+  };
 
   const handleSignOut = async () => {
     const supabase = createClient();
@@ -34,6 +101,77 @@ export default function SettingsPage() {
         Settings
       </h1>
 
+      {/* Profile section */}
+      <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
+          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+            Profile
+          </h2>
+        </div>
+        <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+          <div className="px-5 py-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                Display Name
+              </span>
+              {!isEditing && (
+                <button
+                  onClick={handleStartEdit}
+                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                >
+                  Edit
+                </button>
+              )}
+            </div>
+            {isEditing ? (
+              <div className="mt-3 space-y-3">
+                <input
+                  type="text"
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  placeholder="Enter display name"
+                  className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-900 outline-none transition-colors placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 dark:focus:ring-zinc-600"
+                  disabled={isSaving}
+                  autoFocus
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleSaveName}
+                    disabled={isSaving}
+                    className="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                  >
+                    {isSaving ? "Saving…" : "Save"}
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    disabled={isSaving}
+                    className="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="mt-1 text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                {displayName || "—"}
+              </p>
+            )}
+            {saveMessage && (
+              <p
+                className={`mt-2 text-xs ${
+                  saveMessage.type === "success"
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-red-600 dark:text-red-400"
+                }`}
+              >
+                {saveMessage.text}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Account info section */}
       <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <div className="border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
