@@ -529,16 +529,17 @@ export default function DashboardPage() {
                   return (
                     <div key={item.label}>
                       <div className="flex items-center justify-between text-sm mb-1.5">
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                        <span className="flex items-center gap-2 font-medium text-zinc-700 dark:text-zinc-300">
+                          <span className={`h-2 w-2 shrink-0 rounded-full ${item.color}`} />
                           {item.label}
                         </span>
                         <span className="text-xs text-zinc-400 dark:text-zinc-400">
-                          {item.count} / {item.total}
+                          {item.count} of {item.total}
                         </span>
                       </div>
-                      <div className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800">
+                      <div className="h-2.5 rounded-full bg-zinc-100 dark:bg-zinc-800">
                         <div
-                          className={`h-2 rounded-full ${item.color} transition-all`}
+                          className={`h-2.5 rounded-full ${item.color} transition-all`}
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -570,17 +571,26 @@ export default function DashboardPage() {
                   const isUnassigned = item.id === "__unassigned__";
                   return (
                     <div key={item.id}>
-                      <div className="flex items-center justify-between text-sm mb-1">
-                        <span className={`font-medium truncate ${isUnassigned ? "text-zinc-400 dark:text-zinc-400" : "text-zinc-700 dark:text-zinc-300"}`}>
-                          {item.name}
+                      <div className="flex items-center justify-between text-sm mb-1.5">
+                        <span className="flex items-center gap-2 min-w-0">
+                          {isUnassigned ? (
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[10px] font-semibold text-zinc-400 dark:bg-zinc-800 dark:text-zinc-400">?</span>
+                          ) : (
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[10px] font-semibold text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">
+                              {item.name.slice(0, 1).toUpperCase()}
+                            </span>
+                          )}
+                          <span className={`font-medium truncate ${isUnassigned ? "text-zinc-400 dark:text-zinc-400" : "text-zinc-700 dark:text-zinc-300"}`}>
+                            {item.name}
+                          </span>
                         </span>
                         <span className="text-xs text-zinc-400 dark:text-zinc-400 shrink-0 ml-2">
                           {item.count} task{item.count !== 1 ? "s" : ""}
                         </span>
                       </div>
-                      <div className="h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800">
+                      <div className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800">
                         <div
-                          className={`h-1.5 rounded-full transition-all ${isUnassigned ? "bg-zinc-300 dark:bg-zinc-600" : "bg-blue-400 dark:bg-blue-500"}`}
+                          className={`h-2 rounded-full transition-all ${isUnassigned ? "bg-zinc-300 dark:bg-zinc-600" : "bg-blue-400 dark:bg-blue-500"}`}
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -608,7 +618,7 @@ export default function DashboardPage() {
               )}
             </div>
             {activities.length > 0 ? (
-              <ul className="space-y-3 max-h-72 overflow-y-auto">
+              <ul className="space-y-2.5 max-h-72 overflow-y-auto">
                 {activities.map((a) => (
                   <li key={a.id} className="flex items-start gap-3">
                     <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${actionIcon[a.action] ?? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
