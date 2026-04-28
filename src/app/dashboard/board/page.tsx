@@ -238,7 +238,7 @@ export default function DashboardPage() {
 
   // Cmd/Ctrl+A selects all visible (filtered) tasks
   useEffect(() => {
-    if (!selectedBoardId || lists.length === 0) return;
+    if (!selectedBoardId || lists.length === 0 || currentRole === "viewer") return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey) || e.key !== "a") return;
       const tag = (e.target as HTMLElement).tagName;
@@ -248,7 +248,7 @@ export default function DashboardPage() {
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [selectedBoardId, lists.length, filteredTasks]);
+  }, [selectedBoardId, lists.length, filteredTasks, currentRole]);
 
   // DnD state
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
@@ -931,7 +931,7 @@ export default function DashboardPage() {
         onClose={cancelEdit}
       />
 
-      <BulkActionToolbar
+      {canEditTasks && <BulkActionToolbar
         selectedCount={selectedTaskIds.size}
         totalTaskCount={tasks.length}
         listTitles={lists.map((l) => l.title)}
@@ -940,7 +940,7 @@ export default function DashboardPage() {
         onBulkDelete={handleBulkDelete}
         deleting={bulkDeleting}
         onClearSelection={clearSelection}
-      />
+      />}
     </div>
   );
 }

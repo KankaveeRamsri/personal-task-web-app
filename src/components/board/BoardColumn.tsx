@@ -133,19 +133,25 @@ export default function BoardColumn({
               {list.title === "Done" ? "Completed" : list.title}
             </h3>
           </div>
-          <button
-            onClick={() => onSelectAllInColumn(list.id)}
-            title={allSelected ? "Deselect all" : "Select all"}
-            className={`flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold transition-colors ${
-              allSelected
-                ? "bg-blue-500 text-white"
-                : someSelected
-                  ? "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400"
-                  : "bg-zinc-200/80 text-zinc-500 cursor-pointer hover:bg-zinc-300/80 dark:bg-zinc-700/60 dark:text-zinc-400 dark:hover:bg-zinc-600/60"
-            }`}
-          >
-            {countLabel}
-          </button>
+          {canEditTasks ? (
+            <button
+              onClick={() => onSelectAllInColumn(list.id)}
+              title={allSelected ? "Deselect all" : "Select all"}
+              className={`flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold transition-colors ${
+                allSelected
+                  ? "bg-blue-500 text-white"
+                  : someSelected
+                    ? "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400"
+                    : "bg-zinc-200/80 text-zinc-500 cursor-pointer hover:bg-zinc-300/80 dark:bg-zinc-700/60 dark:text-zinc-400 dark:hover:bg-zinc-600/60"
+              }`}
+            >
+              {countLabel}
+            </button>
+          ) : (
+            <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold bg-zinc-200/80 text-zinc-500 dark:bg-zinc-700/60 dark:text-zinc-400">
+              {countLabel}
+            </span>
+          )}
         </div>
       </div>
 

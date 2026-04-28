@@ -112,13 +112,15 @@ export default function TaskCard({
       }`}
     >
       <div className={`flex items-start gap-2.5 ${task.is_completed ? "opacity-50" : ""}`}>
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={() => onToggleSelect(task.id)}
-          onPointerDown={(e) => e.stopPropagation()}
-          className="mt-[3px] h-3.5 w-3.5 rounded accent-blue-500 dark:accent-blue-400 cursor-pointer shrink-0 touch-manipulation"
-        />
+        {canEditTasks && (
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onToggleSelect(task.id)}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="mt-[3px] h-3.5 w-3.5 rounded accent-blue-500 dark:accent-blue-400 cursor-pointer shrink-0 touch-manipulation"
+          />
+        )}
         <div className="flex-1 min-w-0">
           <span
             className={`block text-[13px] leading-snug font-medium ${
