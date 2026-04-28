@@ -140,6 +140,7 @@ export default function TasksPage() {
   const [filterAssigneeId, setFilterAssigneeId] = useState("all");
   const [filterDueDate, setFilterDueDate] = useState("all");
   const [sortBy, setSortBy] = useState("due_date");
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   const hasActiveFilters =
     searchQuery !== "" ||
@@ -162,6 +163,7 @@ export default function TasksPage() {
   // Reset filters when board changes
   useEffect(() => {
     clearFilters();
+    setSelectedTaskId(null);
   }, [selectedBoardId, clearFilters]);
 
   // Quick view counts
@@ -315,6 +317,12 @@ export default function TasksPage() {
     for (const t of tasks) ids.add(t.list_id);
     return Array.from(ids);
   }, [tasks]);
+
+  const selectedTask = selectedTaskId
+    ? tasks.find((t) => t.id === selectedTaskId) ?? null
+    : null;
+
+  const selectedBoardTitle = boards.find((b) => b.id === selectedBoardId)?.title ?? "";
 
   const selectClass =
     "rounded-md border border-zinc-200 bg-white px-2 py-1.5 text-xs text-zinc-600 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-400 dark:focus:border-zinc-600";
@@ -632,11 +640,28 @@ export default function TasksPage() {
                       ? memberMap.get(task.assignee_id) ?? null
                       : null
                   }
+                  isSelected={task.id === selectedTaskId}
+                  onClick={() => setSelectedTaskId(task.id)}
                 />
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Read-only task detail drawer */}
+      {selectedTask && (
+        <TaskDetailDrawer
+          task={selectedTask}
+          listTitle={listMap.get(selectedTask.list_id) ?? "—"}
+          boardTitle={selectedBoardTitle}
+          assignee={
+            selectedTask.assignee_id
+              ? memberMap.get(selectedTask.assignee_id) ?? null
+              : null
+          }
+          onClose={() => setSelectedTaskId(null)}
+        />
       )}
     </div>
   );
@@ -646,16 +671,27 @@ function TaskRow({
   task,
   listTitle,
   assignee,
+  isSelected,
+  onClick,
 }: {
   task: Task;
   listTitle: string;
   assignee: MemberWithProfile | null;
+  isSelected: boolean;
+  onClick: () => void;
 }) {
   const displayTitle =
     listTitle === "Done" ? "Completed" : listTitle;
 
   return (
-    <tr className="border-t border-zinc-100 transition-colors hover:bg-zinc-50/80 dark:border-zinc-800 dark:hover:bg-zinc-800/50">
+    <tr
+      onClick={onClick}
+      className={`cursor-pointer border-t transition-colors ${
+        isSelected
+          ? "bg-blue-50/60 dark:bg-blue-950/20"
+          : "border-zinc-100 hover:bg-zinc-50/80 dark:border-zinc-800 dark:hover:bg-zinc-800/50"
+      }`}
+    >
       {/* Title */}
       <td className="px-4 py-3">
         <span
@@ -739,5 +775,189 @@ function TaskRow({
         )}
       </td>
     </tr>
+  );
+}
+
+// --- Read-only task detail drawer ---
+
+function TaskDetailDrawer({
+  task,
+  listTitle,
+  boardTitle,
+  assignee,
+  onClose,
+}: {
+  task: Task;
+  listTitle: string;
+  boardTitle: string;
+  assignee: MemberWithProfile | null;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const displayStatus = listTitle === "Done" ? "Completed" : listTitle;
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-50 bg-black/20 backdrop-blur-[2px]"
+        onClick={onClose}
+        style={{ animation: "fade-in 0.15s ease-out" }}
+      />
+      <div
+        className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md bg-white shadow-xl border-l border-zinc-200 dark:bg-zinc-900 dark:border-zinc-700 flex flex-col"
+        style={{ animation: "panel-in 0.2s ease-out" }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100 dark:border-zinc-800">
+          <h2 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+            Task details
+          </h2>
+          <button
+            onClick={onClose}
+            className="flex items-center justify-center h-7 w-7 rounded-md text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
+          {/* Title */}
+          <div>
+            <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">
+              Title
+            </label>
+            <p className={`text-sm ${task.is_completed ? "line-through text-zinc-400 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}>
+              {task.title}
+            </p>
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">
+              Description
+            </label>
+            {task.description ? (
+              <p className="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">
+                {task.description}
+              </p>
+            ) : (
+              <p className="text-sm text-zinc-400 dark:text-zinc-500 italic">
+                No description
+              </p>
+            )}
+          </div>
+
+          {/* Status & Priority row */}
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">
+                Status
+              </label>
+              <span className="inline-flex rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                {displayStatus}
+              </span>
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">
+                Priority
+              </label>
+              {task.priority && task.priority !== "none" ? (
+                <span
+                  className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium capitalize ${getPriorityBadge(task.priority)}`}
+                >
+                  <span
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{
+                      backgroundColor:
+                        task.priority === "high"
+                          ? "#ef4444"
+                          : task.priority === "medium"
+                            ? "#f59e0b"
+                            : "#3b82f6",
+                    }}
+                  />
+                  {task.priority}
+                </span>
+              ) : (
+                <p className="text-xs text-zinc-400 dark:text-zinc-500">None</p>
+              )}
+            </div>
+          </div>
+
+          {/* Due date & Assignee row */}
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">
+                Due date
+              </label>
+              {task.due_date ? (
+                <DueDateChip dateStr={task.due_date} />
+              ) : (
+                <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                  No due date
+                </p>
+              )}
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">
+                Assignee
+              </label>
+              {assignee ? (
+                <span className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400" title={assignee.email}>
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-zinc-200 text-[9px] font-semibold text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
+                    {getInitials(assignee.email, assignee.display_name)}
+                  </span>
+                  <span className="truncate">
+                    {assignee.display_name || assignee.email}
+                  </span>
+                </span>
+              ) : (
+                <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                  Unassigned
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Board / List context */}
+          {(boardTitle || listTitle) && (
+            <div>
+              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">
+                Board
+              </label>
+              <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                {boardTitle}
+                {listTitle && (
+                  <>
+                    <span className="mx-1.5 text-zinc-300 dark:text-zinc-600">/</span>
+                    {displayStatus}
+                  </>
+                )}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 border-t border-zinc-100 dark:border-zinc-800">
+          <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
+            Created {new Date(task.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+            {task.updated_at !== task.created_at && (
+              <> &middot; Updated {new Date(task.updated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</>
+            )}
+          </p>
+        </div>
+      </div>
+    </>
   );
 }
