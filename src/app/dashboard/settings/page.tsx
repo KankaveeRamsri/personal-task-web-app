@@ -1,8 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+import { useBoardData } from "@/hooks/useBoardData";
+import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
+
+const ROLE_LABELS: Record<string, string> = {
+  owner: "Owner",
+  admin: "Admin",
+  member: "Member",
+  viewer: "Viewer (read-only)",
+};
+
+function permissionSummary(role: string | null) {
+  if (role === "viewer") return "You can view tasks and boards but cannot create, edit, or delete them.";
+  if (role === "owner" || role === "admin" || role === "member")
+    return "You can create, edit, and delete tasks in this workspace.";
+  return "";
+}
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -18,6 +34,18 @@ export default function SettingsPage() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  const { workspaces, selectedWorkspaceId, boards, selectedBoardId } = useBoardData();
+  const { currentRole } = useWorkspaceMembers(selectedWorkspaceId);
+
+  const workspaceName = useMemo(
+    () => workspaces.find((w) => w.id === selectedWorkspaceId)?.name ?? "",
+    [workspaces, selectedWorkspaceId],
+  );
+  const boardName = useMemo(
+    () => boards.find((b) => b.id === selectedBoardId)?.title ?? "",
+    [boards, selectedBoardId],
+  );
 
   useEffect(() => {
     const supabase = createClient();
@@ -168,6 +196,42 @@ export default function SettingsPage() {
               </p>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Workspace section */}
+      <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
+          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+            Workspace
+          </h2>
+        </div>
+        <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+          <div className="flex items-center justify-between px-5 py-4">
+            <span className="text-sm text-zinc-500 dark:text-zinc-400">Workspace</span>
+            <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+              {workspaceName || "—"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between px-5 py-4">
+            <span className="text-sm text-zinc-500 dark:text-zinc-400">Board</span>
+            <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+              {boardName || "—"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between px-5 py-4">
+            <span className="text-sm text-zinc-500 dark:text-zinc-400">Your Role</span>
+            <span className="inline-flex items-center rounded-lg bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+              {currentRole ? ROLE_LABELS[currentRole] ?? currentRole : "—"}
+            </span>
+          </div>
+          {currentRole && permissionSummary(currentRole) && (
+            <div className="px-5 py-4">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                {permissionSummary(currentRole)}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
