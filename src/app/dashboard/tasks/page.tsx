@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useBoardData } from "@/hooks/useBoardData";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
 import type { Task } from "@/types/database";
@@ -117,13 +117,114 @@ export default function TasksPage() {
     return map;
   }, [members]);
 
+  // Filter & sort state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterPriority, setFilterPriority] = useState("all");
+  const [filterAssigneeId, setFilterAssigneeId] = useState("all");
+  const [filterDueDate, setFilterDueDate] = useState("all");
+  const [sortBy, setSortBy] = useState("due_date");
+
+  const hasActiveFilters =
+    searchQuery !== "" ||
+    filterStatus !== "all" ||
+    filterPriority !== "all" ||
+    filterAssigneeId !== "all" ||
+    filterDueDate !== "all" ||
+    sortBy !== "due_date";
+
+  const clearFilters = useCallback(() => {
+    setSearchQuery("");
+    setFilterStatus("all");
+    setFilterPriority("all");
+    setFilterAssigneeId("all");
+    setFilterDueDate("all");
+    setSortBy("due_date");
+  }, []);
+
+  // Reset filters when board changes
+  useEffect(() => {
+    clearFilters();
+  }, [selectedBoardId, clearFilters]);
+
+  const filteredTasks = useMemo(() => {
+    const now = new Date();
+    const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    return tasks.filter((task) => {
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const matchesTitle = task.title.toLowerCase().includes(q);
+        const matchesDesc = task.description?.toLowerCase().includes(q) ?? false;
+        if (!matchesTitle && !matchesDesc) return false;
+      }
+
+      if (filterStatus !== "all" && task.list_id !== filterStatus) return false;
+
+      if (filterPriority !== "all" && task.priority !== filterPriority) return false;
+
+      if (filterAssigneeId === "unassigned") {
+        if (task.assignee_id !== null) return false;
+      } else if (filterAssigneeId !== "all") {
+        if (task.assignee_id !== filterAssigneeId) return false;
+      }
+
+      if (filterDueDate !== "all") {
+        if (filterDueDate === "no_due_date") {
+          if (task.due_date !== null) return false;
+        } else if (task.due_date === null) {
+          return false;
+        } else {
+          const target = new Date(task.due_date + "T00:00:00");
+          const targetLocal = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+          const diffDays = Math.round((targetLocal.getTime() - todayLocal.getTime()) / (1000 * 60 * 60 * 24));
+          if (filterDueDate === "overdue" && diffDays >= 0) return false;
+          if (filterDueDate === "today" && diffDays !== 0) return false;
+          if (filterDueDate === "upcoming" && diffDays <= 0) return false;
+        }
+      }
+
+      return true;
+    });
+  }, [tasks, searchQuery, filterStatus, filterPriority, filterAssigneeId, filterDueDate]);
+
   const sortedTasks = useMemo(() => {
-    return [...tasks].sort((a, b) => {
+    const priorityRank: Record<string, number> = { high: 0, medium: 1, low: 2, none: 3 };
+
+    return [...filteredTasks].sort((a, b) => {
+      // Incomplete tasks always first
       if (a.is_completed !== b.is_completed)
         return a.is_completed ? 1 : -1;
-      return b.created_at.localeCompare(a.created_at);
+
+      switch (sortBy) {
+        case "due_date": {
+          const aDate = a.due_date ? new Date(a.due_date + "T00:00:00").getTime() : Infinity;
+          const bDate = b.due_date ? new Date(b.due_date + "T00:00:00").getTime() : Infinity;
+          return aDate - bDate;
+        }
+        case "priority":
+          return (priorityRank[a.priority] ?? 3) - (priorityRank[b.priority] ?? 3);
+        case "title":
+          return a.title.localeCompare(b.title);
+        case "status": {
+          const aList = listMap.get(a.list_id) ?? "";
+          const bList = listMap.get(b.list_id) ?? "";
+          return aList.localeCompare(bList);
+        }
+        default:
+          return 0;
+      }
     });
+  }, [filteredTasks, sortBy, listMap]);
+
+  const uniqueListIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const t of tasks) ids.add(t.list_id);
+    return Array.from(ids);
   }, [tasks]);
+
+  const selectClass =
+    "rounded-md border border-zinc-200 bg-white px-2 py-1.5 text-xs text-zinc-600 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-400 dark:focus:border-zinc-600";
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -174,6 +275,112 @@ export default function TasksPage() {
         )}
       </div>
 
+      {/* Filter toolbar */}
+      {selectedWorkspaceId && tasks.length > 0 && (
+        <div className="mb-4 flex items-center gap-2 flex-wrap">
+          <div className="relative flex-1 min-w-[180px] max-w-xs">
+            <svg
+              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+              />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search tasks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-md border border-zinc-200 bg-white pl-8 pr-3 py-1.5 text-xs text-zinc-700 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-300 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600"
+            />
+          </div>
+
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className={selectClass}
+          >
+            <option value="all">Status: All</option>
+            {uniqueListIds.map((id) => {
+              const title = listMap.get(id) ?? "—";
+              return (
+                <option key={id} value={id}>
+                  {title === "Done" ? "Completed" : title}
+                </option>
+              );
+            })}
+          </select>
+
+          <select
+            value={filterPriority}
+            onChange={(e) => setFilterPriority(e.target.value)}
+            className={selectClass}
+          >
+            <option value="all">Priority: All</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+
+          <select
+            value={filterAssigneeId}
+            onChange={(e) => setFilterAssigneeId(e.target.value)}
+            className={selectClass}
+          >
+            <option value="all">Assignee: All</option>
+            <option value="unassigned">Unassigned</option>
+            {members.map((m) => (
+              <option key={m.user_id} value={m.user_id}>
+                {m.display_name || m.email}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filterDueDate}
+            onChange={(e) => setFilterDueDate(e.target.value)}
+            className={selectClass}
+          >
+            <option value="all">Due: All</option>
+            <option value="overdue">Overdue</option>
+            <option value="today">Today</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="no_due_date">No due date</option>
+          </select>
+
+          <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-700" />
+
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className={selectClass}
+          >
+            <option value="due_date">Sort: Due date</option>
+            <option value="priority">Sort: Priority</option>
+            <option value="title">Sort: Title</option>
+            <option value="status">Sort: Status</option>
+          </select>
+
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+            >
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+              </svg>
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Content */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -215,6 +422,31 @@ export default function TasksPage() {
           <p className="text-sm font-medium text-zinc-400 dark:text-zinc-500">
             Select a workspace to view tasks
           </p>
+        </div>
+      ) : sortedTasks.length === 0 && tasks.length > 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 py-20 dark:border-zinc-700">
+          <svg
+            className="mb-3 h-8 w-8 text-zinc-300 dark:text-zinc-600"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+            />
+          </svg>
+          <p className="text-sm font-medium text-zinc-400 dark:text-zinc-500">
+            No matching tasks
+          </p>
+          <button
+            onClick={clearFilters}
+            className="mt-2 text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300 transition-colors"
+          >
+            Clear filters
+          </button>
         </div>
       ) : sortedTasks.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 py-20 dark:border-zinc-700">
