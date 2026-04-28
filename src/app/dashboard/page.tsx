@@ -416,7 +416,7 @@ export default function DashboardPage() {
             </span>
           </div>
           {recentTasks.length > 0 ? (
-            <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            <ul className="divide-y divide-zinc-100 dark:divide-zinc-800 max-h-80 overflow-y-auto">
               {recentTasks.map((task) => {
                 const taskStatus = (listTitleMap.get(task.list_id) ?? "To Do") === "Done" ? "Completed" : (listTitleMap.get(task.list_id) ?? "To Do");
                 return (
@@ -468,8 +468,8 @@ export default function DashboardPage() {
         <div className="lg:col-span-3 space-y-6">
           {/* Completion summary */}
           {totalTasks > 0 && (
-            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="flex items-center justify-between mb-3">
+            <div className="rounded-2xl border border-zinc-200 bg-white px-6 py-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                   Completion
                 </h2>
@@ -477,9 +477,9 @@ export default function DashboardPage() {
                   {completedTasks} of {totalTasks} tasks ({completionPct}%)
                 </span>
               </div>
-              <div className="h-2.5 rounded-full bg-zinc-100 dark:bg-zinc-800">
+              <div className="h-3 rounded-full bg-zinc-100 dark:bg-zinc-800">
                 <div
-                  className="h-2.5 rounded-full bg-emerald-500 transition-all"
+                  className="h-3 rounded-full bg-emerald-500 transition-all"
                   style={{ width: `${completionPct}%` }}
                 />
               </div>
@@ -491,10 +491,10 @@ export default function DashboardPage() {
             <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
               Quick Actions
             </h2>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Link
                 href="/dashboard/board"
-                className="flex items-center gap-2.5 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                className="flex items-center gap-2.5 rounded-xl bg-zinc-800 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -503,7 +503,7 @@ export default function DashboardPage() {
               </Link>
               <Link
                 href="/dashboard/board"
-                className="flex items-center gap-2.5 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 hover:border-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:border-zinc-600"
+                className="flex items-center gap-2.5 rounded-xl border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 hover:border-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:border-zinc-600"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
