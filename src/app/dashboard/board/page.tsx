@@ -103,6 +103,7 @@ export default function DashboardPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState("");
   const [menuOpen, setMenuOpen] = useState<MenuPosition | null>(null);
+  const [newTaskDescription, setNewTaskDescription] = useState("");
   const [newTaskPriority, setNewTaskPriority] = useState<TaskPriority>("none");
   const [newTaskDueDate, setNewTaskDueDate] = useState("");
   const [newTaskAssigneeId, setNewTaskAssigneeId] = useState("");
@@ -474,25 +475,32 @@ export default function DashboardPage() {
     if (!newTaskTitle.trim() || !listId) return;
     setAdding(true);
     const task = await createTask(listId, newTaskTitle.trim(), {
+      description: newTaskDescription.trim(),
       priority: newTaskPriority,
       due_date: newTaskDueDate || null,
       assignee_id: newTaskAssigneeId || null,
     });
-    if (task && selectedWorkspaceId && selectedBoardId) {
-      logActivity({
-        workspaceId: selectedWorkspaceId,
-        boardId: selectedBoardId,
-        taskId: task.id,
-        action: "task_created",
-        metadata: { task_title: task.title },
-      });
+    if (task) {
+      if (selectedWorkspaceId && selectedBoardId) {
+        logActivity({
+          workspaceId: selectedWorkspaceId,
+          boardId: selectedBoardId,
+          taskId: task.id,
+          action: "task_created",
+          metadata: { task_title: task.title },
+        });
+      }
+      setNewTaskTitle("");
+      setNewTaskDescription("");
+      setNewTaskPriority("none");
+      setNewTaskDueDate("");
+      setNewTaskAssigneeId("");
+      setAddingToListId(null);
+      setAdding(false);
+      showSuccess("Task added");
+    } else {
+      setAdding(false);
     }
-    setNewTaskTitle("");
-    setNewTaskPriority("none");
-    setNewTaskDueDate("");
-    setNewTaskAssigneeId("");
-    setAdding(false);
-    showSuccess("Task added");
   };
 
   const handleToggleComplete = async (task: Task) => {
@@ -855,6 +863,8 @@ export default function DashboardPage() {
               onMoveTask={handleMoveTask}
               onSetAddingToListId={setAddingToListId}
               onSetNewTaskTitle={setNewTaskTitle}
+              newTaskDescription={newTaskDescription}
+              onNewTaskDescriptionChange={setNewTaskDescription}
               newTaskPriority={newTaskPriority}
               newTaskDueDate={newTaskDueDate}
               newTaskAssigneeId={newTaskAssigneeId}

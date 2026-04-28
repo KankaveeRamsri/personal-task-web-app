@@ -43,6 +43,8 @@ export interface BoardColumnProps {
   onMoveTask: (taskId: string, target: string) => void;
   onSetAddingToListId: (id: string | null) => void;
   onSetNewTaskTitle: (value: string) => void;
+  newTaskDescription: string;
+  onNewTaskDescriptionChange: (value: string) => void;
   newTaskPriority: TaskPriority;
   newTaskDueDate: string;
   newTaskAssigneeId: string;
@@ -76,6 +78,8 @@ export default function BoardColumn({
   onMoveTask,
   onSetAddingToListId,
   onSetNewTaskTitle,
+  newTaskDescription,
+  onNewTaskDescriptionChange,
   newTaskPriority,
   newTaskDueDate,
   newTaskAssigneeId,
@@ -230,12 +234,20 @@ export default function BoardColumn({
                 if (e.key === "Escape") {
                   onSetAddingToListId(null);
                   onSetNewTaskTitle("");
+                  onNewTaskDescriptionChange("");
                   onNewTaskPriorityChange("none");
                   onNewTaskDueDateChange("");
                   onNewTaskAssigneeIdChange("");
                 }
               }}
               className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 dark:border-zinc-700 dark:bg-zinc-800/80 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 dark:focus:ring-zinc-700/50"
+            />
+            <textarea
+              placeholder="Description (optional)"
+              rows={2}
+              value={newTaskDescription}
+              onChange={(e) => onNewTaskDescriptionChange(e.target.value)}
+              className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 resize-none dark:border-zinc-700 dark:bg-zinc-800/80 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 dark:focus:ring-zinc-700/50"
             />
             <div className="mt-1.5 flex items-center gap-2">
               <select
@@ -284,6 +296,7 @@ export default function BoardColumn({
                 onClick={() => {
                   onSetAddingToListId(null);
                   onSetNewTaskTitle("");
+                  onNewTaskDescriptionChange("");
                   onNewTaskPriorityChange("none");
                   onNewTaskDueDateChange("");
                   onNewTaskAssigneeIdChange("");
