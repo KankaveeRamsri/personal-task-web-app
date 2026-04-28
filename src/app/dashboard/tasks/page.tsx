@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useBoardData } from "@/hooks/useBoardData";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
 import { createClient } from "@/lib/supabase";
-import type { Task } from "@/types/database";
+import { canEditTasks } from "@/lib/permissions";
+import type { Task, TaskPriority } from "@/types/database";
 import type { MemberWithProfile } from "@/hooks/useWorkspaceMembers";
 
 type QuickView = "all" | "my_tasks" | "due_today" | "overdue" | "unassigned" | "completed";
@@ -104,9 +105,11 @@ export default function TasksPage() {
     loading,
     setSelectedWorkspaceId,
     setSelectedBoardId,
+    updateTask,
+    deleteTask,
   } = useBoardData();
 
-  const { members } = useWorkspaceMembers(selectedWorkspaceId);
+  const { members, currentRole } = useWorkspaceMembers(selectedWorkspaceId);
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
@@ -142,6 +145,23 @@ export default function TasksPage() {
   const [sortBy, setSortBy] = useState("due_date");
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
+  // Bulk selection
+  const canEdit = currentRole ? canEditTasks(currentRole) : false;
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
   const hasActiveFilters =
     searchQuery !== "" ||
     filterStatus !== "all" ||
@@ -164,6 +184,7 @@ export default function TasksPage() {
   useEffect(() => {
     clearFilters();
     setSelectedTaskId(null);
+    setSelectedIds(new Set());
   }, [selectedBoardId, clearFilters]);
 
   // Quick view counts
@@ -312,6 +333,10 @@ export default function TasksPage() {
     });
   }, [filteredTasks, sortBy, listMap]);
 
+  const selectAllVisible = useCallback(() => {
+    setSelectedIds(new Set(sortedTasks.map((t) => t.id)));
+  }, [sortedTasks]);
+
   const uniqueListIds = useMemo(() => {
     const ids = new Set<string>();
     for (const t of tasks) ids.add(t.list_id);
@@ -323,6 +348,62 @@ export default function TasksPage() {
     : null;
 
   const selectedBoardTitle = boards.find((b) => b.id === selectedBoardId)?.title ?? "";
+
+  // Bulk action handlers
+  const handleBulkMove = useCallback(async (targetTitle: string) => {
+    const targetList = lists.find(
+      (l) => l.title.toLowerCase() === targetTitle.toLowerCase()
+    );
+    if (!targetList || selectedIds.size === 0) return;
+
+    setBulkBusy(true);
+    const ids = Array.from(selectedIds);
+    let failed = false;
+    for (const id of ids) {
+      const res = await updateTask(id, { list_id: targetList.id });
+      if (!res) { failed = true; break; }
+    }
+    setBulkBusy(false);
+    if (!failed) setSelectedIds(new Set());
+  }, [lists, selectedIds, updateTask]);
+
+  const handleBulkPriority = useCallback(async (priority: TaskPriority) => {
+    if (selectedIds.size === 0) return;
+    setBulkBusy(true);
+    const ids = Array.from(selectedIds);
+    let failed = false;
+    for (const id of ids) {
+      const res = await updateTask(id, { priority });
+      if (!res) { failed = true; break; }
+    }
+    setBulkBusy(false);
+    if (!failed) setSelectedIds(new Set());
+  }, [selectedIds, updateTask]);
+
+  const handleBulkAssign = useCallback(async (assigneeId: string | null) => {
+    if (selectedIds.size === 0) return;
+    setBulkBusy(true);
+    const ids = Array.from(selectedIds);
+    let failed = false;
+    for (const id of ids) {
+      const res = await updateTask(id, { assignee_id: assigneeId });
+      if (!res) { failed = true; break; }
+    }
+    setBulkBusy(false);
+    if (!failed) setSelectedIds(new Set());
+  }, [selectedIds, updateTask]);
+
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    setBulkBusy(true);
+    const ids = Array.from(selectedIds);
+    for (const id of ids) {
+      await deleteTask(id);
+    }
+    setBulkBusy(false);
+    setSelectedIds(new Set());
+    setSelectedTaskId(null);
+  }, [selectedIds, deleteTask]);
 
   const selectClass =
     "rounded-md border border-zinc-200 bg-white px-2 py-1.5 text-xs text-zinc-600 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-400 dark:focus:border-zinc-600";
@@ -612,6 +693,19 @@ export default function TasksPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-zinc-100 bg-zinc-50/80 dark:border-zinc-800 dark:bg-zinc-800/50">
+                {canEdit && (
+                  <th className="w-10 px-2 py-3">
+                    <input
+                      type="checkbox"
+                      checked={sortedTasks.length > 0 && selectedIds.size === sortedTasks.length}
+                      onChange={() => {
+                        if (selectedIds.size === sortedTasks.length) clearSelection();
+                        else selectAllVisible();
+                      }}
+                      className="h-3.5 w-3.5 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:checked:bg-zinc-100"
+                    />
+                  </th>
+                )}
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                   Task
                 </th>
@@ -642,6 +736,9 @@ export default function TasksPage() {
                   }
                   isSelected={task.id === selectedTaskId}
                   onClick={() => setSelectedTaskId(task.id)}
+                  canEdit={canEdit}
+                  checked={selectedIds.has(task.id)}
+                  onCheck={() => toggleSelect(task.id)}
                 />
               ))}
             </tbody>
@@ -663,6 +760,22 @@ export default function TasksPage() {
           onClose={() => setSelectedTaskId(null)}
         />
       )}
+
+      {/* Bulk action toolbar */}
+      {canEdit && selectedIds.size > 0 && (
+        <BulkToolbar
+          selectedCount={selectedIds.size}
+          totalCount={sortedTasks.length}
+          listTitles={lists.map((l) => l.title)}
+          members={members}
+          busy={bulkBusy}
+          onBulkMove={handleBulkMove}
+          onBulkPriority={handleBulkPriority}
+          onBulkAssign={handleBulkAssign}
+          onBulkDelete={handleBulkDelete}
+          onClear={clearSelection}
+        />
+      )}
     </div>
   );
 }
@@ -673,12 +786,18 @@ function TaskRow({
   assignee,
   isSelected,
   onClick,
+  canEdit,
+  checked,
+  onCheck,
 }: {
   task: Task;
   listTitle: string;
   assignee: MemberWithProfile | null;
   isSelected: boolean;
   onClick: () => void;
+  canEdit: boolean;
+  checked: boolean;
+  onCheck: () => void;
 }) {
   const displayTitle =
     listTitle === "Done" ? "Completed" : listTitle;
@@ -689,9 +808,25 @@ function TaskRow({
       className={`cursor-pointer border-t transition-colors ${
         isSelected
           ? "bg-blue-50/60 dark:bg-blue-950/20"
-          : "border-zinc-100 hover:bg-zinc-50/80 dark:border-zinc-800 dark:hover:bg-zinc-800/50"
+          : checked
+            ? "bg-zinc-50 dark:bg-zinc-800/30"
+            : "border-zinc-100 hover:bg-zinc-50/80 dark:border-zinc-800 dark:hover:bg-zinc-800/50"
       }`}
     >
+      {/* Checkbox */}
+      {canEdit && (
+        <td
+          className="w-10 px-2 py-3"
+          onClick={(e) => { e.stopPropagation(); onCheck(); }}
+        >
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={onCheck}
+            className="h-3.5 w-3.5 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:checked:bg-zinc-100"
+          />
+        </td>
+      )}
       {/* Title */}
       <td className="px-4 py-3">
         <span
@@ -957,6 +1092,204 @@ function TaskDetailDrawer({
             )}
           </p>
         </div>
+      </div>
+    </>
+  );
+}
+
+// --- Bulk action toolbar ---
+
+const displayListTitle = (title: string) =>
+  title === "Done" ? "Completed" : title;
+
+function BulkToolbar({
+  selectedCount,
+  totalCount,
+  listTitles,
+  members,
+  busy,
+  onBulkMove,
+  onBulkPriority,
+  onBulkAssign,
+  onBulkDelete,
+  onClear,
+}: {
+  selectedCount: number;
+  totalCount: number;
+  listTitles: string[];
+  members: MemberWithProfile[];
+  busy: boolean;
+  onBulkMove: (targetTitle: string) => void;
+  onBulkPriority: (priority: TaskPriority) => void;
+  onBulkAssign: (assigneeId: string | null) => void;
+  onBulkDelete: () => void;
+  onClear: () => void;
+}) {
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const moveRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!moveOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (moveRef.current && !moveRef.current.contains(e.target as Node))
+        setMoveOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [moveOpen]);
+
+  useEffect(() => {
+    if (confirmDelete) setMoveOpen(false);
+  }, [confirmDelete]);
+
+  const btnBase = "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+
+  return (
+    <>
+      {/* Delete confirmation */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
+          <div className="mx-4 w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-700 dark:bg-zinc-800">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-50 dark:bg-red-950">
+                <svg className="h-4.5 w-4.5 text-red-500 dark:text-red-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Delete tasks</h3>
+                <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                  Delete {selectedCount} selected task{selectedCount > 1 ? "s" : ""}? This cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <button onClick={() => setConfirmDelete(false)} disabled={busy} className="rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 active:bg-zinc-200 disabled:opacity-50 dark:text-zinc-400 dark:hover:bg-zinc-700">
+                Cancel
+              </button>
+              <button
+                onClick={() => { setConfirmDelete(false); onBulkDelete(); }}
+                disabled={busy}
+                className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700 active:bg-red-800 disabled:opacity-50"
+              >
+                {busy ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toolbar */}
+      <div
+        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-800"
+        style={{ animation: "toolbar-in 0.15s ease-out" }}
+      >
+        <span className="flex items-center gap-1.5 shrink-0">
+          <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-blue-500 px-1.5 text-[11px] font-semibold text-white">
+            {selectedCount}
+          </span>
+          <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            of {totalCount}
+          </span>
+        </span>
+
+        <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-700" />
+
+        {/* Move */}
+        <div className="relative" ref={moveRef}>
+          <button
+            onClick={() => setMoveOpen((v) => !v)}
+            disabled={busy}
+            className={`${btnBase} text-zinc-600 hover:bg-zinc-100 hover:text-zinc-800 active:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-700 dark:hover:text-zinc-100`}
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+            </svg>
+            Move
+          </button>
+          {moveOpen && (
+            <div className="absolute bottom-full left-0 mb-2 w-40 rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
+              <p className="px-3 py-1 text-[11px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Move to</p>
+              {listTitles.map((title) => (
+                <button
+                  key={title}
+                  onClick={() => { setMoveOpen(false); onBulkMove(title); }}
+                  disabled={busy}
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:text-zinc-300 dark:hover:bg-zinc-700/50"
+                >
+                  {displayListTitle(title)}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Priority */}
+        <select
+          onChange={(e) => { if (e.target.value) { onBulkPriority(e.target.value as TaskPriority); e.target.value = ""; } }}
+          disabled={busy}
+          defaultValue=""
+          className="h-8 rounded-lg border border-zinc-200 bg-transparent pl-2 pr-6 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-800 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-700"
+        >
+          <option value="" disabled>Priority</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+          <option value="none">None</option>
+        </select>
+
+        {/* Assignee */}
+        <select
+          onChange={(e) => {
+            const val = e.target.value;
+            onBulkAssign(val === "__unassigned__" ? null : val);
+            e.target.value = "";
+          }}
+          disabled={busy}
+          defaultValue=""
+          className="h-8 max-w-[140px] rounded-lg border border-zinc-200 bg-transparent pl-2 pr-6 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-800 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-700"
+        >
+          <option value="" disabled>Assignee</option>
+          <option value="__unassigned__">Unassigned</option>
+          {members.map((m) => (
+            <option key={m.user_id} value={m.user_id}>
+              {m.display_name || m.email}
+            </option>
+          ))}
+        </select>
+
+        {/* Delete */}
+        <button
+          onClick={() => setConfirmDelete(true)}
+          disabled={busy}
+          className={`${btnBase} text-red-500 hover:bg-red-50 active:bg-red-100 dark:text-red-400 dark:hover:bg-red-950/30`}
+        >
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+          </svg>
+          Delete
+        </button>
+
+        <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-700" />
+
+        <button
+          onClick={onClear}
+          disabled={busy}
+          className={`${btnBase} text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-300`}
+        >
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+          Clear
+        </button>
+
+        <style jsx>{`
+          @keyframes toolbar-in {
+            from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+          }
+        `}</style>
       </div>
     </>
   );
