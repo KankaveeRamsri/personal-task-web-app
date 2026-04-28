@@ -694,7 +694,7 @@ export default function TasksPage() {
             <thead>
               <tr className="border-b border-zinc-100 bg-zinc-50/80 dark:border-zinc-800 dark:bg-zinc-800/50">
                 {canEdit && (
-                  <th className="w-10 px-2 py-3">
+                  <th className="w-10 px-2 py-3 text-center">
                     <input
                       type="checkbox"
                       checked={sortedTasks.length > 0 && selectedIds.size === sortedTasks.length}
@@ -816,13 +816,13 @@ function TaskRow({
       {/* Checkbox */}
       {canEdit && (
         <td
-          className="w-10 px-2 py-3"
+          className="w-10 px-2 py-3 text-center"
           onClick={(e) => { e.stopPropagation(); onCheck(); }}
         >
           <input
             type="checkbox"
             checked={checked}
-            onChange={onCheck}
+            readOnly
             className="h-3.5 w-3.5 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:checked:bg-zinc-100"
           />
         </td>
