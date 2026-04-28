@@ -4,11 +4,33 @@ import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase";
 import type { Workspace, Board, List, Task } from "@/types/database";
 
+const STORAGE_WS = "selectedWorkspaceId";
+const STORAGE_BD = "selectedBoardId";
+
+function readStorage(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeStorage(key: string, value: string | null) {
+  try {
+    if (value) localStorage.setItem(key, value);
+    else localStorage.removeItem(key);
+  } catch {}
+}
+
 export function useBoardData() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(
+    () => readStorage(STORAGE_WS),
+  );
   const [boards, setBoards] = useState<Board[]>([]);
-  const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
+  const [selectedBoardId, setSelectedBoardId] = useState<string | null>(
+    () => readStorage(STORAGE_BD),
+  );
   const [lists, setLists] = useState<List[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,25 +136,36 @@ export function useBoardData() {
     setTasks((data ?? []) as Task[]);
   }, []);
 
-  // Initial load: fetch workspaces, then auto-select first
+  // Sync selected IDs to localStorage
+  useEffect(() => {
+    writeStorage(STORAGE_WS, selectedWorkspaceId);
+  }, [selectedWorkspaceId]);
+
+  useEffect(() => {
+    writeStorage(STORAGE_BD, selectedBoardId);
+  }, [selectedBoardId]);
+
+  // Initial load: fetch workspaces, prefer localStorage value if still valid
   useEffect(() => {
     (async () => {
       setLoading(true);
       const ws = await fetchWorkspaces();
       if (ws && ws.length > 0) {
-        setSelectedWorkspaceId(ws[0].id);
+        const saved = readStorage(STORAGE_WS);
+        setSelectedWorkspaceId(saved && ws.some((w) => w.id === saved) ? saved : ws[0].id);
       }
       setLoading(false);
     })();
   }, [fetchWorkspaces]);
 
-  // When workspace changes, fetch boards
+  // When workspace changes, fetch boards — prefer localStorage board if still valid
   useEffect(() => {
     if (!selectedWorkspaceId) return;
     (async () => {
       const bds = await fetchBoards(selectedWorkspaceId);
       if (bds && bds.length > 0) {
-        setSelectedBoardId(bds[0].id);
+        const saved = readStorage(STORAGE_BD);
+        setSelectedBoardId(saved && bds.some((b) => b.id === saved) ? saved : bds[0].id);
       } else {
         setSelectedBoardId(null);
       }
