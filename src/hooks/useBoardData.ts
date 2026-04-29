@@ -460,6 +460,41 @@ export function useBoardData() {
     [],
   );
 
+  const createList = useCallback(
+    async (boardId: string, title: string) => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get current max position in this board
+      const { data: existingLists } = await supabase
+        .from("lists")
+        .select("position")
+        .eq("board_id", boardId)
+        .order("position", { ascending: false })
+        .limit(1);
+
+      const nextPos = existingLists && existingLists.length > 0 ? existingLists[0].position + 1000 : 1000;
+
+      const { data, error } = await supabase
+        .from("lists")
+        .insert({ board_id: boardId, title, position: nextPos })
+        .select()
+        .single();
+
+      if (error) {
+        setErrorMsg(error.message);
+        return;
+      }
+      const list = data as List;
+      setLists((prev) => [...prev, list].sort((a, b) => a.position - b.position));
+      return list;
+    },
+    []
+  );
+
   const clearError = useCallback(() => setErrorMsg(""), []);
 
   return {
@@ -478,6 +513,7 @@ export function useBoardData() {
     createWorkspace,
     createBoard,
     createTask,
+    createList,
     updateTask,
     deleteTask,
     moveTask,

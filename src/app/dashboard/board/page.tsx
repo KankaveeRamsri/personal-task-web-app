@@ -40,6 +40,7 @@ export default function DashboardPage() {
     createWorkspace,
     createBoard,
     createTask,
+    createList,
     updateTask,
     deleteTask,
     moveTask,
@@ -124,6 +125,11 @@ export default function DashboardPage() {
   // Board creation
   const [showNewBoard, setShowNewBoard] = useState(false);
   const [newBoardTitle, setNewBoardTitle] = useState("");
+
+  // Add list
+  const [showAddList, setShowAddList] = useState(false);
+  const [newListTitle, setNewListTitle] = useState("");
+  const [addingList, setAddingList] = useState(false);
 
   // Member management
   const { members, currentRole, invite, remove, updateRole } =
@@ -468,6 +474,22 @@ export default function DashboardPage() {
     setNewBoardTitle("");
     setShowNewBoard(false);
     showSuccess("Board created");
+  };
+
+  const MAX_LISTS = 10;
+  const canAddList = canEditTasks && lists.length < MAX_LISTS;
+
+  const handleAddList = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newListTitle.trim() || !selectedBoardId) return;
+    setAddingList(true);
+    const list = await createList(selectedBoardId, newListTitle.trim());
+    if (list) {
+      setNewListTitle("");
+      setShowAddList(false);
+      showSuccess("List added");
+    }
+    setAddingList(false);
   };
 
   const handleAddTask = async (e: React.FormEvent, listId: string) => {
@@ -874,6 +896,57 @@ export default function DashboardPage() {
               allListTitles={lists.map((l) => l.title)}
             />
           ))}
+          {canAddList && (
+            showAddList ? (
+              <div className="w-[300px] flex-shrink-0 rounded-xl bg-zinc-100/50 dark:bg-zinc-800/30 p-3">
+                <form onSubmit={handleAddList}>
+                  <input
+                    type="text"
+                    placeholder="List name..."
+                    autoFocus
+                    value={newListTitle}
+                    onChange={(e) => setNewListTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        setShowAddList(false);
+                        setNewListTitle("");
+                      }
+                    }}
+                    className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 dark:border-zinc-700 dark:bg-zinc-800/80 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 dark:focus:ring-zinc-700/50"
+                  />
+                  <div className="mt-2 flex items-center gap-2">
+                    <button
+                      type="submit"
+                      disabled={addingList || !newListTitle.trim()}
+                      className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-700 active:bg-zinc-800 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:focus:ring-zinc-600"
+                    >
+                      {addingList ? "Adding..." : "Add list"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAddList(false);
+                        setNewListTitle("");
+                      }}
+                      className="text-xs text-zinc-400 transition-colors hover:text-zinc-600 active:text-zinc-700 dark:zinc-500 dark:hover:text-zinc-300 dark:active:text-zinc-200"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowAddList(true)}
+                className="w-[300px] flex-shrink-0 rounded-xl border-2 border-dashed border-zinc-200/60 dark:border-zinc-700/40 py-4 flex items-center justify-center gap-2 text-sm text-zinc-400 transition-colors hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-600 dark:hover:border-zinc-600 dark:hover:bg-zinc-800/30 dark:hover:text-zinc-300"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Add list
+              </button>
+            )
+          )}
           </div>
           <DragOverlay dropAnimation={{ duration: 200, easing: "ease" }}>
             {activeTask ? (
