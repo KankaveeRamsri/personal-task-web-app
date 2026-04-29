@@ -8,6 +8,7 @@ export type NotificationItem = Activity & {
   task_title?: string;
   board_title?: string;
   is_read: boolean;
+  is_important: boolean;
 };
 
 export function useNotifications() {
@@ -139,18 +140,23 @@ export function useNotifications() {
 
       const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
 
+      // Fetch task titles + assignee_ids for importance detection
       const taskIds = [
         ...new Set(
           rawActivities.map((a) => a.task_id as string).filter(Boolean)
         ),
       ];
       let extraTaskTitles = new Map<string, string>();
+      let taskAssigneeMap = new Map<string, string | null>();
       if (taskIds.length > 0) {
         const { data: tasks } = await supabase
           .from("tasks")
-          .select("id, title")
+          .select("id, title, assignee_id")
           .in("id", taskIds);
-        extraTaskTitles = new Map((tasks ?? []).map((t) => [t.id, t.title]));
+        for (const t of tasks ?? []) {
+          extraTaskTitles.set(t.id, t.title);
+          taskAssigneeMap.set(t.id, t.assignee_id);
+        }
       }
 
       // Fetch read state
@@ -163,6 +169,8 @@ export function useNotifications() {
 
       const readSet = new Set((reads ?? []).map((r) => r.activity_id));
 
+      const IMPORTANT_ACTIONS = new Set(["task_assigned", "due_date_changed"]);
+
       const items: NotificationItem[] = rawActivities.map((a) => {
         const taskTitle =
           (a._task_title as string | undefined) ??
@@ -171,13 +179,20 @@ export function useNotifications() {
             | string
             | undefined);
 
+        const action = a.action as string;
+        const taskId = a.task_id as string;
+        const isImportant =
+          IMPORTANT_ACTIONS.has(action) &&
+          !!taskId &&
+          taskAssigneeMap.get(taskId) === user.id;
+
         return {
           id: a.id as string,
           workspace_id: a.workspace_id as string,
           board_id: a.board_id as string,
-          task_id: (a.task_id as string) ?? null,
+          task_id: taskId ?? null,
           actor_id: a.actor_id as string,
-          action: a.action as string,
+          action,
           metadata: (a.metadata ?? {}) as Record<string, unknown>,
           created_at: a.created_at as string,
           actor_email: profileMap.get(a.actor_id as string)?.email ?? "",
@@ -186,6 +201,7 @@ export function useNotifications() {
           task_title: taskTitle,
           board_title: boardMap.get(a.board_id as string)?.title,
           is_read: readSet.has(a.id as string),
+          is_important: isImportant,
         };
       });
 
@@ -274,6 +290,9 @@ export function useNotifications() {
   }, [notifications]);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const importantUnreadCount = notifications.filter(
+    (n) => !n.is_read && n.is_important
+  ).length;
 
   return {
     notifications,
@@ -282,5 +301,6 @@ export function useNotifications() {
     refresh: () => fetchNotifications(false),
     markAllAsRead,
     unreadCount,
+    importantUnreadCount,
   };
 }

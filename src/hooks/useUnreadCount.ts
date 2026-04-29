@@ -3,20 +3,17 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase";
 
-async function getRelevantActivityIds(
+async function getImportantUnreadIds(
   supabase: ReturnType<typeof createClient>,
   userId: string
 ): Promise<string[]> {
   const { data: memberships } = await supabase
     .from("workspace_members")
-    .select("workspace_id, role")
+    .select("workspace_id")
     .eq("user_id", userId);
 
   if (!memberships || memberships.length === 0) return [];
 
-  const isOwnerOrAdmin = memberships.some(
-    (m) => m.role === "owner" || m.role === "admin"
-  );
   const workspaceIds = memberships.map((m) => m.workspace_id);
 
   const { data: boards } = await supabase
@@ -29,23 +26,13 @@ async function getRelevantActivityIds(
 
   const boardIds = boards.map((b) => b.id);
 
-  if (isOwnerOrAdmin) {
-    const { data: activities } = await supabase
-      .from("task_activities")
-      .select("id")
-      .in("board_id", boardIds)
-      .neq("actor_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(100);
-    return (activities ?? []).map((a) => a.id);
-  }
-
   const { data: lists } = await supabase
     .from("lists")
     .select("id")
     .in("board_id", boardIds);
 
   if (!lists || lists.length === 0) return [];
+
   const listIds = lists.map((l) => l.id);
 
   const { data: assignedTasks } = await supabase
@@ -55,12 +42,14 @@ async function getRelevantActivityIds(
     .eq("assignee_id", userId);
 
   if (!assignedTasks || assignedTasks.length === 0) return [];
+
   const taskIds = assignedTasks.map((t) => t.id);
 
   const { data: activities } = await supabase
     .from("task_activities")
     .select("id")
     .in("task_id", taskIds)
+    .in("action", ["task_assigned", "due_date_changed"])
     .neq("actor_id", userId)
     .order("created_at", { ascending: false })
     .limit(100);
@@ -86,7 +75,7 @@ export function useUnreadCount() {
         return;
       }
 
-      const relevantIds = await getRelevantActivityIds(supabase, user.id);
+      const relevantIds = await getImportantUnreadIds(supabase, user.id);
       if (relevantIds.length === 0) {
         setCount(0);
         setLoading(false);
@@ -108,7 +97,7 @@ export function useUnreadCount() {
     }
   }, []);
 
-  // Realtime subscription: optimistic +1 on new activity
+  // Realtime: only increment for important actions
   useEffect(() => {
     let stale = false;
     const supabase = createClient();
@@ -128,7 +117,12 @@ export function useUnreadCount() {
           },
           (payload: { new: Record<string, unknown> }) => {
             const actorId = payload.new.actor_id as string;
-            if (actorId && actorId !== userIdRef.current) {
+            const action = payload.new.action as string;
+            if (
+              actorId &&
+              actorId !== userIdRef.current &&
+              (action === "task_assigned" || action === "due_date_changed")
+            ) {
               setCount((prev) => prev + 1);
             }
           }

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useNotifications } from "@/hooks/useNotifications";
 import type { NotificationItem } from "@/hooks/useNotifications";
 
+type Tab = "important" | "all";
+
 const actionStyle: Record<string, string> = {
   task_created:
     "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400",
@@ -79,10 +81,18 @@ function formatDescription(item: NotificationItem): string {
     case "task_moved":
       return `moved "${title}" to ${fmt((m.to as string) ?? "")}`;
     case "task_assigned":
+      if (item.is_important) {
+        return m.assignee_name
+          ? `assigned you to "${title}"`
+          : `unassigned you from "${title}"`;
+      }
       return m.assignee_name
         ? `assigned "${title}" to ${m.assignee_name as string}`
         : `unassigned "${title}"`;
     case "due_date_changed":
+      if (item.is_important) {
+        return `changed the due date of your task "${title}"`;
+      }
       return `changed due date of "${title}"`;
     case "task_deleted":
       return `deleted "${title}"`;
@@ -127,6 +137,11 @@ function formatDateSeparator(dateStr: string): string {
   });
 }
 
+const tabs: { key: Tab; label: string }[] = [
+  { key: "important", label: "Important" },
+  { key: "all", label: "All" },
+];
+
 export default function NotificationsPage() {
   const {
     notifications,
@@ -136,8 +151,14 @@ export default function NotificationsPage() {
     markAllAsRead,
     unreadCount,
   } = useNotifications();
+  const [tab, setTab] = useState<Tab>("important");
   const [marking, setMarking] = useState(false);
   const [markError, setMarkError] = useState<string | null>(null);
+
+  const displayed =
+    tab === "important"
+      ? notifications.filter((n) => n.is_important)
+      : notifications;
 
   const handleMarkAllRead = async () => {
     setMarking(true);
@@ -179,6 +200,42 @@ export default function NotificationsPage() {
         Activity from tasks assigned to you and your workspace.
       </p>
 
+      {/* Tabs */}
+      {!loading && !error && notifications.length > 0 && (
+        <div className="mt-4 flex gap-1 rounded-lg border border-zinc-200 p-1 dark:border-zinc-700">
+          {tabs.map((t) => {
+            const count =
+              t.key === "important"
+                ? notifications.filter((n) => n.is_important).length
+                : notifications.length;
+            return (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  tab === t.key
+                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+                    : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+                }`}
+              >
+                {t.label}
+                {count > 0 && (
+                  <span
+                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                      tab === t.key
+                        ? "bg-white/20 dark:bg-zinc-800/40"
+                        : "bg-zinc-100 dark:bg-zinc-800"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {markError && (
         <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
           {markError}
@@ -216,14 +273,25 @@ export default function NotificationsPage() {
         </div>
       )}
 
+      {/* Empty tab */}
+      {!loading && !error && notifications.length > 0 && displayed.length === 0 && (
+        <div className="mt-8 rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-10 text-center dark:border-zinc-700 dark:bg-zinc-900">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            {tab === "important"
+              ? "No important notifications. Switch to \"All\" to see all activity."
+              : "No notifications."}
+          </p>
+        </div>
+      )}
+
       {/* Notification list */}
-      {!loading && !error && notifications.length > 0 && (
-        <div className="mt-6 space-y-0.5">
+      {!loading && !error && displayed.length > 0 && (
+        <div className="mt-4 space-y-0.5">
           {(() => {
             let lastDate = "";
             const elements: React.ReactNode[] = [];
 
-            for (const item of notifications) {
+            for (const item of displayed) {
               const dateLabel = formatDateSeparator(item.created_at);
               if (dateLabel !== lastDate) {
                 lastDate = dateLabel;
@@ -251,7 +319,9 @@ export default function NotificationsPage() {
                   className={`group flex items-start gap-3 rounded-xl px-3 py-3 transition-colors ${
                     item.is_read
                       ? "hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-                      : "bg-blue-50/50 hover:bg-blue-50 dark:bg-blue-950/20 dark:hover:bg-blue-950/30"
+                      : item.is_important
+                        ? "bg-violet-50/60 hover:bg-violet-50 dark:bg-violet-950/20 dark:hover:bg-violet-950/30"
+                        : "bg-blue-50/50 hover:bg-blue-50 dark:bg-blue-950/20 dark:hover:bg-blue-950/30"
                   }`}
                 >
                   <span
@@ -260,13 +330,15 @@ export default function NotificationsPage() {
                     {icon}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13px] leading-snug text-zinc-700 dark:text-zinc-300">
-                      <span className="font-medium text-zinc-900 dark:text-zinc-100">
-                        {actor}
-                      </span>{" "}
-                      {formatDescription(item)}
-                    </p>
-                    <div className="mt-1 flex items-center gap-2 text-[11px] text-zinc-400 dark:text-zinc-500">
+                    <div className="flex items-center gap-2">
+                      <p className="text-[13px] leading-snug text-zinc-700 dark:text-zinc-300">
+                        <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                          {actor}
+                        </span>{" "}
+                        {formatDescription(item)}
+                      </p>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-zinc-400 dark:text-zinc-500">
                       <span>{timeAgo(item.created_at)}</span>
                       {item.board_title && (
                         <>
@@ -288,9 +360,16 @@ export default function NotificationsPage() {
                       )}
                     </div>
                   </div>
-                  {!item.is_read && (
-                    <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
-                  )}
+                  <div className="mt-1 flex shrink-0 items-center gap-1.5">
+                    {item.is_important && (
+                      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                        Important
+                      </span>
+                    )}
+                    {!item.is_read && (
+                      <span className="h-2 w-2 rounded-full bg-blue-500" />
+                    )}
+                  </div>
                 </a>
               );
             }
