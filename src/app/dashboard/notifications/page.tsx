@@ -286,96 +286,97 @@ export default function NotificationsPage() {
 
       {/* Notification list */}
       {!loading && !error && displayed.length > 0 && (
-        <div className="mt-4 space-y-0.5">
-          {(() => {
-            let lastDate = "";
-            const elements: React.ReactNode[] = [];
+        <div className="mt-4">
+          {displayed.length >= 50 && (
+            <p className="mb-2 text-[11px] text-zinc-400 dark:text-zinc-500">
+              Showing latest {displayed.length} notifications
+            </p>
+          )}
+          <div className="overflow-y-auto rounded-xl border border-zinc-200 dark:border-zinc-800 max-h-[calc(100vh-260px)]">
+            <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+              {(() => {
+                let lastDate = "";
+                const elements: React.ReactNode[] = [];
 
-            for (const item of displayed) {
-              const dateLabel = formatDateSeparator(item.created_at);
-              if (dateLabel !== lastDate) {
-                lastDate = dateLabel;
-                elements.push(
-                  <div
-                    key={`sep-${dateLabel}-${elements.length}`}
-                    className="sticky top-0 z-10 bg-background py-2 text-xs font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500"
-                  >
-                    {dateLabel}
-                  </div>
-                );
-              }
+                for (const item of displayed) {
+                  const dateLabel = formatDateSeparator(item.created_at);
+                  if (dateLabel !== lastDate) {
+                    lastDate = dateLabel;
+                    elements.push(
+                      <div
+                        key={`sep-${dateLabel}-${elements.length}`}
+                        className="sticky top-0 z-10 bg-zinc-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:bg-zinc-900 dark:text-zinc-500"
+                      >
+                        {dateLabel}
+                      </div>
+                    );
+                  }
 
-              const icon =
-                actionIcon[item.action] ?? actionIcon.task_updated;
-              const style =
-                actionStyle[item.action] ?? actionStyle.task_updated;
-              const actor =
-                item.actor_display_name || item.actor_email || "Someone";
+                  const icon =
+                    actionIcon[item.action] ?? actionIcon.task_updated;
+                  const style =
+                    actionStyle[item.action] ?? actionStyle.task_updated;
+                  const actor =
+                    item.actor_display_name || item.actor_email || "Someone";
 
-              elements.push(
-                <a
-                  key={item.id}
-                  href="/dashboard/board"
-                  className={`group flex items-start gap-3 rounded-xl px-3 py-3 transition-colors ${
-                    item.is_read
-                      ? "hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-                      : item.is_important
-                        ? "bg-violet-50/60 hover:bg-violet-50 dark:bg-violet-950/20 dark:hover:bg-violet-950/30"
-                        : "bg-blue-50/50 hover:bg-blue-50 dark:bg-blue-950/20 dark:hover:bg-blue-950/30"
-                  }`}
-                >
-                  <span
-                    className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm ${style}`}
-                  >
-                    {icon}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-[13px] leading-snug text-zinc-700 dark:text-zinc-300">
-                        <span className="font-medium text-zinc-900 dark:text-zinc-100">
-                          {actor}
-                        </span>{" "}
-                        {formatDescription(item)}
-                      </p>
-                    </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-zinc-400 dark:text-zinc-500">
-                      <span>{timeAgo(item.created_at)}</span>
-                      {item.board_title && (
-                        <>
-                          <span className="text-zinc-300 dark:text-zinc-600">
-                            &middot;
-                          </span>
-                          <span>{item.board_title}</span>
-                        </>
-                      )}
-                      {!item.is_read && (
-                        <>
-                          <span className="text-zinc-300 dark:text-zinc-600">
-                            &middot;
-                          </span>
-                          <span className="font-medium text-blue-600 dark:text-blue-400">
-                            New
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <div className="mt-1 flex shrink-0 items-center gap-1.5">
-                    {item.is_important && (
-                      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                        Important
+                  elements.push(
+                    <a
+                      key={item.id}
+                      href="/dashboard/board"
+                      className={`group flex items-start gap-3 px-3 py-2.5 transition-colors ${
+                        item.is_read
+                          ? "hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                          : item.is_important
+                            ? "bg-violet-50/60 hover:bg-violet-50 dark:bg-violet-950/20 dark:hover:bg-violet-950/30"
+                            : "bg-blue-50/50 hover:bg-blue-50 dark:bg-blue-950/20 dark:hover:bg-blue-950/30"
+                      }`}
+                    >
+                      <span
+                        className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs ${style}`}
+                      >
+                        {icon}
                       </span>
-                    )}
-                    {!item.is_read && (
-                      <span className="h-2 w-2 rounded-full bg-blue-500" />
-                    )}
-                  </div>
-                </a>
-              );
-            }
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13px] leading-snug text-zinc-700 dark:text-zinc-300">
+                          <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                            {actor}
+                          </span>{" "}
+                          {formatDescription(item)}
+                        </p>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-zinc-400 dark:text-zinc-500">
+                          <span>{timeAgo(item.created_at)}</span>
+                          {item.board_title && (
+                            <>
+                              <span className="text-zinc-300 dark:text-zinc-600">&middot;</span>
+                              <span>{item.board_title}</span>
+                            </>
+                          )}
+                          {!item.is_read && (
+                            <>
+                              <span className="text-zinc-300 dark:text-zinc-600">&middot;</span>
+                              <span className="font-medium text-blue-600 dark:text-blue-400">New</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-0.5 flex shrink-0 items-center gap-1.5">
+                        {item.is_important && (
+                          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                            Important
+                          </span>
+                        )}
+                        {!item.is_read && (
+                          <span className="h-2 w-2 rounded-full bg-blue-500" />
+                        )}
+                      </div>
+                    </a>
+                  );
+                }
 
-            return elements;
-          })()}
+                return elements;
+              })()}
+            </div>
+          </div>
         </div>
       )}
     </div>
