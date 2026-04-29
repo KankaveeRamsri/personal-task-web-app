@@ -143,6 +143,12 @@ export default function TasksPage() {
     return map;
   }, [lists]);
 
+  const listPositionMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const l of lists) map.set(l.id, l.position);
+    return map;
+  }, [lists]);
+
   const memberMap = useMemo(() => {
     const map = new Map<string, MemberWithProfile>();
     for (const m of members) map.set(m.user_id, m);
@@ -337,9 +343,9 @@ export default function TasksPage() {
         case "title":
           return a.title.localeCompare(b.title);
         case "status": {
-          const aList = listMap.get(a.list_id) ?? "";
-          const bList = listMap.get(b.list_id) ?? "";
-          return aList.localeCompare(bList);
+          const aPos = listPositionMap.get(a.list_id) ?? 0;
+          const bPos = listPositionMap.get(b.list_id) ?? 0;
+          return aPos - bPos;
         }
         default:
           return 0;

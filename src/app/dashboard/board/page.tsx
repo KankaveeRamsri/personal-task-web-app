@@ -12,7 +12,7 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { arrayMove } from "@dnd-kit/sortable";
+import { arrayMove, SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { useBoardData } from "@/hooks/useBoardData";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
 import type { List, Task, WorkspaceRole, TaskPriority } from "@/types/database";
@@ -43,6 +43,7 @@ export default function DashboardPage() {
     createList,
     renameList,
     updateListColor,
+    reorderLists,
     deleteList,
     updateTask,
     deleteTask,
@@ -262,26 +263,35 @@ export default function DashboardPage() {
 
   // DnD state
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [activeListId, setActiveListId] = useState<string | null>(null);
   const dragSavingRef = useRef(false);
   const activeTask = activeTaskId ? tasks.find((t) => t.id === activeTaskId) ?? null : null;
+  const activeListData = activeListId ? lists.find((l) => l.id === activeListId) ?? null : null;
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
   );
 
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveTaskId(event.active.id as string);
+    const activeId = event.active.id as string;
+    if (lists.some((l) => l.id === activeId)) {
+      setActiveListId(activeId);
+    } else {
+      setActiveTaskId(activeId);
+    }
     document.body.style.cursor = "grabbing";
   };
 
   const handleDragCancel = () => {
     setActiveTaskId(null);
+    setActiveListId(null);
     document.body.style.cursor = "";
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveTaskId(null);
+    setActiveListId(null);
     document.body.style.cursor = "";
 
     if (!over || !canEditTasks) return;
@@ -289,6 +299,23 @@ export default function DashboardPage() {
 
     const activeId = active.id as string;
     const overId = over.id as string;
+
+    // List reorder
+    if (activeId !== overId && lists.some((l) => l.id === activeId) && lists.some((l) => l.id === overId)) {
+      dragSavingRef.current = true;
+      const oldIndex = lists.findIndex((l) => l.id === activeId);
+      const newIndex = lists.findIndex((l) => l.id === overId);
+      const reordered = arrayMove(lists, oldIndex, newIndex).map(
+        (l, i) => ({ ...l, position: (i + 1) * 1000 })
+      );
+      await reorderLists(reordered, lists);
+      dragSavingRef.current = false;
+      showSuccess("List reordered");
+      return;
+    }
+
+    // Task drag — skip if active was a list
+    if (lists.some((l) => l.id === activeId)) return;
 
     const activeTaskData = tasks.find((t) => t.id === activeId);
     if (!activeTaskData) return;
@@ -890,6 +917,7 @@ export default function DashboardPage() {
             onDragEnd={handleDragEnd}
             onDragCancel={handleDragCancel}
           >
+          <SortableContext items={lists.map((l) => l.id)} strategy={horizontalListSortingStrategy}>
           <div className="flex gap-5 overflow-x-auto pb-6 items-start -mx-1 px-1">
           {lists.map((list) => (
             <BoardColumn
@@ -930,6 +958,7 @@ export default function DashboardPage() {
               onRenameList={handleRenameList}
               onUpdateListColor={handleUpdateListColor}
               onDeleteList={handleDeleteList}
+              draggingListId={activeListId}
             />
           ))}
           {canAddList && (
@@ -984,6 +1013,7 @@ export default function DashboardPage() {
             )
           )}
           </div>
+          </SortableContext>
           <DragOverlay dropAnimation={{ duration: 200, easing: "ease" }}>
             {activeTask ? (
               <div
@@ -1010,6 +1040,25 @@ export default function DashboardPage() {
                       </div>
                     ) : null}
                   </div>
+                </div>
+              </div>
+            ) : activeListData ? (
+              <div
+                className="w-[300px] rounded-xl bg-white/90 shadow-2xl ring-1 ring-black/5 dark:bg-zinc-800/90 dark:ring-white/5"
+                style={{ cursor: "grabbing" }}
+              >
+                <div
+                  className="h-1 rounded-t-xl"
+                  style={{ backgroundColor: activeListData.color || ({ "To Do": "#a1a1aa", "In Progress": "#3b82f6", "Completed": "#10b981", "Done": "#10b981" }[activeListData.title] ?? "#a1a1aa") }}
+                />
+                <div className="px-3 py-3 flex items-center gap-2">
+                  <span
+                    className="h-2 w-2 rounded-full"
+                    style={{ backgroundColor: activeListData.color || ({ "To Do": "#a1a1aa", "In Progress": "#3b82f6", "Completed": "#10b981", "Done": "#10b981" }[activeListData.title] ?? "#a1a1aa") }}
+                  />
+                  <span className="text-[13px] font-semibold text-zinc-700 dark:text-zinc-300">
+                    {activeListData.title === "Done" ? "Completed" : activeListData.title}
+                  </span>
                 </div>
               </div>
             ) : null}

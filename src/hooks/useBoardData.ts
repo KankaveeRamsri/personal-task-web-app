@@ -531,6 +531,39 @@ export function useBoardData() {
     return true;
   }, []);
 
+  const reorderLists = useCallback(
+    async (reordered: List[], original: List[]) => {
+      const originalMap = new Map(original.map((l) => [l.id, l]));
+      const changed = reordered.filter(
+        (l) => l.position !== originalMap.get(l.id)?.position
+      );
+      if (changed.length === 0) return true;
+
+      const reorderedMap = new Map(reordered.map((l) => [l.id, l]));
+      setLists((prev) => prev.map((l) => reorderedMap.get(l.id) ?? l));
+
+      const supabase = createClient();
+      const results = await Promise.all(
+        changed.map((list) =>
+          supabase
+            .from("lists")
+            .update({ position: list.position })
+            .eq("id", list.id)
+        )
+      );
+
+      const failed = results.find((r) => r.error);
+      if (failed) {
+        const revertMap = new Map(original.map((l) => [l.id, l]));
+        setLists((prev) => prev.map((l) => revertMap.get(l.id) ?? l));
+        setErrorMsg(failed.error!.message);
+        return false;
+      }
+      return true;
+    },
+    []
+  );
+
   const deleteList = useCallback(async (listId: string) => {
     const supabase = createClient();
     const { error } = await supabase.from("lists").delete().eq("id", listId);
@@ -564,6 +597,7 @@ export function useBoardData() {
     createList,
     renameList,
     updateListColor,
+    reorderLists,
     deleteList,
     updateTask,
     deleteTask,

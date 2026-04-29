@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useDroppable } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type { List, Task, TaskPriority } from "@/types/database";
 import type { MemberWithProfile } from "@/hooks/useWorkspaceMembers";
 import TaskCard from "@/components/board/TaskCard";
@@ -67,6 +67,7 @@ export interface BoardColumnProps {
   onRenameList: (listId: string, newTitle: string) => Promise<boolean>;
   onUpdateListColor: (listId: string, color: string) => Promise<boolean>;
   onDeleteList: (listId: string) => Promise<boolean>;
+  draggingListId: string | null;
 }
 
 export default function BoardColumn({
@@ -106,10 +107,21 @@ export default function BoardColumn({
   onRenameList,
   onUpdateListColor,
   onDeleteList,
+  draggingListId,
 }: BoardColumnProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const barColor = getColumnBarColor(list.title, list.color);
-  const { setNodeRef, isOver } = useDroppable({ id: list.id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+    isOver,
+  } = useSortable({ id: list.id });
+  const showTaskHighlight = isOver && !draggingListId;
   const taskIds = tasks.map((t) => t.id);
 
   useEffect(() => {
@@ -192,11 +204,12 @@ export default function BoardColumn({
   return (
     <div
       ref={setNodeRef}
+      style={transform ? { transform: CSS.Transform.toString(transform), transition } : undefined}
       className={`w-[300px] flex-shrink-0 rounded-xl flex flex-col max-h-[calc(100vh-220px)] overflow-hidden transition-all duration-200 relative ${
-        isOver
+        showTaskHighlight
           ? "bg-blue-50/50 ring-2 ring-inset ring-blue-200 shadow-sm dark:bg-blue-950/25 dark:ring-blue-800"
           : "bg-zinc-100/50 dark:bg-zinc-800/30"
-      }`}
+      }${isDragging ? " opacity-30" : ""}`}
     >
       {/* Color bar */}
       <div
@@ -246,6 +259,24 @@ export default function BoardColumn({
             </div>
           ) : (
             <div className="flex items-center gap-2 min-w-0">
+              {canEditTasks && (
+                <button
+                  ref={setActivatorNodeRef}
+                  {...attributes}
+                  {...listeners}
+                  className="shrink-0 cursor-grab rounded p-0.5 text-zinc-300 hover:text-zinc-500 dark:text-zinc-600 dark:hover:text-zinc-400 active:cursor-grabbing"
+                  title="Drag to reorder"
+                >
+                  <svg className="h-3.5 w-3.5" viewBox="0 0 10 16" fill="currentColor">
+                    <circle cx="2.5" cy="2" r="1.2" />
+                    <circle cx="7.5" cy="2" r="1.2" />
+                    <circle cx="2.5" cy="8" r="1.2" />
+                    <circle cx="7.5" cy="8" r="1.2" />
+                    <circle cx="2.5" cy="14" r="1.2" />
+                    <circle cx="7.5" cy="14" r="1.2" />
+                  </svg>
+                </button>
+              )}
               <span
                 className="h-2 w-2 rounded-full shrink-0"
                 style={{ backgroundColor: barColor }}
