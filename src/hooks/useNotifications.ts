@@ -7,6 +7,7 @@ import type { Activity } from "./useRecentActivities";
 export type NotificationItem = Activity & {
   task_title?: string;
   board_title?: string;
+  is_read: boolean;
 };
 
 export function useNotifications() {
@@ -136,15 +137,11 @@ export function useNotifications() {
         .select("id, email, display_name")
         .in("id", actorIds);
 
-      const profileMap = new Map(
-        (profiles ?? []).map((p) => [p.id, p])
-      );
+      const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
 
       const taskIds = [
         ...new Set(
-          rawActivities
-            .map((a) => a.task_id as string)
-            .filter(Boolean)
+          rawActivities.map((a) => a.task_id as string).filter(Boolean)
         ),
       ];
       let extraTaskTitles = new Map<string, string>();
@@ -153,16 +150,26 @@ export function useNotifications() {
           .from("tasks")
           .select("id, title")
           .in("id", taskIds);
-        extraTaskTitles = new Map(
-          (tasks ?? []).map((t) => [t.id, t.title])
-        );
+        extraTaskTitles = new Map((tasks ?? []).map((t) => [t.id, t.title]));
       }
+
+      // Fetch read state
+      const activityIds = rawActivities.map((a) => a.id as string);
+      const { data: reads } = await supabase
+        .from("notification_reads")
+        .select("activity_id")
+        .eq("user_id", user.id)
+        .in("activity_id", activityIds);
+
+      const readSet = new Set((reads ?? []).map((r) => r.activity_id));
 
       const items: NotificationItem[] = rawActivities.map((a) => {
         const taskTitle =
           (a._task_title as string | undefined) ??
           extraTaskTitles.get(a.task_id as string) ??
-          ((a.metadata as Record<string, unknown>)?.task_title as string | undefined);
+          ((a.metadata as Record<string, unknown>)?.task_title as
+            | string
+            | undefined);
 
         return {
           id: a.id as string,
@@ -178,6 +185,7 @@ export function useNotifications() {
             profileMap.get(a.actor_id as string)?.display_name ?? "",
           task_title: taskTitle,
           board_title: boardMap.get(a.board_id as string)?.title,
+          is_read: readSet.has(a.id as string),
         };
       });
 
@@ -193,5 +201,41 @@ export function useNotifications() {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  return { notifications, loading, error, refresh: fetchNotifications };
+  const markAllAsRead = useCallback(async () => {
+    const unread = notifications.filter((n) => !n.is_read);
+    if (unread.length === 0) return false;
+
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    const rows = unread.map((n) => ({
+      user_id: user.id,
+      activity_id: n.id,
+    }));
+
+    const { error: upsertError } = await supabase
+      .from("notification_reads")
+      .upsert(rows, { onConflict: "user_id,activity_id" });
+
+    if (upsertError) return false;
+
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+
+    window.dispatchEvent(new CustomEvent("notifications-read"));
+    return true;
+  }, [notifications]);
+
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  return {
+    notifications,
+    loading,
+    error,
+    refresh: fetchNotifications,
+    markAllAsRead,
+    unreadCount,
+  };
 }

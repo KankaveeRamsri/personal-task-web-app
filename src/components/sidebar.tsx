@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { useUnreadCount } from "@/hooks/useUnreadCount";
 
 interface SidebarProps {
   userEmail: string;
@@ -89,6 +91,17 @@ const bottomNav = [
 
 export function Sidebar({ userEmail, onSignOut }: SidebarProps) {
   const pathname = usePathname();
+  const { count: unreadCount, refresh: refreshUnread } = useUnreadCount();
+
+  useEffect(() => {
+    refreshUnread();
+  }, [pathname, refreshUnread]);
+
+  useEffect(() => {
+    const handler = () => refreshUnread();
+    window.addEventListener("notifications-read", handler);
+    return () => window.removeEventListener("notifications-read", handler);
+  }, [refreshUnread]);
 
   const isActive = (href: string) => {
     if (href === "#") return false;
@@ -126,6 +139,11 @@ export function Sidebar({ userEmail, onSignOut }: SidebarProps) {
             >
               {item.icon}
               {item.label}
+              {item.label === "Notifications" && unreadCount > 0 && (
+                <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-semibold text-white">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
             </Link>
           );
         })}

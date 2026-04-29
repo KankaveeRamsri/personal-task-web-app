@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useNotifications } from "@/hooks/useNotifications";
 import type { NotificationItem } from "@/hooks/useNotifications";
 
@@ -127,7 +128,26 @@ function formatDateSeparator(dateStr: string): string {
 }
 
 export default function NotificationsPage() {
-  const { notifications, loading, error, refresh } = useNotifications();
+  const {
+    notifications,
+    loading,
+    error,
+    refresh,
+    markAllAsRead,
+    unreadCount,
+  } = useNotifications();
+  const [marking, setMarking] = useState(false);
+  const [markError, setMarkError] = useState<string | null>(null);
+
+  const handleMarkAllRead = async () => {
+    setMarking(true);
+    setMarkError(null);
+    const ok = await markAllAsRead();
+    if (!ok) {
+      setMarkError("Failed to mark as read. Please try again.");
+    }
+    setMarking(false);
+  };
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -136,17 +156,34 @@ export default function NotificationsPage() {
           Notifications
         </h1>
         {!loading && notifications.length > 0 && (
-          <button
-            onClick={refresh}
-            className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
-          >
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <button
+                onClick={handleMarkAllRead}
+                disabled={marking}
+                className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+              >
+                {marking ? "Marking..." : "Mark all as read"}
+              </button>
+            )}
+            <button
+              onClick={refresh}
+              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+            >
+              Refresh
+            </button>
+          </div>
         )}
       </div>
       <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
         Activity from tasks assigned to you and your workspace.
       </p>
+
+      {markError && (
+        <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+          {markError}
+        </div>
+      )}
 
       {/* Loading */}
       {loading && (
@@ -206,13 +243,16 @@ export default function NotificationsPage() {
                 actionStyle[item.action] ?? actionStyle.task_updated;
               const actor =
                 item.actor_display_name || item.actor_email || "Someone";
-              const initial = actor.slice(0, 1).toUpperCase();
 
               elements.push(
                 <a
                   key={item.id}
                   href="/dashboard/board"
-                  className="group flex items-start gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                  className={`group flex items-start gap-3 rounded-xl px-3 py-3 transition-colors ${
+                    item.is_read
+                      ? "hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                      : "bg-blue-50/50 hover:bg-blue-50 dark:bg-blue-950/20 dark:hover:bg-blue-950/30"
+                  }`}
                 >
                   <span
                     className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm ${style}`}
@@ -236,21 +276,21 @@ export default function NotificationsPage() {
                           <span>{item.board_title}</span>
                         </>
                       )}
+                      {!item.is_read && (
+                        <>
+                          <span className="text-zinc-300 dark:text-zinc-600">
+                            &middot;
+                          </span>
+                          <span className="font-medium text-blue-600 dark:text-blue-400">
+                            New
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
-                  <svg
-                    className="mt-1 h-4 w-4 shrink-0 text-zinc-300 transition-colors group-hover:text-zinc-500 dark:text-zinc-600 dark:group-hover:text-zinc-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="m8.25 4.5 7.5 7.5-7.5 7.5"
-                    />
-                  </svg>
+                  {!item.is_read && (
+                    <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
+                  )}
                 </a>
               );
             }
