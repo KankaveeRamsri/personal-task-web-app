@@ -569,6 +569,16 @@ export default function DashboardPage() {
           action: "task_created",
           metadata: { task_title: task.title },
         });
+        if (newTaskAssigneeId) {
+          const assignee = members.find((m) => m.user_id === newTaskAssigneeId);
+          logActivity({
+            workspaceId: selectedWorkspaceId,
+            boardId: selectedBoardId,
+            taskId: task.id,
+            action: "task_assigned",
+            metadata: { task_title: task.title, assignee_name: assignee ? (assignee.display_name || assignee.email) : null },
+          });
+        }
       }
       setNewTaskTitle("");
       setNewTaskDescription("");
