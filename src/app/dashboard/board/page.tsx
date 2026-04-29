@@ -41,6 +41,8 @@ export default function DashboardPage() {
     createBoard,
     createTask,
     createList,
+    renameList,
+    deleteList,
     updateTask,
     deleteTask,
     moveTask,
@@ -492,6 +494,29 @@ export default function DashboardPage() {
     setAddingList(false);
   };
 
+  const DEFAULT_LIST_TITLES = new Set(["To Do", "In Progress", "Completed"]);
+
+  const handleRenameList = useCallback(async (listId: string, newTitle: string): Promise<boolean> => {
+    const trimmed = newTitle.trim();
+    if (!trimmed) return false;
+    const duplicate = lists.some(
+      (l) => l.id !== listId && l.title.toLowerCase() === trimmed.toLowerCase()
+    );
+    if (duplicate) {
+      setErrorMsg("A list with this name already exists");
+      return false;
+    }
+    const ok = await renameList(listId, trimmed);
+    if (ok) showSuccess("List renamed");
+    return ok;
+  }, [lists, renameList, showSuccess, setErrorMsg]);
+
+  const handleDeleteList = useCallback(async (listId: string): Promise<boolean> => {
+    const ok = await deleteList(listId);
+    if (ok) showSuccess("List deleted");
+    return ok;
+  }, [deleteList, showSuccess]);
+
   const handleAddTask = async (e: React.FormEvent, listId: string) => {
     e.preventDefault();
     if (!newTaskTitle.trim() || !listId) return;
@@ -894,6 +919,9 @@ export default function DashboardPage() {
               onNewTaskDueDateChange={setNewTaskDueDate}
               onNewTaskAssigneeIdChange={setNewTaskAssigneeId}
               allListTitles={lists.map((l) => l.title)}
+              isDefaultList={DEFAULT_LIST_TITLES.has(list.title)}
+              onRenameList={handleRenameList}
+              onDeleteList={handleDeleteList}
             />
           ))}
           {canAddList && (

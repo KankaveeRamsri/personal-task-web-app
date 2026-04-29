@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { List, Task, TaskPriority } from "@/types/database";
@@ -52,6 +52,9 @@ export interface BoardColumnProps {
   onNewTaskDueDateChange: (value: string) => void;
   onNewTaskAssigneeIdChange: (value: string) => void;
   allListTitles: string[];
+  isDefaultList: boolean;
+  onRenameList: (listId: string, newTitle: string) => Promise<boolean>;
+  onDeleteList: (listId: string) => Promise<boolean>;
 }
 
 export default function BoardColumn({
@@ -87,6 +90,9 @@ export default function BoardColumn({
   onNewTaskDueDateChange,
   onNewTaskAssigneeIdChange,
   allListTitles,
+  isDefaultList,
+  onRenameList,
+  onDeleteList,
 }: BoardColumnProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const barColor = getColumnBarColor(list.title, list.color);
@@ -98,6 +104,58 @@ export default function BoardColumn({
       inputRef.current.focus();
     }
   }, [addingToListId, list.id, newTaskTitle]);
+
+  // List action menu state
+  const [listMenuOpen, setListMenuOpen] = useState(false);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [listBusy, setListBusy] = useState(false);
+  const listMenuRef = useRef<HTMLDivElement>(null);
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!listMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (listMenuRef.current && !listMenuRef.current.contains(e.target as Node)) {
+        setListMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [listMenuOpen]);
+
+  useEffect(() => {
+    if (isRenaming && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [isRenaming]);
+
+  const handleStartRename = () => {
+    setListMenuOpen(false);
+    setRenameValue(list.title);
+    setIsRenaming(true);
+  };
+
+  const handleSaveRename = async () => {
+    const trimmed = renameValue.trim();
+    if (!trimmed || trimmed === list.title) {
+      setIsRenaming(false);
+      return;
+    }
+    setListBusy(true);
+    const ok = await onRenameList(list.id, trimmed);
+    setListBusy(false);
+    if (ok) setIsRenaming(false);
+  };
+
+  const handleConfirmDeleteList = async () => {
+    if (totalTaskCount > 0) return;
+    setListBusy(true);
+    await onDeleteList(list.id);
+    setListBusy(false);
+  };
 
   const moveTargets: MoveTarget[] = allListTitles.map((title) => ({
     title,
@@ -113,7 +171,7 @@ export default function BoardColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`w-[300px] flex-shrink-0 rounded-xl flex flex-col max-h-[calc(100vh-220px)] overflow-hidden transition-all duration-200 ${
+      className={`w-[300px] flex-shrink-0 rounded-xl flex flex-col max-h-[calc(100vh-220px)] overflow-hidden transition-all duration-200 relative ${
         isOver
           ? "bg-blue-50/50 ring-2 ring-inset ring-blue-200 shadow-sm dark:bg-blue-950/25 dark:ring-blue-800"
           : "bg-zinc-100/50 dark:bg-zinc-800/30"
@@ -127,21 +185,94 @@ export default function BoardColumn({
 
       {/* Header */}
       <div className="flex-shrink-0 px-3 pt-3 pb-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span
-              className="h-2 w-2 rounded-full shrink-0"
-              style={{ backgroundColor: barColor }}
-            />
-            <h3 className="text-[13px] font-semibold tracking-tight text-zinc-700 dark:text-zinc-300">
-              {list.title === "Done" ? "Completed" : list.title}
-            </h3>
-          </div>
+        <div className="flex items-center justify-between gap-1">
+          {isRenaming ? (
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              <span
+                className="h-2 w-2 rounded-full shrink-0"
+                style={{ backgroundColor: barColor }}
+              />
+              <input
+                ref={renameInputRef}
+                type="text"
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSaveRename();
+                  if (e.key === "Escape") setIsRenaming(false);
+                }}
+                disabled={listBusy}
+                className="flex-1 min-w-0 rounded border border-zinc-300 bg-white px-1.5 py-0.5 text-[13px] font-semibold text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-200 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:focus:border-zinc-500"
+              />
+              <button
+                onClick={handleSaveRename}
+                disabled={listBusy || !renameValue.trim()}
+                className="shrink-0 rounded p-0.5 text-zinc-400 hover:text-zinc-700 disabled:opacity-50 dark:hover:text-zinc-200"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+              </button>
+              <button
+                onClick={() => setIsRenaming(false)}
+                disabled={listBusy}
+                className="shrink-0 rounded p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 min-w-0">
+              <span
+                className="h-2 w-2 rounded-full shrink-0"
+                style={{ backgroundColor: barColor }}
+              />
+              <h3 className="text-[13px] font-semibold tracking-tight text-zinc-700 dark:text-zinc-300 truncate">
+                {list.title === "Done" ? "Completed" : list.title}
+              </h3>
+              {canEditTasks && !isDefaultList && (
+                <div className="relative" ref={listMenuRef}>
+                  <button
+                    onClick={() => setListMenuOpen((v) => !v)}
+                    className="shrink-0 rounded p-0.5 text-zinc-400 hover:bg-zinc-200/60 hover:text-zinc-600 dark:hover:bg-zinc-700/60 dark:hover:text-zinc-300"
+                  >
+                    <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M10 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4ZM10 12a2 2 0 1 1 0-4 2 2 0 0 1 0 4ZM10 18a2 2 0 1 1 0-4 2 2 0 0 1 0 4Z" />
+                    </svg>
+                  </button>
+                  {listMenuOpen && (
+                    <div className="absolute left-0 top-full z-20 mt-1 w-36 rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
+                      <button
+                        onClick={handleStartRename}
+                        className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-zinc-700 transition-colors hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-700/50"
+                      >
+                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                        </svg>
+                        Rename
+                      </button>
+                      <button
+                        onClick={() => { setListMenuOpen(false); setShowDeleteDialog(true); }}
+                        className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+                      >
+                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                        </svg>
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           {canEditTasks ? (
             <button
               onClick={() => onSelectAllInColumn(list.id)}
               title={allSelected ? "Deselect all" : "Select all"}
-              className={`flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold transition-colors ${
+              className={`flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold transition-colors ${
                 allSelected
                   ? "bg-blue-500 text-white"
                   : someSelected
@@ -152,12 +283,71 @@ export default function BoardColumn({
               {countLabel}
             </button>
           ) : (
-            <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold bg-zinc-200/80 text-zinc-500 dark:bg-zinc-700/60 dark:text-zinc-400">
+            <span className="flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold bg-zinc-200/80 text-zinc-500 dark:bg-zinc-700/60 dark:text-zinc-400">
               {countLabel}
             </span>
           )}
         </div>
       </div>
+
+      {/* Delete list dialog */}
+      {showDeleteDialog && (
+        <div className="absolute inset-0 z-30 flex items-start justify-center pt-12 bg-black/10 rounded-xl">
+          <div className="mx-3 w-full max-w-[260px] rounded-xl border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-700 dark:bg-zinc-800">
+            {totalTaskCount > 0 ? (
+              <>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-50 dark:bg-amber-950">
+                    <svg className="h-4 w-4 text-amber-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">Cannot delete</h3>
+                </div>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+                  This list contains {totalTaskCount} task{totalTaskCount > 1 ? "s" : ""}. Move or delete the tasks before deleting this list.
+                </p>
+                <button
+                  onClick={() => setShowDeleteDialog(false)}
+                  className="w-full rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                >
+                  Got it
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-50 dark:bg-red-950">
+                    <svg className="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">Delete list?</h3>
+                </div>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+                  Delete &ldquo;{list.title}&rdquo;? This cannot be undone.
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowDeleteDialog(false)}
+                    disabled={listBusy}
+                    className="flex-1 rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirmDeleteList}
+                    disabled={listBusy}
+                    className="flex-1 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                  >
+                    {listBusy ? "Deleting..." : "Delete"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Task list */}
       <div className="flex-1 overflow-y-auto px-2.5 pb-2.5">

@@ -495,6 +495,36 @@ export function useBoardData() {
     []
   );
 
+  const renameList = useCallback(async (listId: string, newTitle: string) => {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("lists")
+      .update({ title: newTitle })
+      .eq("id", listId)
+      .select()
+      .single();
+
+    if (error) {
+      setErrorMsg(error.message);
+      return false;
+    }
+    const updated = data as List;
+    setLists((prev) => prev.map((l) => (l.id === listId ? updated : l)));
+    return true;
+  }, []);
+
+  const deleteList = useCallback(async (listId: string) => {
+    const supabase = createClient();
+    const { error } = await supabase.from("lists").delete().eq("id", listId);
+
+    if (error) {
+      setErrorMsg(error.message);
+      return false;
+    }
+    setLists((prev) => prev.filter((l) => l.id !== listId));
+    return true;
+  }, []);
+
   const clearError = useCallback(() => setErrorMsg(""), []);
 
   return {
@@ -514,6 +544,8 @@ export function useBoardData() {
     createBoard,
     createTask,
     createList,
+    renameList,
+    deleteList,
     updateTask,
     deleteTask,
     moveTask,
