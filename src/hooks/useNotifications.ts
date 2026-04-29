@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase";
 import type { Activity } from "./useRecentActivities";
 
@@ -15,8 +15,8 @@ export function useNotifications() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchNotifications = useCallback(async () => {
-    setLoading(true);
+  const fetchNotifications = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     setError(null);
 
     try {
@@ -27,7 +27,7 @@ export function useNotifications() {
       } = await supabase.auth.getUser();
       if (!user) {
         setNotifications([]);
-        setLoading(false);
+        if (!silent) setLoading(false);
         return;
       }
 
@@ -38,7 +38,7 @@ export function useNotifications() {
 
       if (mError || !memberships || memberships.length === 0) {
         setNotifications([]);
-        setLoading(false);
+        if (!silent) setLoading(false);
         return;
       }
 
@@ -55,7 +55,7 @@ export function useNotifications() {
 
       if (!boards || boards.length === 0) {
         setNotifications([]);
-        setLoading(false);
+        if (!silent) setLoading(false);
         return;
       }
 
@@ -82,7 +82,7 @@ export function useNotifications() {
 
         if (!lists || lists.length === 0) {
           setNotifications([]);
-          setLoading(false);
+          if (!silent) setLoading(false);
           return;
         }
 
@@ -96,7 +96,7 @@ export function useNotifications() {
 
         if (!assignedTasks || assignedTasks.length === 0) {
           setNotifications([]);
-          setLoading(false);
+          if (!silent) setLoading(false);
           return;
         }
 
@@ -123,7 +123,7 @@ export function useNotifications() {
 
       if (rawActivities.length === 0) {
         setNotifications([]);
-        setLoading(false);
+        if (!silent) setLoading(false);
         return;
       }
 
@@ -191,14 +191,59 @@ export function useNotifications() {
 
       setNotifications(items);
     } catch {
-      setError("Failed to load notifications");
+      if (!silent) setError("Failed to load notifications");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     fetchNotifications();
+  }, [fetchNotifications]);
+
+  // Realtime subscription: throttled silent refresh on new activity
+  const lastRefreshRef = useRef(0);
+  const channelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
+  const userIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    let stale = false;
+    const supabase = createClient();
+
+    supabase.auth.getUser().then(({ data }) => {
+      if (stale || !data.user) return;
+      userIdRef.current = data.user.id;
+
+      channelRef.current = supabase
+        .channel("notifications-feed")
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "task_activities",
+          },
+          (payload: { new: Record<string, unknown> }) => {
+            const actorId = payload.new.actor_id as string;
+            if (!actorId || actorId === userIdRef.current) return;
+
+            const now = Date.now();
+            if (now - lastRefreshRef.current < 2000) return;
+            lastRefreshRef.current = now;
+
+            fetchNotifications(true);
+          }
+        )
+        .subscribe();
+    });
+
+    return () => {
+      stale = true;
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
   }, [fetchNotifications]);
 
   const markAllAsRead = useCallback(async () => {
@@ -234,7 +279,7 @@ export function useNotifications() {
     notifications,
     loading,
     error,
-    refresh: fetchNotifications,
+    refresh: () => fetchNotifications(false),
     markAllAsRead,
     unreadCount,
   };

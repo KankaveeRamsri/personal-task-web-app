@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase";
 
 async function getRelevantActivityIds(
@@ -71,6 +71,8 @@ async function getRelevantActivityIds(
 export function useUnreadCount() {
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const channelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
+  const userIdRef = useRef<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -104,6 +106,43 @@ export function useUnreadCount() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Realtime subscription: optimistic +1 on new activity
+  useEffect(() => {
+    let stale = false;
+    const supabase = createClient();
+
+    supabase.auth.getUser().then(({ data }) => {
+      if (stale || !data.user) return;
+      userIdRef.current = data.user.id;
+
+      channelRef.current = supabase
+        .channel("unread-badge")
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "task_activities",
+          },
+          (payload: { new: Record<string, unknown> }) => {
+            const actorId = payload.new.actor_id as string;
+            if (actorId && actorId !== userIdRef.current) {
+              setCount((prev) => prev + 1);
+            }
+          }
+        )
+        .subscribe();
+    });
+
+    return () => {
+      stale = true;
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
   }, []);
 
   return { count, loading, refresh };
