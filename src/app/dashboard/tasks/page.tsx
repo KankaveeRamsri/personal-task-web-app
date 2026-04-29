@@ -337,12 +337,6 @@ export default function TasksPage() {
     setSelectedIds(new Set(sortedTasks.map((t) => t.id)));
   }, [sortedTasks]);
 
-  const uniqueListIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const t of tasks) ids.add(t.list_id);
-    return Array.from(ids);
-  }, [tasks]);
-
   const selectedTask = selectedTaskId
     ? tasks.find((t) => t.id === selectedTaskId) ?? null
     : null;
@@ -528,14 +522,11 @@ export default function TasksPage() {
             className={selectClass}
           >
             <option value="all">Status: All</option>
-            {uniqueListIds.map((id) => {
-              const title = listMap.get(id) ?? "—";
-              return (
-                <option key={id} value={id}>
-                  {title === "Done" ? "Completed" : title}
-                </option>
-              );
-            })}
+            {lists.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.title === "Done" ? "Completed" : l.title}
+              </option>
+            ))}
           </select>
 
           <select
