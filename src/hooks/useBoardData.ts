@@ -35,6 +35,7 @@ export function useBoardData() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
+  const [reorderPending, setReorderPending] = useState(false);
 
   // Reset derived state when workspace changes (adjust during render, not in effect)
   const [prevWorkspaceId, setPrevWorkspaceId] = useState<string | null>(null);
@@ -539,27 +540,55 @@ export function useBoardData() {
       );
       if (changed.length === 0) return true;
 
-      const reorderedMap = new Map(reordered.map((l) => [l.id, l]));
-      setLists((prev) => prev.map((l) => reorderedMap.get(l.id) ?? l));
+      // Set lists in the NEW order (iterating reordered, not prev)
+      setLists((prev) => {
+        const prevMap = new Map(prev.map((l) => [l.id, l]));
+        return reordered.map((l) => {
+          const latest = prevMap.get(l.id);
+          return latest ? { ...latest, position: l.position } : l;
+        });
+      });
+      setReorderPending(true);
 
-      const supabase = createClient();
-      const results = await Promise.all(
-        changed.map((list) =>
-          supabase
-            .from("lists")
-            .update({ position: list.position })
-            .eq("id", list.id)
-        )
-      );
+      try {
+        const supabase = createClient();
+        const results = await Promise.all(
+          changed.map((list) =>
+            supabase
+              .from("lists")
+              .update({ position: list.position })
+              .eq("id", list.id)
+          )
+        );
 
-      const failed = results.find((r) => r.error);
-      if (failed) {
-        const revertMap = new Map(original.map((l) => [l.id, l]));
-        setLists((prev) => prev.map((l) => revertMap.get(l.id) ?? l));
-        setErrorMsg(failed.error!.message);
+        const failed = results.find((r) => r.error);
+        if (failed) {
+          // Rollback: restore original order
+          setLists((prev) => {
+            const prevMap = new Map(prev.map((l) => [l.id, l]));
+            return original.map((l) => {
+              const latest = prevMap.get(l.id);
+              return latest ? { ...latest, position: l.position } : l;
+            });
+          });
+          setErrorMsg(failed.error!.message);
+          return false;
+        }
+        return true;
+      } catch {
+        // Rollback: restore original order
+        setLists((prev) => {
+          const prevMap = new Map(prev.map((l) => [l.id, l]));
+          return original.map((l) => {
+            const latest = prevMap.get(l.id);
+            return latest ? { ...latest, position: l.position } : l;
+          });
+        });
+        setErrorMsg("Failed to save list order");
         return false;
+      } finally {
+        setReorderPending(false);
       }
-      return true;
     },
     []
   );
@@ -588,6 +617,7 @@ export function useBoardData() {
     tasks,
     loading,
     errorMsg,
+    reorderPending,
     // Actions
     setSelectedWorkspaceId,
     setSelectedBoardId,

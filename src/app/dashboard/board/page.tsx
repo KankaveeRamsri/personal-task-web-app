@@ -44,6 +44,7 @@ export default function DashboardPage() {
     renameList,
     updateListColor,
     reorderLists,
+    reorderPending,
     deleteList,
     updateTask,
     deleteTask,
@@ -300,16 +301,14 @@ export default function DashboardPage() {
     const activeId = active.id as string;
     const overId = over.id as string;
 
-    // List reorder
+    // List reorder — optimistic, fire-and-forget persist
     if (activeId !== overId && lists.some((l) => l.id === activeId) && lists.some((l) => l.id === overId)) {
-      dragSavingRef.current = true;
       const oldIndex = lists.findIndex((l) => l.id === activeId);
       const newIndex = lists.findIndex((l) => l.id === overId);
       const reordered = arrayMove(lists, oldIndex, newIndex).map(
         (l, i) => ({ ...l, position: (i + 1) * 1000 })
       );
-      await reorderLists(reordered, lists);
-      dragSavingRef.current = false;
+      reorderLists(reordered, lists);
       showSuccess("List reordered");
       return;
     }
@@ -908,6 +907,14 @@ export default function DashboardPage() {
             onDueDateChange={setFilterDueDate}
             onClearFilters={clearFilters}
           />
+
+          {/* Saving indicator */}
+          {reorderPending && (
+            <div className="flex items-center gap-1.5 text-[11px] text-zinc-400 dark:text-zinc-500 -mt-2">
+              <div className="h-2.5 w-2.5 animate-spin rounded-full border border-zinc-300 border-t-zinc-500 dark:border-zinc-600 dark:border-t-zinc-400" />
+              Saving order…
+            </div>
+          )}
 
           {/* Lists — Kanban columns */}
           <DndContext
