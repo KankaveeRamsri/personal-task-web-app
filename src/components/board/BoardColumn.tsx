@@ -8,6 +8,17 @@ import type { MemberWithProfile } from "@/hooks/useWorkspaceMembers";
 import TaskCard from "@/components/board/TaskCard";
 import type { MenuPosition, MoveTarget } from "@/components/board/TaskCard";
 
+const COLOR_PRESETS = [
+  { name: "Gray", hex: "#a1a1aa" },
+  { name: "Blue", hex: "#3b82f6" },
+  { name: "Green", hex: "#10b981" },
+  { name: "Orange", hex: "#f97316" },
+  { name: "Red", hex: "#ef4444" },
+  { name: "Purple", hex: "#8b5cf6" },
+  { name: "Pink", hex: "#ec4899" },
+  { name: "Yellow", hex: "#eab308" },
+];
+
 const getColumnBarColor = (title: string, color: string) => {
   if (color) return color;
   const defaults: Record<string, string> = {
@@ -54,6 +65,7 @@ export interface BoardColumnProps {
   allListTitles: string[];
   isDefaultList: boolean;
   onRenameList: (listId: string, newTitle: string) => Promise<boolean>;
+  onUpdateListColor: (listId: string, color: string) => Promise<boolean>;
   onDeleteList: (listId: string) => Promise<boolean>;
 }
 
@@ -92,6 +104,7 @@ export default function BoardColumn({
   allListTitles,
   isDefaultList,
   onRenameList,
+  onUpdateListColor,
   onDeleteList,
 }: BoardColumnProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -136,6 +149,14 @@ export default function BoardColumn({
     setListMenuOpen(false);
     setRenameValue(list.title);
     setIsRenaming(true);
+  };
+
+  const handleColorSelect = async (hex: string) => {
+    if (listBusy) return;
+    setListMenuOpen(false);
+    setListBusy(true);
+    await onUpdateListColor(list.id, hex);
+    setListBusy(false);
   };
 
   const handleSaveRename = async () => {
@@ -243,7 +264,7 @@ export default function BoardColumn({
                     </svg>
                   </button>
                   {listMenuOpen && (
-                    <div className="absolute left-0 top-full z-20 mt-1 w-36 rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
+                    <div className="absolute left-0 top-full z-20 mt-1 w-44 rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
                       <button
                         onClick={handleStartRename}
                         className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-zinc-700 transition-colors hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-700/50"
@@ -253,6 +274,27 @@ export default function BoardColumn({
                         </svg>
                         Rename
                       </button>
+                      <div className="border-t border-zinc-100 dark:border-zinc-700/50 my-1" />
+                      <div className="px-3 py-1.5">
+                        <p className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500 mb-1.5">Color</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {COLOR_PRESETS.map((preset) => (
+                            <button
+                              key={preset.hex}
+                              onClick={() => handleColorSelect(preset.hex)}
+                              title={preset.name}
+                              disabled={listBusy}
+                              className={`h-5 w-5 rounded-full border-2 transition-transform hover:scale-110 disabled:opacity-50 ${
+                                list.color === preset.hex
+                                  ? "border-zinc-900 dark:border-zinc-100"
+                                  : "border-transparent hover:border-zinc-300 dark:hover:border-zinc-600"
+                              }`}
+                              style={{ backgroundColor: preset.hex }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="border-t border-zinc-100 dark:border-zinc-700/50 my-1" />
                       <button
                         onClick={() => { setListMenuOpen(false); setShowDeleteDialog(true); }}
                         className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"

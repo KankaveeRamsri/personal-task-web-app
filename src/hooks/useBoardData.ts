@@ -513,6 +513,24 @@ export function useBoardData() {
     return true;
   }, []);
 
+  const updateListColor = useCallback(async (listId: string, color: string) => {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("lists")
+      .update({ color })
+      .eq("id", listId)
+      .select()
+      .single();
+
+    if (error) {
+      setErrorMsg(error.message);
+      return false;
+    }
+    const updated = data as List;
+    setLists((prev) => prev.map((l) => (l.id === listId ? updated : l)));
+    return true;
+  }, []);
+
   const deleteList = useCallback(async (listId: string) => {
     const supabase = createClient();
     const { error } = await supabase.from("lists").delete().eq("id", listId);
@@ -545,6 +563,7 @@ export function useBoardData() {
     createTask,
     createList,
     renameList,
+    updateListColor,
     deleteList,
     updateTask,
     deleteTask,

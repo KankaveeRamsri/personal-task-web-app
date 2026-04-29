@@ -129,6 +129,20 @@ export default function TasksPage() {
     return map;
   }, [lists]);
 
+  const listColorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    const defaults: Record<string, string> = {
+      "To Do": "#a1a1aa",
+      "In Progress": "#3b82f6",
+      "Completed": "#10b981",
+      "Done": "#10b981",
+    };
+    for (const l of lists) {
+      map.set(l.id, l.color || defaults[l.title] || "#a1a1aa");
+    }
+    return map;
+  }, [lists]);
+
   const memberMap = useMemo(() => {
     const map = new Map<string, MemberWithProfile>();
     for (const m of members) map.set(m.user_id, m);
@@ -720,6 +734,7 @@ export default function TasksPage() {
                   key={task.id}
                   task={task}
                   listTitle={listMap.get(task.list_id) ?? "—"}
+                  listColor={listColorMap.get(task.list_id) ?? "#a1a1aa"}
                   assignee={
                     task.assignee_id
                       ? memberMap.get(task.assignee_id) ?? null
@@ -742,6 +757,7 @@ export default function TasksPage() {
         <TaskDetailDrawer
           task={selectedTask}
           listTitle={listMap.get(selectedTask.list_id) ?? "—"}
+          listColor={listColorMap.get(selectedTask.list_id) ?? "#a1a1aa"}
           boardTitle={selectedBoardTitle}
           assignee={
             selectedTask.assignee_id
@@ -774,6 +790,7 @@ export default function TasksPage() {
 function TaskRow({
   task,
   listTitle,
+  listColor,
   assignee,
   isSelected,
   onClick,
@@ -783,6 +800,7 @@ function TaskRow({
 }: {
   task: Task;
   listTitle: string;
+  listColor: string;
   assignee: MemberWithProfile | null;
   isSelected: boolean;
   onClick: () => void;
@@ -838,7 +856,8 @@ function TaskRow({
 
       {/* Status */}
       <td className="px-4 py-3">
-        <span className="inline-flex rounded-md bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+        <span className="inline-flex items-center gap-1.5 rounded-md bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: listColor }} />
           {displayTitle}
         </span>
       </td>
@@ -909,12 +928,14 @@ function TaskRow({
 function TaskDetailDrawer({
   task,
   listTitle,
+  listColor,
   boardTitle,
   assignee,
   onClose,
 }: {
   task: Task;
   listTitle: string;
+  listColor: string;
   boardTitle: string;
   assignee: MemberWithProfile | null;
   onClose: () => void;
@@ -989,7 +1010,8 @@ function TaskDetailDrawer({
               <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">
                 Status
               </label>
-              <span className="inline-flex rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: listColor }} />
                 {displayStatus}
               </span>
             </div>

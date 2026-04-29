@@ -42,6 +42,7 @@ export default function DashboardPage() {
     createTask,
     createList,
     renameList,
+    updateListColor,
     deleteList,
     updateTask,
     deleteTask,
@@ -517,6 +518,12 @@ export default function DashboardPage() {
     return ok;
   }, [deleteList, showSuccess]);
 
+  const handleUpdateListColor = useCallback(async (listId: string, color: string): Promise<boolean> => {
+    const ok = await updateListColor(listId, color);
+    if (ok) showSuccess("Color updated");
+    return ok;
+  }, [updateListColor, showSuccess]);
+
   const handleAddTask = async (e: React.FormEvent, listId: string) => {
     e.preventDefault();
     if (!newTaskTitle.trim() || !listId) return;
@@ -921,6 +928,7 @@ export default function DashboardPage() {
               allListTitles={lists.map((l) => l.title)}
               isDefaultList={DEFAULT_LIST_TITLES.has(list.title)}
               onRenameList={handleRenameList}
+              onUpdateListColor={handleUpdateListColor}
               onDeleteList={handleDeleteList}
             />
           ))}

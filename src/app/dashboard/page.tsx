@@ -34,7 +34,20 @@ function priorityBadge(priority: string) {
   return styles[priority] ?? "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400";
 }
 
-function getListColor(title: string, paletteIndex: number): string {
+function getListColor(title: string, paletteIndex: number, listColor?: string): string {
+  if (listColor) {
+    const hexToBg: Record<string, string> = {
+      "#a1a1aa": "bg-zinc-400",
+      "#3b82f6": "bg-blue-500",
+      "#10b981": "bg-emerald-500",
+      "#f97316": "bg-orange-500",
+      "#ef4444": "bg-red-500",
+      "#8b5cf6": "bg-violet-500",
+      "#ec4899": "bg-pink-500",
+      "#eab308": "bg-yellow-500",
+    };
+    return hexToBg[listColor.toLowerCase()] ?? "bg-zinc-400";
+  }
   const defaults: Record<string, string> = {
     "To Do": "bg-zinc-400",
     "In Progress": "bg-amber-500",
@@ -171,7 +184,7 @@ export default function DashboardPage() {
     const map = new Map<string, string>();
     let customIdx = 0;
     lists.forEach((l) => {
-      map.set(l.title, getListColor(l.title, customIdx));
+      map.set(l.title, getListColor(l.title, customIdx, l.color || undefined));
       if (!{ "To Do": 1, "In Progress": 1, "Done": 1, "Completed": 1 }[l.title]) {
         customIdx++;
       }
