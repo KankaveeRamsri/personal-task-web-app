@@ -34,14 +34,19 @@ function priorityBadge(priority: string) {
   return styles[priority] ?? "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400";
 }
 
-function statusDot(status: string) {
-  const styles: Record<string, string> = {
+function getListColor(title: string, paletteIndex: number): string {
+  const defaults: Record<string, string> = {
     "To Do": "bg-zinc-400",
     "In Progress": "bg-amber-500",
     "Done": "bg-emerald-500",
     "Completed": "bg-emerald-500",
   };
-  return styles[status] ?? "bg-zinc-300";
+  if (defaults[title]) return defaults[title];
+  const palette = [
+    "bg-violet-400", "bg-sky-400", "bg-rose-400",
+    "bg-teal-400", "bg-orange-400", "bg-pink-400", "bg-cyan-400",
+  ];
+  return palette[paletteIndex % palette.length];
 }
 
 function getLocalDate(d: Date): Date {
@@ -159,6 +164,18 @@ export default function DashboardPage() {
   const listTitleMap = useMemo(() => {
     const map = new Map<string, string>();
     lists.forEach((l) => map.set(l.id, l.title));
+    return map;
+  }, [lists]);
+
+  const listColorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    let customIdx = 0;
+    lists.forEach((l) => {
+      map.set(l.title, getListColor(l.title, customIdx));
+      if (!{ "To Do": 1, "In Progress": 1, "Done": 1, "Completed": 1 }[l.title]) {
+        customIdx++;
+      }
+    });
     return map;
   }, [lists]);
 
@@ -296,19 +313,13 @@ export default function DashboardPage() {
 
   // Progress bars per list
   const progressItems = useMemo(() => {
-    const colors: Record<string, string> = {
-      "To Do": "bg-zinc-400",
-      "In Progress": "bg-amber-500",
-      "Done": "bg-emerald-500",
-      "Completed": "bg-emerald-500",
-    };
     return lists.map((l) => ({
       label: l.title === "Done" ? "Completed" : l.title,
       count: tasksByListTitle[l.title] ?? 0,
       total: totalTasks,
-      color: colors[l.title] ?? "bg-zinc-400",
+      color: listColorMap.get(l.title) ?? "bg-zinc-400",
     }));
-  }, [lists, tasksByListTitle, totalTasks]);
+  }, [lists, tasksByListTitle, totalTasks, listColorMap]);
 
   // ── Loading ──────────────────────────────────────────────────
 
@@ -440,14 +451,16 @@ export default function DashboardPage() {
           {recentTasks.length > 0 ? (
             <ul className="divide-y divide-zinc-100 dark:divide-zinc-800 max-h-80 overflow-y-auto">
               {recentTasks.map((task) => {
-                const taskStatus = (listTitleMap.get(task.list_id) ?? "To Do") === "Done" ? "Completed" : (listTitleMap.get(task.list_id) ?? "To Do");
+                const listTitle = listTitleMap.get(task.list_id) ?? "";
+                const taskStatus = listTitle === "Done" ? "Completed" : (listTitle || "To Do");
+                const dotColor = listColorMap.get(listTitle) ?? "bg-zinc-300";
                 return (
                   <li key={task.id}>
                     <Link
                       href="/dashboard/board"
                       className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
                     >
-                      <span className={`h-2 w-2 shrink-0 rounded-full ${statusDot(taskStatus)}`} />
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${dotColor}`} />
                       <div className="min-w-0 flex-1">
                         <p className={`truncate text-sm font-medium ${task.is_completed ? "line-through text-zinc-400 dark:text-zinc-400" : "text-zinc-800 dark:text-zinc-200"}`}>
                           {task.title}
@@ -545,7 +558,7 @@ export default function DashboardPage() {
               <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
                 Task Status
               </h2>
-              <div className="space-y-4">
+              <div className={progressItems.length > 5 ? "space-y-3 max-h-[360px] overflow-y-auto" : "space-y-4"}>
                 {progressItems.map((item) => {
                   const pct = item.total > 0 ? Math.round((item.count / item.total) * 100) : 0;
                   return (
