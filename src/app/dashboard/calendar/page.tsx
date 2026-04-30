@@ -8,51 +8,85 @@ import type { Task, List } from "@/types/database";
 import type { MemberWithProfile } from "@/hooks/useWorkspaceMembers";
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Pure date helpers — no side-effects, timezone-safe
 // ---------------------------------------------------------------------------
 
-function getLocalDate(d: Date): Date {
+/** Strips time component, returns a new Date at local midnight. */
+function localMidnight(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-/** Returns a sortable YYYY-MM-DD key for a due_date string. */
+/** Converts a Date to a YYYY-MM-DD string using LOCAL date parts. */
+function toDateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Parses a YYYY-MM-DD key into a local-midnight Date (no timezone shift). */
+function parseDateKey(key: string): Date {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/** due_date stored as "YYYY-MM-DD" or "YYYY-MM-DDTHH:mm:ss" → stable key */
 function dueDateKey(dateStr: string): string {
-  return dateStr.slice(0, 10); // already "YYYY-MM-DD"
+  return dateStr.slice(0, 10);
 }
 
-/** Human-readable section heading for a date key. */
-function formatGroupHeading(key: string): string {
-  const target = getLocalDate(new Date(key + "T00:00:00"));
-  const today = getLocalDate(new Date());
-  const diffDays = Math.round(
-    (target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-  );
-
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Tomorrow";
-  if (diffDays === -1) return "Yesterday";
-  if (diffDays < 0) return `${Math.abs(diffDays)}d overdue · ${target.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
-  if (diffDays <= 6)
-    return target.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
-  return target.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: target.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
-  });
+function startOfMonth(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
 }
 
-/** Relative label shown on each task row (compact). */
-function relativeLabel(key: string): { label: string; overdue: boolean } {
-  const target = getLocalDate(new Date(key + "T00:00:00"));
-  const today = getLocalDate(new Date());
-  const diffDays = Math.round(
-    (target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-  );
-  if (diffDays < 0) return { label: `${Math.abs(diffDays)}d overdue`, overdue: true };
-  if (diffDays === 0) return { label: "Today", overdue: false };
-  if (diffDays === 1) return { label: "Tomorrow", overdue: false };
-  return { label: `${diffDays}d`, overdue: false };
+function endOfMonth(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0);
 }
+
+/** Returns the Date of Monday of the week containing `d`. */
+function startOfWeek(d: Date): Date {
+  const day = d.getDay(); // 0=Sun … 6=Sat
+  const diff = (day === 0 ? -6 : 1 - day); // shift to Mon
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + diff);
+}
+
+/** Returns the Date of Sunday of the week containing `d`. */
+function endOfWeek(d: Date): Date {
+  const day = d.getDay();
+  const diff = day === 0 ? 0 : 7 - day;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + diff);
+}
+
+/** Add N months to a date (returns first day of that month). */
+function addMonths(d: Date, n: number): Date {
+  return new Date(d.getFullYear(), d.getMonth() + n, 1);
+}
+
+/** Format month title, e.g. "April 2026". Pure string, no locale dependency. */
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+function formatMonthTitle(d: Date): string {
+  return `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/** Short day number for display in cell header. */
+function dayNumber(d: Date): number {
+  return d.getDate();
+}
+
+// ---------------------------------------------------------------------------
+// Initialise `currentMonth` from today — called ONLY on client
+// ---------------------------------------------------------------------------
+function todayMonthStart(): Date {
+  const t = new Date();
+  return new Date(t.getFullYear(), t.getMonth(), 1);
+}
+
+// ---------------------------------------------------------------------------
+// Existing helpers kept for EmptyState / label usage
+// ---------------------------------------------------------------------------
 
 function getInitials(email: string, displayName: string): string {
   if (displayName && displayName.trim()) {
@@ -76,10 +110,12 @@ const LIST_COLOR_DEFAULTS: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Sub-components
+// TaskChip — compact pill shown inside a calendar cell
 // ---------------------------------------------------------------------------
 
-function TaskItem({
+const MAX_VISIBLE = 3;
+
+function TaskChip({
   task,
   list,
   assignee,
@@ -90,336 +126,120 @@ function TaskItem({
   assignee: MemberWithProfile | null;
   boardId: string | null;
 }) {
-  const listTitle = list?.title ?? "—";
-  const displayTitle = listTitle === "Done" ? "Completed" : listTitle;
-  const listColor =
-    list?.color || LIST_COLOR_DEFAULTS[listTitle] || "#a1a1aa";
-
+  const listTitle = list?.title ?? "";
+  const listColor = list?.color || LIST_COLOR_DEFAULTS[listTitle] || "#a1a1aa";
   const done = task.is_completed || isCompletedListTitle(listTitle);
-  const { label, overdue } = task.due_date
-    ? relativeLabel(dueDateKey(task.due_date))
-    : { label: "", overdue: false };
-  const showOverdue = overdue && !done;
-
-  // Navigate to the board page (scoped view) — shallow for now
-  const href = boardId ? `/dashboard/board` : "#";
+  const href = boardId ? "/dashboard/board" : "#";
 
   return (
     <Link
       href={href}
-      className={`group flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-all duration-150 select-none
+      onClick={(e) => e.stopPropagation()}
+      title={task.title}
+      className={`group flex items-center gap-1 rounded px-1.5 py-[3px] text-[11px] font-medium leading-tight truncate transition-colors
         ${done
-          ? "border-zinc-100 bg-white/60 dark:border-zinc-800/50 dark:bg-zinc-900/40"
-          : showOverdue
-            ? "border-red-100 bg-red-50/30 hover:border-red-200 hover:bg-red-50/60 dark:border-red-900/30 dark:bg-red-950/20 dark:hover:border-red-800/40"
-            : "border-zinc-100 bg-white hover:border-zinc-200 hover:bg-zinc-50/60 dark:border-zinc-800/50 dark:bg-zinc-900/60 dark:hover:border-zinc-700/50 dark:hover:bg-zinc-800/60"
-        }`}
+          ? "bg-zinc-100 text-zinc-400 line-through dark:bg-zinc-800/60 dark:text-zinc-500"
+          : "bg-white text-zinc-700 hover:bg-zinc-50 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700/80"
+        } border border-zinc-200/80 dark:border-zinc-700/60`}
     >
-      {/* Completion indicator */}
+      {/* Status dot */}
       <span
-        className={`shrink-0 flex h-4 w-4 items-center justify-center rounded-full border-2 transition-colors
-          ${done
-            ? "border-emerald-400 bg-emerald-400 dark:border-emerald-500 dark:bg-emerald-500"
-            : showOverdue
-              ? "border-red-300 dark:border-red-700"
-              : "border-zinc-300 dark:border-zinc-600"
-          }`}
-      >
-        {done && (
-          <svg className="h-2.5 w-2.5 text-white" viewBox="0 0 12 12" fill="none">
-            <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        )}
-      </span>
-
+        className="shrink-0 h-1.5 w-1.5 rounded-full"
+        style={{ backgroundColor: done ? "#a1a1aa" : listColor }}
+      />
       {/* Title */}
-      <span
-        className={`flex-1 min-w-0 truncate text-[13px] font-medium leading-snug
-          ${done
-            ? "line-through text-zinc-400 dark:text-zinc-500"
-            : showOverdue
-              ? "text-zinc-800 dark:text-zinc-200"
-              : "text-zinc-800 dark:text-zinc-200"
-          }`}
-      >
-        {task.title}
-      </span>
-
-      {/* Status badge */}
-      <span className="hidden sm:inline-flex shrink-0 items-center gap-1 rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-        <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: listColor }} />
-        {displayTitle}
-      </span>
-
+      <span className="truncate">{task.title}</span>
       {/* Assignee avatar */}
       {assignee && (
         <span
-          className="shrink-0 inline-flex h-5 w-5 items-center justify-center rounded-full bg-zinc-200 text-[8px] font-semibold text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300"
+          className="shrink-0 ml-auto inline-flex h-4 w-4 items-center justify-center rounded-full bg-zinc-200 text-[8px] font-semibold text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300"
           title={assignee.display_name || assignee.email}
         >
           {getInitials(assignee.email, assignee.display_name)}
         </span>
       )}
-
-      {/* Overdue chip (only on overdue, non-done tasks) */}
-      {showOverdue && (
-        <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-red-50 text-red-500 dark:bg-red-950/40 dark:text-red-400">
-          {label}
-        </span>
-      )}
-
-      {/* Arrow hint */}
-      <svg className="shrink-0 h-3.5 w-3.5 text-zinc-300 opacity-0 group-hover:opacity-100 transition-opacity dark:text-zinc-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-      </svg>
     </Link>
   );
 }
 
-interface DateGroup {
-  key: string;
-  isPast: boolean;
+// ---------------------------------------------------------------------------
+// CalendarCell — single day box in the grid
+// ---------------------------------------------------------------------------
+
+function CalendarCell({
+  date,
+  isCurrentMonth,
+  isToday,
+  tasks,
+  listMap,
+  memberMap,
+  boardId,
+}: {
+  date: Date;
+  isCurrentMonth: boolean;
+  isToday: boolean;
   tasks: Task[];
-}
-
-// ---------------------------------------------------------------------------
-// Main page
-// ---------------------------------------------------------------------------
-
-export default function CalendarPage() {
-  // ── Hydration gate ───────────────────────────────────────────────────────
-  // All date-dependent rendering (new Date(), toLocaleDateString, isPast,
-  // isToday, overdue labels) must only execute on the client after mount.
-  // The first render must be identical between server and client.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-
-  const {
-    workspaces,
-    selectedWorkspaceId,
-    boards,
-    selectedBoardId,
-    lists,
-    tasks,
-    loading,
-    setSelectedWorkspaceId,
-    setSelectedBoardId,
-  } = useBoardData();
-
-  const { members } = useWorkspaceMembers(selectedWorkspaceId);
-
-  // Build lookup maps
-  const listMap = useMemo(() => {
-    const m = new Map<string, List>();
-    for (const l of lists) m.set(l.id, l);
-    return m;
-  }, [lists]);
-
-  const memberMap = useMemo(() => {
-    const m = new Map<string, MemberWithProfile>();
-    for (const mem of members) m.set(mem.user_id, mem);
-    return m;
-  }, [members]);
-
-  // Only tasks with a due_date, sorted chronologically.
-  // `mounted` is in the dependency array so this re-runs after hydration,
-  // at which point new Date() correctly reflects the client's local timezone.
-  const dateGroups = useMemo((): DateGroup[] => {
-    if (!mounted) return []; // stable empty value during SSR / first render
-
-    const today = getLocalDate(new Date());
-    const tasksWithDue = tasks.filter((t) => t.due_date !== null);
-
-    // Group by date key
-    const groupMap = new Map<string, Task[]>();
-    for (const t of tasksWithDue) {
-      const key = dueDateKey(t.due_date!);
-      if (!groupMap.has(key)) groupMap.set(key, []);
-      groupMap.get(key)!.push(t);
-    }
-
-    // Sort groups chronologically
-    const sortedKeys = Array.from(groupMap.keys()).sort();
-
-    return sortedKeys.map((key) => {
-      const target = getLocalDate(new Date(key + "T00:00:00"));
-      const isPast = target < today;
-      return {
-        key,
-        isPast,
-        tasks: groupMap.get(key)!,
-      };
-    });
-  }, [tasks, mounted]);
-
-  const hasDueTasks = dateGroups.length > 0;
-  const totalWithDue = dateGroups.reduce((s, g) => s + g.tasks.length, 0);
-
-  const selectClass =
-    "rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-400 dark:hover:bg-zinc-700/50 dark:hover:text-zinc-300 dark:focus:ring-zinc-600";
+  listMap: Map<string, List>;
+  memberMap: Map<string, MemberWithProfile>;
+  boardId: string | null;
+}) {
+  const visible = tasks.slice(0, MAX_VISIBLE);
+  const overflow = tasks.length - MAX_VISIBLE;
+  const num = dayNumber(date);
 
   return (
-    <div className="mx-auto max-w-2xl">
-      {/* ── Header ─────────────────────────────────────────────── */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-1">
-          <svg className="h-5 w-5 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
-          </svg>
-          <h1 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-            Calendar
-          </h1>
-        </div>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Tasks grouped by due date
-        </p>
+    <div
+      className={`min-h-[100px] p-1.5 flex flex-col gap-1 border-b border-r transition-colors
+        ${isCurrentMonth
+          ? "bg-white dark:bg-zinc-900"
+          : "bg-zinc-50/60 dark:bg-zinc-900/40"
+        }
+        ${isToday ? "ring-2 ring-inset ring-blue-500/30 dark:ring-blue-500/20" : ""}
+      `}
+    >
+      {/* Day number */}
+      <div className="flex items-center justify-between mb-0.5">
+        <span
+          className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-semibold leading-none
+            ${isToday
+              ? "bg-blue-600 text-white"
+              : isCurrentMonth
+                ? "text-zinc-700 dark:text-zinc-300"
+                : "text-zinc-400 dark:text-zinc-600"
+            }`}
+        >
+          {num}
+        </span>
+        {tasks.length > 0 && !isCurrentMonth && (
+          <span className="text-[10px] text-zinc-400 dark:text-zinc-600">
+            {tasks.length}
+          </span>
+        )}
       </div>
 
-      {/* ── Everything below depends on client-only state (localStorage,
-           Supabase, new Date()). Before mounted, render a deterministic
-           spinner so the server HTML and client first-render are identical. */}
-      {!mounted ? (
-        <div className="flex items-center justify-center py-20">
-          <svg className="h-6 w-6 animate-spin text-zinc-400" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-        </div>
-      ) : (
-        <>
-          {/* ── Context selectors ─────────────────────────────────── */}
-          <div className="mb-5 flex items-center gap-2 flex-wrap">
-            {workspaces.length > 0 && (
-              <select
-                value={selectedWorkspaceId ?? ""}
-                onChange={(e) => setSelectedWorkspaceId(e.target.value)}
-                className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-semibold text-zinc-900 shadow-md ring-1 ring-zinc-900/[0.08] transition-all hover:shadow-lg hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/[0.06] dark:hover:border-zinc-500 dark:focus:ring-zinc-500"
-              >
-                {workspaces.map((ws) => (
-                  <option key={ws.id} value={ws.id}>
-                    {ws.icon} {ws.name}
-                  </option>
-                ))}
-              </select>
-            )}
-            {selectedWorkspaceId && (
-              <>
-                <span className="text-zinc-300 dark:text-zinc-600">/</span>
-                {boards.length > 0 ? (
-                  <select
-                    value={selectedBoardId ?? ""}
-                    onChange={(e) => setSelectedBoardId(e.target.value)}
-                    className={selectClass}
-                  >
-                    {boards.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.title}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <span className="text-sm text-zinc-400 dark:text-zinc-500">No boards</span>
-                )}
-              </>
-            )}
-
-            {/* Stats chip */}
-            {hasDueTasks && (
-              <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
-                </svg>
-                {totalWithDue} task{totalWithDue !== 1 ? "s" : ""} with due date
-              </span>
-            )}
-          </div>
-
-          {/* ── Content ──────────────────────────────────────────────── */}
-          {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <svg className="h-6 w-6 animate-spin text-zinc-400" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-            </div>
-          ) : !selectedWorkspaceId ? (
-            <EmptyState icon="workspace" message="Select a workspace to view the calendar" />
-          ) : !selectedBoardId ? (
-            <EmptyState icon="board" message="Select a board to view scheduled tasks" />
-          ) : !hasDueTasks ? (
-            <EmptyState
-              icon="calendar"
-              message="No tasks have a due date yet"
-              sub="Add due dates to your tasks on the Board page to see them here."
-            />
-          ) : (
-            /* ── Grouped date list ─────────────────────────────────── */
-            <div className="space-y-7">
-              {dateGroups.map(({ key, isPast, tasks: groupTasks }) => {
-                // All new Date() calls here are safe — only reachable after mounted === true
-                const heading = formatGroupHeading(key);
-                const todayMs = getLocalDate(new Date()).getTime();
-                const targetMs = getLocalDate(new Date(key + "T00:00:00")).getTime();
-                const isToday = targetMs === todayMs;
-
-                return (
-                  <section key={key}>
-                    {/* Date heading */}
-                    <div className="mb-2.5 flex items-center gap-2">
-                      <span
-                        className={`shrink-0 h-2 w-2 rounded-full ${
-                          isPast && !isToday
-                            ? "bg-red-400 dark:bg-red-500"
-                            : isToday
-                              ? "bg-amber-400 dark:bg-amber-500"
-                              : "bg-zinc-300 dark:bg-zinc-600"
-                        }`}
-                      />
-                      <h2
-                        className={`text-[13px] font-semibold tracking-tight ${
-                          isPast && !isToday
-                            ? "text-red-500 dark:text-red-400"
-                            : isToday
-                              ? "text-amber-600 dark:text-amber-400"
-                              : "text-zinc-700 dark:text-zinc-300"
-                        }`}
-                      >
-                        {heading}
-                      </h2>
-                      <span className="ml-1 text-[11px] font-medium text-zinc-400 dark:text-zinc-500">
-                        {groupTasks.length} task{groupTasks.length !== 1 ? "s" : ""}
-                      </span>
-                      <div className="flex-1 h-px bg-zinc-100 dark:bg-zinc-800" />
-                    </div>
-
-                    {/* Task list */}
-                    <ul className="space-y-1.5">
-                      {groupTasks.map((task) => (
-                        <li key={task.id}>
-                          <TaskItem
-                            task={task}
-                            list={listMap.get(task.list_id)}
-                            assignee={
-                              task.assignee_id ? memberMap.get(task.assignee_id) ?? null : null
-                            }
-                            boardId={selectedBoardId}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                );
-              })}
-            </div>
-          )}
-        </>
-      )}
+      {/* Task chips */}
+      <div className="flex flex-col gap-0.5 min-w-0">
+        {visible.map((task) => (
+          <TaskChip
+            key={task.id}
+            task={task}
+            list={listMap.get(task.list_id)}
+            assignee={task.assignee_id ? memberMap.get(task.assignee_id) ?? null : null}
+            boardId={boardId}
+          />
+        ))}
+        {overflow > 0 && (
+          <span className="px-1.5 text-[10px] font-medium text-zinc-400 dark:text-zinc-500 cursor-default">
+            +{overflow} more
+          </span>
+        )}
+      </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Empty state helper
+// EmptyState
 // ---------------------------------------------------------------------------
 
 function EmptyState({
@@ -455,6 +275,291 @@ function EmptyState({
         <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500 text-center max-w-xs">
           {sub}
         </p>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main page
+// ---------------------------------------------------------------------------
+
+const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+export default function CalendarPage() {
+  // ── Hydration gate ──────────────────────────────────────────────────────
+  // All date-dependent rendering must only execute after client mount.
+  // The first render must be identical between server and client.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  // ── Month navigation state (initialised lazily to avoid SSR mismatch) ──
+  const [currentMonth, setCurrentMonth] = useState<Date | null>(null);
+  useEffect(() => {
+    // Only set after mount so server and client first render match
+    setCurrentMonth(todayMonthStart());
+  }, []);
+
+  // ── Board data ──────────────────────────────────────────────────────────
+  const {
+    workspaces,
+    selectedWorkspaceId,
+    boards,
+    selectedBoardId,
+    lists,
+    tasks,
+    loading,
+    setSelectedWorkspaceId,
+    setSelectedBoardId,
+  } = useBoardData();
+
+  const { members } = useWorkspaceMembers(selectedWorkspaceId);
+
+  // ── Lookup maps ─────────────────────────────────────────────────────────
+  const listMap = useMemo(() => {
+    const m = new Map<string, List>();
+    for (const l of lists) m.set(l.id, l);
+    return m;
+  }, [lists]);
+
+  const memberMap = useMemo(() => {
+    const m = new Map<string, MemberWithProfile>();
+    for (const mem of members) m.set(mem.user_id, mem);
+    return m;
+  }, [members]);
+
+  // ── Task lookup by date key ─────────────────────────────────────────────
+  // `mounted` in deps ensures new Date() only runs on client
+  const tasksByDate = useMemo(() => {
+    if (!mounted) return new Map<string, Task[]>();
+    const m = new Map<string, Task[]>();
+    for (const t of tasks) {
+      if (!t.due_date) continue;
+      const key = dueDateKey(t.due_date);
+      if (!m.has(key)) m.set(key, []);
+      m.get(key)!.push(t);
+    }
+    return m;
+  }, [tasks, mounted]);
+
+  // ── Calendar grid cells ─────────────────────────────────────────────────
+  const { cells, todayKey, monthTitle } = useMemo(() => {
+    if (!mounted || !currentMonth) {
+      return { cells: [], todayKey: "", monthTitle: "" };
+    }
+
+    const today = localMidnight(new Date());
+    const todayKey = toDateKey(today);
+
+    const first = startOfMonth(currentMonth);
+    const last = endOfMonth(currentMonth);
+    const gridStart = startOfWeek(first); // Monday of first week
+    const gridEnd = endOfWeek(last);     // Sunday of last week
+
+    const cells: Date[] = [];
+    const cursor = new Date(gridStart);
+    while (cursor <= gridEnd) {
+      cells.push(new Date(cursor));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    return {
+      cells,
+      todayKey,
+      monthTitle: formatMonthTitle(currentMonth),
+    };
+  }, [currentMonth, mounted]);
+
+  // ── Selector style ──────────────────────────────────────────────────────
+  const selectClass =
+    "rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-400 dark:hover:bg-zinc-700/50 dark:hover:text-zinc-300 dark:focus:ring-zinc-600";
+  const navBtnClass =
+    "inline-flex items-center justify-center h-8 w-8 rounded-lg border border-zinc-200 bg-white text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-600";
+
+  // ── Render ──────────────────────────────────────────────────────────────
+  return (
+    <div className="mx-auto max-w-7xl">
+      {/* ── Static header — safe for SSR ───────────────────────── */}
+      <div className="mb-5">
+        <div className="flex items-center gap-2 mb-1">
+          <svg className="h-5 w-5 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+          </svg>
+          <h1 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+            Calendar
+          </h1>
+        </div>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          Monthly view of tasks by due date
+        </p>
+      </div>
+
+      {/* ── Everything below is client-only ────────────────────────
+           Before mounted, render a single deterministic spinner so
+           server HTML and client first-render are identical.       */}
+      {!mounted ? (
+        <div className="flex items-center justify-center py-24">
+          <svg className="h-6 w-6 animate-spin text-zinc-400" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+        </div>
+      ) : (
+        <>
+          {/* ── Toolbar: workspace/board + month navigation ─────── */}
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            {/* Workspace selector */}
+            {workspaces.length > 0 && (
+              <select
+                value={selectedWorkspaceId ?? ""}
+                onChange={(e) => setSelectedWorkspaceId(e.target.value)}
+                className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-semibold text-zinc-900 shadow-sm ring-1 ring-zinc-900/[0.08] transition-all hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/[0.06] dark:hover:border-zinc-500 dark:focus:ring-zinc-500"
+              >
+                {workspaces.map((ws) => (
+                  <option key={ws.id} value={ws.id}>
+                    {ws.icon} {ws.name}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {/* Board selector */}
+            {selectedWorkspaceId && (
+              <>
+                <span className="text-zinc-300 dark:text-zinc-600">/</span>
+                {boards.length > 0 ? (
+                  <select
+                    value={selectedBoardId ?? ""}
+                    onChange={(e) => setSelectedBoardId(e.target.value)}
+                    className={selectClass}
+                  >
+                    {boards.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.title}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="text-sm text-zinc-400 dark:text-zinc-500">No boards</span>
+                )}
+              </>
+            )}
+
+            {/* Spacer */}
+            <div className="flex-1" />
+
+            {/* Month navigation */}
+            {currentMonth && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setCurrentMonth((m) => m ? addMonths(m, -1) : m)}
+                  className={navBtnClass}
+                  aria-label="Previous month"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                  </svg>
+                </button>
+
+                <span className="min-w-[140px] text-center text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                  {monthTitle}
+                </span>
+
+                <button
+                  onClick={() => setCurrentMonth((m) => m ? addMonths(m, 1) : m)}
+                  className={navBtnClass}
+                  aria-label="Next month"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                  </svg>
+                </button>
+
+                <button
+                  onClick={() => setCurrentMonth(todayMonthStart())}
+                  className="ml-1 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-[13px] font-medium text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-600"
+                >
+                  Today
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* ── Main content ─────────────────────────────────────── */}
+          {loading ? (
+            <div className="flex items-center justify-center py-24">
+              <svg className="h-6 w-6 animate-spin text-zinc-400" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            </div>
+          ) : !selectedWorkspaceId ? (
+            <EmptyState icon="workspace" message="Select a workspace to view the calendar" />
+          ) : !selectedBoardId ? (
+            <EmptyState icon="board" message="Select a board to view scheduled tasks" />
+          ) : (
+            /* ── Month grid ──────────────────────────────────────── */
+            <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden dark:border-zinc-700 dark:bg-zinc-900">
+              {/* Weekday header row */}
+              <div className="grid grid-cols-7 border-b border-zinc-200 dark:border-zinc-700">
+                {WEEKDAY_LABELS.map((label) => (
+                  <div
+                    key={label}
+                    className={`py-2 text-center text-[11px] font-semibold uppercase tracking-wide
+                      ${label === "Sat" || label === "Sun"
+                        ? "text-zinc-400 dark:text-zinc-500"
+                        : "text-zinc-500 dark:text-zinc-400"
+                      }`}
+                  >
+                    {label}
+                  </div>
+                ))}
+              </div>
+
+              {/* Day cells grid */}
+              {cells.length > 0 && currentMonth && (
+                <div
+                  className="grid grid-cols-7"
+                  style={{
+                    gridTemplateRows: `repeat(${Math.ceil(cells.length / 7)}, minmax(100px, auto))`,
+                  }}
+                >
+                  {cells.map((date) => {
+                    const key = toDateKey(date);
+                    const isCurrentMonth =
+                      date.getMonth() === currentMonth.getMonth() &&
+                      date.getFullYear() === currentMonth.getFullYear();
+                    const isToday = key === todayKey;
+                    const dayTasks = tasksByDate.get(key) ?? [];
+
+                    return (
+                      <CalendarCell
+                        key={key}
+                        date={date}
+                        isCurrentMonth={isCurrentMonth}
+                        isToday={isToday}
+                        tasks={dayTasks}
+                        listMap={listMap}
+                        memberMap={memberMap}
+                        boardId={selectedBoardId}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Empty month hint — grid shows but no tasks */}
+              {cells.length > 0 && tasksByDate.size === 0 && (
+                <div className="py-10 text-center text-sm text-zinc-400 dark:text-zinc-500 border-t border-zinc-100 dark:border-zinc-800">
+                  No tasks with due dates this month.
+                  <span className="block text-xs mt-1 text-zinc-300 dark:text-zinc-600">
+                    Tasks from other months may still appear in their cells.
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
