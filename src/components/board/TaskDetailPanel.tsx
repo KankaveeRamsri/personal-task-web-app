@@ -21,6 +21,7 @@ export interface TaskDetailPanelProps {
   onAssigneeIdChange: (value: string) => void;
   onSave: () => void;
   onClose: () => void;
+  canEditDueDate?: boolean;
 }
 
 export default function TaskDetailPanel({
@@ -40,6 +41,7 @@ export default function TaskDetailPanel({
   onAssigneeIdChange,
   onSave,
   onClose,
+  canEditDueDate = true,
 }: TaskDetailPanelProps) {
   const titleRef = useRef<HTMLInputElement>(null);
 
@@ -130,7 +132,8 @@ export default function TaskDetailPanel({
                 type="date"
                 value={editDueDate}
                 onChange={(e) => onDueDateChange(e.target.value)}
-                className="w-full rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 dark:focus:ring-zinc-700/50 dark:border-zinc-700 dark:focus:border-zinc-600"
+                disabled={!canEditDueDate}
+                className="w-full rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 dark:focus:ring-zinc-700/50 dark:border-zinc-700 dark:focus:border-zinc-600 disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
           </div>

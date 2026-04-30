@@ -239,6 +239,7 @@ function DashboardBoard() {
     !currentRole || ["owner", "admin", "member"].includes(currentRole);
   const isManager =
     currentRole === "owner" || currentRole === "admin";
+  const canEditDueDate = !currentRole || ["owner", "admin"].includes(currentRole);
 
   // Delete board
   const [confirmDeleteBoard, setConfirmDeleteBoard] = useState(false);
@@ -694,11 +695,13 @@ function DashboardBoard() {
     if (!editTitle.trim()) return;
     const original = tasks.find((t) => t.id === id);
     setUpdatingId(id);
+    const finalDueDate = canEditDueDate ? (editDueDate || null) : (original?.due_date || null);
+
     await updateTask(id, {
       title: editTitle.trim(),
       description: editDescription.trim(),
       priority: editPriority,
-      due_date: editDueDate || null,
+      due_date: finalDueDate,
       assignee_id: editAssigneeId || null,
     } as Partial<Task>);
 
@@ -714,7 +717,7 @@ function DashboardBoard() {
           action: "task_assigned",
           metadata: { task_title: editTitle.trim(), assignee_name: assignee ? (assignee.display_name || assignee.email) : null },
         });
-      } else if (original.due_date !== newDueDate) {
+      } else if (canEditDueDate && original.due_date !== newDueDate) {
         logActivity({
           workspaceId: selectedWorkspaceId,
           boardId: selectedBoardId,
@@ -1185,6 +1188,7 @@ function DashboardBoard() {
         onAssigneeIdChange={setEditAssigneeId}
         onSave={() => { if (editingId) saveEdit(editingId); }}
         onClose={cancelEdit}
+        canEditDueDate={canEditDueDate}
       />
 
       {canEditTasks && <BulkActionToolbar

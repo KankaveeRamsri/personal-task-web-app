@@ -136,6 +136,7 @@ function TaskChip({
   onPreview,
   fromDate,
   canEdit,
+  canEditDueDate,
 }: {
   task: Task;
   list: List | undefined;
@@ -143,6 +144,7 @@ function TaskChip({
   onPreview: () => void;
   fromDate: string;
   canEdit: boolean;
+  canEditDueDate: boolean;
 }) {
   const listTitle = list?.title ?? "";
   const listColor = list?.color || LIST_COLOR_DEFAULTS[listTitle] || "#a1a1aa";
@@ -150,7 +152,7 @@ function TaskChip({
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `cal-task-${task.id}`,
-    disabled: !canEdit,
+    disabled: !canEditDueDate,
     data: { type: "calendar-task", taskId: task.id, fromDate },
   });
 
@@ -159,9 +161,9 @@ function TaskChip({
       ref={setNodeRef}
       onClick={onPreview}
       title={task.title}
-      {...(canEdit ? attributes : {})}
-      {...(canEdit ? listeners : {})}
-      style={{ opacity: isDragging ? 0.35 : 1, cursor: canEdit ? (isDragging ? "grabbing" : "grab") : "pointer" }}
+      {...(canEditDueDate ? attributes : {})}
+      {...(canEditDueDate ? listeners : {})}
+      style={{ opacity: isDragging ? 0.35 : 1, cursor: canEditDueDate ? (isDragging ? "grabbing" : "grab") : "pointer" }}
       className={`group w-full flex items-center gap-1 rounded px-1.5 py-[3px] text-[11px] font-medium leading-tight truncate transition-opacity text-left
         ${done
           ? "bg-zinc-100 text-zinc-400 line-through dark:bg-zinc-800/60 dark:text-zinc-500"
@@ -195,6 +197,7 @@ function CalendarCell({
   listMap,
   memberMap,
   canEdit,
+  canEditDueDate,
   onPreviewTask,
   onShowMore,
 }: {
@@ -207,6 +210,7 @@ function CalendarCell({
   memberMap: Map<string, MemberWithProfile>;
   boardId: string | null;
   canEdit: boolean;
+  canEditDueDate: boolean;
   onPreviewTask: (task: Task) => void;
   onShowMore?: (dateKey: string) => void;
 }) {
@@ -262,6 +266,7 @@ function CalendarCell({
             onPreview={() => onPreviewTask(task)}
             fromDate={dateKey}
             canEdit={canEdit}
+            canEditDueDate={canEditDueDate}
           />
         ))}
         {overflow > 0 && (
@@ -362,6 +367,7 @@ function TaskPreviewModal({
   assignee,
   board,
   canEdit,
+  canEditDueDate,
   onClose,
   onOpenInBoard,
   onUpdateDate,
@@ -371,6 +377,7 @@ function TaskPreviewModal({
   assignee: MemberWithProfile | null;
   board: Board | undefined;
   canEdit: boolean;
+  canEditDueDate: boolean;
   onClose: () => void;
   onOpenInBoard: (taskId: string) => void;
   onUpdateDate: (taskId: string, newDate: string) => Promise<void>;
@@ -463,7 +470,7 @@ function TaskPreviewModal({
             {/* Due date */}
             <div>
               <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1">Due Date</p>
-              {canEdit ? (
+              {canEditDueDate ? (
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-zinc-700 dark:text-zinc-300">{dueDateDisplay}</span>
                   <div className="relative inline-flex items-center">
@@ -538,6 +545,8 @@ function DayTasksModal({
   tasks,
   listMap,
   memberMap,
+  canEdit,
+  canEditDueDate,
   onClose,
   onPreviewTask,
 }: {
@@ -545,6 +554,8 @@ function DayTasksModal({
   tasks: Task[];
   listMap: Map<string, List>;
   memberMap: Map<string, MemberWithProfile>;
+  canEdit: boolean;
+  canEditDueDate: boolean;
   onClose: () => void;
   onPreviewTask: (task: Task) => void;
 }) {
@@ -593,7 +604,8 @@ function DayTasksModal({
                 onPreviewTask(task);
               }}
               fromDate={dateKey}
-              canEdit={false} // Disable drag inside modal
+              canEdit={canEdit}
+              canEditDueDate={canEditDueDate}
             />
           ))}
         </div>
@@ -720,6 +732,7 @@ export default function CalendarPage() {
 
   const { members, currentRole } = useWorkspaceMembers(selectedWorkspaceId);
   const canEdit = !currentRole || ["owner", "admin", "member"].includes(currentRole);
+  const canEditDueDate = !currentRole || ["owner", "admin"].includes(currentRole);
 
   // ── DnD sensors ─────────────────────────────────────────────────────────
   const sensors = useSensors(
@@ -752,7 +765,7 @@ export default function CalendarPage() {
     if (!active || !over) return;
     if (active.data.current?.type !== "calendar-task") return;
     if (over.data.current?.type !== "calendar-date") return;
-    if (!canEdit) return;
+    if (!canEditDueDate) return;
 
     const taskId: string = active.data.current.taskId;
     const fromDate: string = active.data.current.fromDate;
@@ -797,6 +810,7 @@ export default function CalendarPage() {
   }, [canEdit, updateTask, tasks, lists, selectedWorkspaceId]);
 
   const handleReschedule = useCallback(async (taskId: string, newDate: string) => {
+    if (!canEditDueDate) return;
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
     const oldDate = task.due_date;
@@ -827,7 +841,7 @@ export default function CalendarPage() {
       next.delete(taskId);
       return next;
     });
-  }, [updateTask, tasks, lists, selectedWorkspaceId]);
+  }, [updateTask, tasks, lists, selectedWorkspaceId, canEditDueDate]);
 
   // ── Lookup maps ─────────────────────────────────────────────────────────
   const listMap = useMemo(() => {
@@ -1152,6 +1166,7 @@ export default function CalendarPage() {
                           memberMap={memberMap}
                           boardId={selectedBoardId}
                           canEdit={canEdit}
+                          canEditDueDate={canEditDueDate}
                           onPreviewTask={openPreview}
                           onShowMore={openOverflow}
                         />
@@ -1174,6 +1189,7 @@ export default function CalendarPage() {
                         onPreview={() => {}}
                         fromDate=""
                         canEdit={false}
+                        canEditDueDate={canEditDueDate}
                       />
                     </div>
                   ) : null}
@@ -1232,6 +1248,8 @@ export default function CalendarPage() {
             tasks={overflowTasks}
             listMap={listMap}
             memberMap={memberMap}
+            canEdit={canEdit}
+            canEditDueDate={canEditDueDate}
             onClose={closeOverflow}
             onPreviewTask={openPreview}
           />
@@ -1250,6 +1268,7 @@ export default function CalendarPage() {
             assignee={previewAssignee}
             board={previewBoard}
             canEdit={canEdit}
+            canEditDueDate={canEditDueDate}
             onClose={closePreview}
             onOpenInBoard={navigateToTask}
             onUpdateDate={handleReschedule}
