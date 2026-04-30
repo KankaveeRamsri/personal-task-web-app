@@ -1,8 +1,20 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
+import {
+  DndContext,
+  DragOverlay,
+  useDraggable,
+  useDroppable,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
 import { useBoardData } from "@/hooks/useBoardData";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
 import type { Task, List, Board } from "@/types/database";
@@ -121,21 +133,35 @@ function TaskChip({
   list,
   assignee,
   onPreview,
+  fromDate,
+  canEdit,
 }: {
   task: Task;
   list: List | undefined;
   assignee: MemberWithProfile | null;
   onPreview: () => void;
+  fromDate: string;
+  canEdit: boolean;
 }) {
   const listTitle = list?.title ?? "";
   const listColor = list?.color || LIST_COLOR_DEFAULTS[listTitle] || "#a1a1aa";
   const done = task.is_completed || isCompletedListTitle(listTitle);
 
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `cal-task-${task.id}`,
+    disabled: !canEdit,
+    data: { type: "calendar-task", taskId: task.id, fromDate },
+  });
+
   return (
     <button
+      ref={setNodeRef}
       onClick={onPreview}
       title={task.title}
-      className={`group w-full flex items-center gap-1 rounded px-1.5 py-[3px] text-[11px] font-medium leading-tight truncate transition-colors text-left cursor-pointer
+      {...(canEdit ? attributes : {})}
+      {...(canEdit ? listeners : {})}
+      style={{ opacity: isDragging ? 0.35 : 1, cursor: canEdit ? (isDragging ? "grabbing" : "grab") : "pointer" }}
+      className={`group w-full flex items-center gap-1 rounded px-1.5 py-[3px] text-[11px] font-medium leading-tight truncate transition-opacity text-left
         ${done
           ? "bg-zinc-100 text-zinc-400 line-through dark:bg-zinc-800/60 dark:text-zinc-500"
           : "bg-white text-zinc-700 hover:bg-blue-50 hover:text-blue-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-blue-950/40 dark:hover:text-blue-300"
@@ -160,14 +186,17 @@ function TaskChip({
 // ---------------------------------------------------------------------------
 
 function CalendarCell({
+  dateKey,
   date,
   isCurrentMonth,
   isToday,
   tasks,
   listMap,
   memberMap,
+  canEdit,
   onPreviewTask,
 }: {
+  dateKey: string;
   date: Date;
   isCurrentMonth: boolean;
   isToday: boolean;
@@ -175,20 +204,28 @@ function CalendarCell({
   listMap: Map<string, List>;
   memberMap: Map<string, MemberWithProfile>;
   boardId: string | null;
+  canEdit: boolean;
   onPreviewTask: (task: Task) => void;
 }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `cal-date-${dateKey}`,
+    data: { type: "calendar-date", dateKey },
+  });
+
   const visible = tasks.slice(0, MAX_VISIBLE);
   const overflow = tasks.length - MAX_VISIBLE;
   const num = dayNumber(date);
 
   return (
     <div
+      ref={setNodeRef}
       className={`min-h-[100px] p-1.5 flex flex-col gap-1 border-b border-r transition-colors
         ${isCurrentMonth
           ? "bg-white dark:bg-zinc-900"
           : "bg-zinc-50/60 dark:bg-zinc-900/40"
         }
         ${isToday ? "ring-2 ring-inset ring-blue-500/30 dark:ring-blue-500/20" : ""}
+        ${isOver ? "bg-blue-50/70 dark:bg-blue-950/30 ring-2 ring-inset ring-blue-400/40" : ""}
       `}
     >
       {/* Day number */}
@@ -220,6 +257,8 @@ function CalendarCell({
             list={listMap.get(task.list_id)}
             assignee={task.assignee_id ? memberMap.get(task.assignee_id) ?? null : null}
             onPreview={() => onPreviewTask(task)}
+            fromDate={dateKey}
+            canEdit={canEdit}
           />
         ))}
         {overflow > 0 && (
@@ -477,9 +516,67 @@ export default function CalendarPage() {
     loading,
     setSelectedWorkspaceId,
     setSelectedBoardId,
+    updateTask,
   } = useBoardData();
 
-  const { members } = useWorkspaceMembers(selectedWorkspaceId);
+  const { members, currentRole } = useWorkspaceMembers(selectedWorkspaceId);
+  const canEdit = !currentRole || ["owner", "admin", "member"].includes(currentRole);
+
+  // ── DnD sensors ─────────────────────────────────────────────────────────
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
+  );
+
+  // ── Optimistic DnD state ─────────────────────────────────────────────────
+  // Maps taskId → overridden due_date key while a move is in-flight
+  const [optimisticMoves, setOptimisticMoves] = useState<Map<string, string>>(new Map());
+  // Task being dragged — used to render DragOverlay
+  const activeDragRef = useRef<{ task: Task; fromDate: string } | null>(null);
+  const [activeDragTask, setActiveDragTask] = useState<Task | null>(null);
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const { active } = event;
+    if (active.data.current?.type !== "calendar-task") return;
+    const taskId: string = active.data.current.taskId;
+    const fromDate: string = active.data.current.fromDate;
+    const task = tasks.find((t) => t.id === taskId) ?? null;
+    activeDragRef.current = task ? { task, fromDate } : null;
+    setActiveDragTask(task);
+  }, [tasks]);
+
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    setActiveDragTask(null);
+    activeDragRef.current = null;
+
+    const { active, over } = event;
+    if (!active || !over) return;
+    if (active.data.current?.type !== "calendar-task") return;
+    if (over.data.current?.type !== "calendar-date") return;
+    if (!canEdit) return;
+
+    const taskId: string = active.data.current.taskId;
+    const fromDate: string = active.data.current.fromDate;
+    const toDate: string = over.data.current.dateKey;
+    if (fromDate === toDate) return;
+
+    // Optimistic UI: move task to new date immediately
+    setOptimisticMoves((prev) => new Map(prev).set(taskId, toDate));
+
+    // Persist via existing hook (updates tasks state on success, noop on error)
+    const result = await updateTask(taskId, { due_date: toDate } as Partial<Task>);
+
+    // Always clear the optimistic override after the request resolves.
+    // On success: hook state is now updated, override is redundant.
+    // On failure: hook state unchanged, clearing reverts the UI.
+    setOptimisticMoves((prev) => {
+      const next = new Map(prev);
+      next.delete(taskId);
+      return next;
+    });
+
+    void result; // suppress lint
+  }, [canEdit, updateTask]);
 
   // ── Lookup maps ─────────────────────────────────────────────────────────
   const listMap = useMemo(() => {
@@ -495,18 +592,19 @@ export default function CalendarPage() {
   }, [members]);
 
   // ── Task lookup by date key ─────────────────────────────────────────────
-  // `mounted` in deps ensures new Date() only runs on client
+  // Respects optimisticMoves overrides for immediate drag-drop feedback.
   const tasksByDate = useMemo(() => {
     if (!mounted) return new Map<string, Task[]>();
     const m = new Map<string, Task[]>();
     for (const t of tasks) {
       if (!t.due_date) continue;
-      const key = dueDateKey(t.due_date);
-      if (!m.has(key)) m.set(key, []);
-      m.get(key)!.push(t);
+      // Use overridden date if a move is in-flight for this task
+      const effectiveKey = optimisticMoves.get(t.id) ?? dueDateKey(t.due_date);
+      if (!m.has(effectiveKey)) m.set(effectiveKey, []);
+      m.get(effectiveKey)!.push(t);
     }
     return m;
-  }, [tasks, mounted]);
+  }, [tasks, mounted, optimisticMoves]);
 
   // ── Calendar grid cells ─────────────────────────────────────────────────
   const { cells, todayKey, monthTitle } = useMemo(() => {
@@ -665,66 +763,93 @@ export default function CalendarPage() {
             <EmptyState icon="board" message="Select a board to view scheduled tasks" />
           ) : (
             /* ── Month grid ──────────────────────────────────────── */
-            <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden dark:border-zinc-700 dark:bg-zinc-900">
-              {/* Weekday header row */}
-              <div className="grid grid-cols-7 border-b border-zinc-200 dark:border-zinc-700">
-                {WEEKDAY_LABELS.map((label) => (
+            <DndContext
+              sensors={sensors}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden dark:border-zinc-700 dark:bg-zinc-900">
+                {/* Weekday header row */}
+                <div className="grid grid-cols-7 border-b border-zinc-200 dark:border-zinc-700">
+                  {WEEKDAY_LABELS.map((label) => (
+                    <div
+                      key={label}
+                      className={`py-2 text-center text-[11px] font-semibold uppercase tracking-wide
+                        ${label === "Sat" || label === "Sun"
+                          ? "text-zinc-400 dark:text-zinc-500"
+                          : "text-zinc-500 dark:text-zinc-400"
+                        }`}
+                    >
+                      {label}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Day cells grid */}
+                {cells.length > 0 && currentMonth && (
                   <div
-                    key={label}
-                    className={`py-2 text-center text-[11px] font-semibold uppercase tracking-wide
-                      ${label === "Sat" || label === "Sun"
-                        ? "text-zinc-400 dark:text-zinc-500"
-                        : "text-zinc-500 dark:text-zinc-400"
-                      }`}
+                    className="grid grid-cols-7"
+                    style={{
+                      gridTemplateRows: `repeat(${Math.ceil(cells.length / 7)}, minmax(100px, auto))`,
+                    }}
                   >
-                    {label}
+                    {cells.map((date) => {
+                      const key = toDateKey(date);
+                      const isCurrentMonth =
+                        date.getMonth() === currentMonth.getMonth() &&
+                        date.getFullYear() === currentMonth.getFullYear();
+                      const isToday = key === todayKey;
+                      const dayTasks = tasksByDate.get(key) ?? [];
+
+                      return (
+                        <CalendarCell
+                          key={key}
+                          dateKey={key}
+                          date={date}
+                          isCurrentMonth={isCurrentMonth}
+                          isToday={isToday}
+                          tasks={dayTasks}
+                          listMap={listMap}
+                          memberMap={memberMap}
+                          boardId={selectedBoardId}
+                          canEdit={canEdit}
+                          onPreviewTask={openPreview}
+                        />
+                      );
+                    })}
                   </div>
-                ))}
+                )}
+
+                {/* Empty month hint — grid shows but no tasks */}
+                {cells.length > 0 && tasksByDate.size === 0 && (
+                  <div className="py-10 text-center text-sm text-zinc-400 dark:text-zinc-500 border-t border-zinc-100 dark:border-zinc-800">
+                    No tasks with due dates this month.
+                    <span className="block text-xs mt-1 text-zinc-300 dark:text-zinc-600">
+                      Tasks from other months may still appear in their cells.
+                    </span>
+                  </div>
+                )}
               </div>
-
-              {/* Day cells grid */}
-              {cells.length > 0 && currentMonth && (
-                <div
-                  className="grid grid-cols-7"
-                  style={{
-                    gridTemplateRows: `repeat(${Math.ceil(cells.length / 7)}, minmax(100px, auto))`,
-                  }}
-                >
-                  {cells.map((date) => {
-                    const key = toDateKey(date);
-                    const isCurrentMonth =
-                      date.getMonth() === currentMonth.getMonth() &&
-                      date.getFullYear() === currentMonth.getFullYear();
-                    const isToday = key === todayKey;
-                    const dayTasks = tasksByDate.get(key) ?? [];
-
-                    return (
-                      <CalendarCell
-                        key={key}
-                        date={date}
-                        isCurrentMonth={isCurrentMonth}
-                        isToday={isToday}
-                        tasks={dayTasks}
-                        listMap={listMap}
-                        memberMap={memberMap}
-                        boardId={selectedBoardId}
-                        onPreviewTask={openPreview}
+              
+              {/* Drag overlay for visual feedback */}
+              {canEdit && createPortal(
+                <DragOverlay dropAnimation={{ duration: 250, easing: "cubic-bezier(0.18, 0.67, 0.6, 1.22)" }}>
+                  {activeDragTask ? (
+                    <div className="w-[180px] shadow-xl rotate-3 opacity-90">
+                      <TaskChip
+                        task={activeDragTask}
+                        list={listMap.get(activeDragTask.list_id)}
+                        assignee={activeDragTask.assignee_id ? memberMap.get(activeDragTask.assignee_id) ?? null : null}
+                        onPreview={() => {}}
+                        fromDate=""
+                        canEdit={false}
                       />
-                    );
-                  })}
-                </div>
+                    </div>
+                  ) : null}
+                </DragOverlay>,
+                document.body
               )}
-
-              {/* Empty month hint — grid shows but no tasks */}
-              {cells.length > 0 && tasksByDate.size === 0 && (
-                <div className="py-10 text-center text-sm text-zinc-400 dark:text-zinc-500 border-t border-zinc-100 dark:border-zinc-800">
-                  No tasks with due dates this month.
-                  <span className="block text-xs mt-1 text-zinc-300 dark:text-zinc-600">
-                    Tasks from other months may still appear in their cells.
-                  </span>
-                </div>
-              )}
-            </div>
+            </DndContext>
           )}
         </>
       )}
