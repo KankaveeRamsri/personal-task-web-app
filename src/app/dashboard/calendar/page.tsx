@@ -290,20 +290,25 @@ const PRIORITY_COLOR: Record<string, string> = {
   none: "text-zinc-400", low: "text-blue-500", medium: "text-amber-500", high: "text-red-500",
 };
 
+
 function TaskPreviewModal({
   task,
   list,
   assignee,
   board,
+  canEdit,
   onClose,
   onOpenInBoard,
+  onUpdateDate,
 }: {
   task: Task;
   list: List | undefined;
   assignee: MemberWithProfile | null;
   board: Board | undefined;
+  canEdit: boolean;
   onClose: () => void;
   onOpenInBoard: (taskId: string) => void;
+  onUpdateDate: (taskId: string, newDate: string) => Promise<void>;
 }) {
   // Close on Escape
   useEffect(() => {
@@ -393,7 +398,29 @@ function TaskPreviewModal({
             {/* Due date */}
             <div>
               <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1">Due Date</p>
-              <span className="text-sm text-zinc-700 dark:text-zinc-300">{dueDateDisplay}</span>
+              {canEdit ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-zinc-700 dark:text-zinc-300">{dueDateDisplay}</span>
+                  <div className="relative inline-flex items-center">
+                    <input
+                      type="date"
+                      value={task.due_date?.slice(0, 10) ?? ""}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          onUpdateDate(task.id, e.target.value);
+                        }
+                      }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      aria-label="Change due date"
+                    />
+                    <button type="button" className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
+                      Change
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <span className="text-sm text-zinc-700 dark:text-zinc-300">{dueDateDisplay}</span>
+              )}
             </div>
 
             {/* Board */}
@@ -664,6 +691,16 @@ export default function CalendarPage() {
 
     void result; // suppress lint
   }, [canEdit, updateTask]);
+
+  const handleReschedule = useCallback(async (taskId: string, newDate: string) => {
+    setOptimisticMoves((prev) => new Map(prev).set(taskId, newDate));
+    await updateTask(taskId, { due_date: newDate } as Partial<Task>);
+    setOptimisticMoves((prev) => {
+      const next = new Map(prev);
+      next.delete(taskId);
+      return next;
+    });
+  }, [updateTask]);
 
   // ── Lookup maps ─────────────────────────────────────────────────────────
   const listMap = useMemo(() => {
@@ -968,8 +1005,10 @@ export default function CalendarPage() {
             list={previewList}
             assignee={previewAssignee}
             board={previewBoard}
+            canEdit={canEdit}
             onClose={closePreview}
             onOpenInBoard={navigateToTask}
+            onUpdateDate={handleReschedule}
           />
         );
       })()}
