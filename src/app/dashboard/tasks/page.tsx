@@ -53,21 +53,47 @@ function getDueDateInfo(dateStr: string): { label: string; diffDays: number } {
   };
 }
 
-function DueDateChip({ dateStr }: { dateStr: string }) {
-  const { label, diffDays } = getDueDateInfo(dateStr);
-  const isOverdue = diffDays < 0;
-  const isToday = diffDays === 0;
+/** Returns true when a list title represents a completed/done state. */
+function isCompletedListTitle(title: string): boolean {
+  const t = title.toLowerCase().trim();
+  return t === "done" || t === "completed";
+}
+
+function DueDateChip({
+  dateStr,
+  isCompleted = false,
+  listTitle = "",
+}: {
+  dateStr: string;
+  isCompleted?: boolean;
+  listTitle?: string;
+}) {
+  // A task is considered "done" if the is_completed flag is set OR
+  // if it sits in a list whose title indicates completion.
+  const done = isCompleted || isCompletedListTitle(listTitle);
+
+  const { diffDays } = getDueDateInfo(dateStr);
+  const isOverdue = diffDays < 0 && !done;
+  const isToday = diffDays === 0 && !done;
+
+  // For completed tasks: always show a muted absolute date, never overdue.
+  let label: string;
+  if (done) {
+    const date = new Date(dateStr + "T00:00:00");
+    label = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  } else {
+    label = getDueDateInfo(dateStr).label;
+  }
 
   let chipClass: string;
-  if (isOverdue) {
-    chipClass =
-      "bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400";
+  if (done) {
+    chipClass = "bg-zinc-100 text-zinc-400 dark:bg-zinc-700/50 dark:text-zinc-500";
+  } else if (isOverdue) {
+    chipClass = "bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400";
   } else if (isToday) {
-    chipClass =
-      "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400";
+    chipClass = "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400";
   } else {
-    chipClass =
-      "bg-zinc-100 text-zinc-500 dark:bg-zinc-700/50 dark:text-zinc-400";
+    chipClass = "bg-zinc-100 text-zinc-500 dark:bg-zinc-700/50 dark:text-zinc-400";
   }
 
   return (
@@ -312,7 +338,16 @@ export default function TasksPage() {
           const target = new Date(task.due_date + "T00:00:00");
           const targetLocal = new Date(target.getFullYear(), target.getMonth(), target.getDate());
           const diffDays = Math.round((targetLocal.getTime() - todayLocal.getTime()) / (1000 * 60 * 60 * 24));
-          if (filterDueDate === "overdue" && diffDays >= 0) return false;
+          if (filterDueDate === "overdue") {
+            // Exclude if not actually past-due, or if the task is completed
+            const completedListIds = new Set(
+              lists
+                .filter((l) => isCompletedListTitle(l.title))
+                .map((l) => l.id)
+            );
+            if (diffDays >= 0) return false;
+            if (task.is_completed || completedListIds.has(task.list_id)) return false;
+          }
           if (filterDueDate === "today" && diffDays !== 0) return false;
           if (filterDueDate === "upcoming" && diffDays <= 0) return false;
         }
@@ -918,7 +953,11 @@ function TaskRow({
       {/* Due date */}
       <td className="px-4 py-3">
         {task.due_date ? (
-          <DueDateChip dateStr={task.due_date} />
+          <DueDateChip
+            dateStr={task.due_date}
+            isCompleted={task.is_completed}
+            listTitle={listTitle}
+          />
         ) : (
           <span className="text-xs text-zinc-400 dark:text-zinc-500">
             —
@@ -1055,7 +1094,11 @@ function TaskDetailDrawer({
                 Due date
               </label>
               {task.due_date ? (
-                <DueDateChip dateStr={task.due_date} />
+                <DueDateChip
+                  dateStr={task.due_date}
+                  isCompleted={task.is_completed}
+                  listTitle={listTitle}
+                />
               ) : (
                 <p className="text-xs text-zinc-400 dark:text-zinc-500">
                   No due date
