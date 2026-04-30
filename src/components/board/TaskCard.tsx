@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Task } from "@/types/database";
@@ -62,6 +64,141 @@ function getDueDateInfo(dateStr: string): { label: string; diffDays: number } {
     label: target.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
     diffDays,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Portal dropdown — escapes parent overflow / CSS-transform stacking contexts
+// ---------------------------------------------------------------------------
+interface TaskActionMenuPortalProps {
+  menuOpen: MenuPosition;
+  task: Task;
+  moveTargets: MoveTarget[];
+  isUpdating: boolean;
+  onSetMenuOpen: (menu: MenuPosition | null) => void;
+  onStartEdit: (task: Task) => void;
+  onConfirmDelete: (id: string | null) => void;
+  onMoveTask: (taskId: string, target: string) => void;
+}
+
+function TaskActionMenuPortal({
+  menuOpen,
+  task,
+  moveTargets,
+  isUpdating,
+  onSetMenuOpen,
+  onStartEdit,
+  onConfirmDelete,
+  onMoveTask,
+}: TaskActionMenuPortalProps) {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onSetMenuOpen(null);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onSetMenuOpen]);
+
+  // Close on any scroll (page or column)
+  useEffect(() => {
+    const handleScroll = () => onSetMenuOpen(null);
+    window.addEventListener("scroll", handleScroll, { capture: true, passive: true });
+    return () => window.removeEventListener("scroll", handleScroll, { capture: true });
+  }, [onSetMenuOpen]);
+
+  // Smart flip: if not enough room below, show above the trigger button
+  const MENU_HEIGHT_ESTIMATE = 240; // px — generous estimate
+  const MENU_WIDTH = 192; // w-48 = 12rem = 192px
+  const viewportH = typeof window !== "undefined" ? window.innerHeight : 800;
+  const viewportW = typeof window !== "undefined" ? window.innerWidth : 1200;
+
+  const spaceBelow = viewportH - menuOpen.top;
+  const showAbove = spaceBelow < MENU_HEIGHT_ESTIMATE && menuOpen.top > MENU_HEIGHT_ESTIMATE;
+
+  // top position: below trigger (default) or above trigger
+  // menuOpen.top is rect.bottom + 4 (set in the trigger onClick)
+  // For above: we need to subtract the menu height from the trigger's top
+  // We stored rect.bottom in menuOpen.top, so rect.top ≈ menuOpen.top - triggerHeight
+  // Use a fixed 28px trigger height estimate (h-6 button + 4px gap)
+  const TRIGGER_OFFSET = 28 + 4; // button height + gap
+  const top = showAbove
+    ? menuOpen.top - TRIGGER_OFFSET - MENU_HEIGHT_ESTIMATE
+    : menuOpen.top;
+
+  // Clamp left so the menu never overflows the right edge
+  const left = Math.min(menuOpen.left, viewportW - MENU_WIDTH - 8);
+
+  return createPortal(
+    <>
+      {/* Invisible full-screen backdrop — click outside closes */}
+      <div
+        className="fixed inset-0 z-[9998]"
+        onClick={() => onSetMenuOpen(null)}
+      />
+      {/* Dropdown */}
+      <div
+        ref={menuRef}
+        className="fixed z-[9999] w-48 rounded-lg bg-white shadow-lg border border-zinc-200 py-1 dark:bg-zinc-800 dark:border-zinc-700"
+        style={{ top, left }}
+      >
+        <div className="px-3 py-1.5 border-b border-zinc-100 dark:border-zinc-700/50">
+          <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300 truncate">{task.title}</p>
+        </div>
+
+        {/* Move to section */}
+        <div className="py-1">
+          <p className="px-3 py-1 text-[11px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Move to</p>
+          {moveTargets.map((target) => {
+            const displayTitle = target.title === "Done" ? "Completed" : target.title;
+            return (
+              <button
+                key={target.title}
+                onClick={() => {
+                  if (!target.current && !isUpdating) {
+                    onSetMenuOpen(null);
+                    onMoveTask(task.id, target.title);
+                  }
+                }}
+                disabled={target.current || isUpdating}
+                className={`flex w-full items-center gap-2 px-3 py-1.5 text-xs transition-colors ${
+                  target.current
+                    ? "text-zinc-400 dark:text-zinc-500"
+                    : "text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-700/50"
+                }`}
+              >
+                {target.current ? (
+                  <svg className="h-3 w-3 shrink-0" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z" />
+                  </svg>
+                ) : (
+                  <span className="w-3 shrink-0" />
+                )}
+                {displayTitle}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="border-t border-zinc-100 dark:border-zinc-700/50" />
+        <button
+          onClick={() => { onSetMenuOpen(null); onStartEdit(task); }}
+          className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-700/50 transition-colors"
+        >
+          Edit
+        </button>
+        <div className="border-t border-zinc-100 dark:border-zinc-700/50" />
+        <button
+          onClick={() => { onSetMenuOpen(null); onConfirmDelete(task.id); }}
+          className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors"
+        >
+          Delete
+        </button>
+      </div>
+    </>,
+    document.body
+  );
 }
 
 export default function TaskCard({
@@ -250,68 +387,18 @@ export default function TaskCard({
         </div>
       )}
 
-      {/* Action menu */}
+      {/* Action menu — rendered via Portal to escape parent overflow/transform stacking context */}
       {menuOpen?.taskId === task.id && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => onSetMenuOpen(null)} />
-          <div
-            className="fixed z-50 w-48 rounded-lg bg-white shadow-lg border border-zinc-200 py-1 dark:bg-zinc-800 dark:border-zinc-700"
-            style={{ top: menuOpen.top, left: menuOpen.left }}
-          >
-            <div className="px-3 py-1.5 border-b border-zinc-100 dark:border-zinc-700/50">
-              <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300 truncate">{task.title}</p>
-            </div>
-
-            {/* Move to section */}
-            <div className="py-1">
-              <p className="px-3 py-1 text-[11px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Move to</p>
-              {moveTargets.map((target) => {
-                const displayTitle = target.title === "Done" ? "Completed" : target.title;
-                return (
-                  <button
-                    key={target.title}
-                    onClick={() => {
-                      if (!target.current && !isUpdating) {
-                        onSetMenuOpen(null);
-                        onMoveTask(task.id, target.title);
-                      }
-                    }}
-                    disabled={target.current || isUpdating}
-                    className={`flex w-full items-center gap-2 px-3 py-1.5 text-xs transition-colors ${
-                      target.current
-                        ? "text-zinc-400 dark:text-zinc-500"
-                        : "text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-700/50"
-                    }`}
-                  >
-                    {target.current ? (
-                      <svg className="h-3 w-3 shrink-0" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z" />
-                      </svg>
-                    ) : (
-                      <span className="w-3 shrink-0" />
-                    )}
-                    {displayTitle}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="border-t border-zinc-100 dark:border-zinc-700/50" />
-            <button
-              onClick={() => { onSetMenuOpen(null); onStartEdit(task); }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-700/50 transition-colors"
-            >
-              Edit
-            </button>
-            <div className="border-t border-zinc-100 dark:border-zinc-700/50" />
-            <button
-              onClick={() => { onSetMenuOpen(null); onConfirmDelete(task.id); }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors"
-            >
-              Delete
-            </button>
-          </div>
-        </>
+        <TaskActionMenuPortal
+          menuOpen={menuOpen}
+          task={task}
+          moveTargets={moveTargets}
+          isUpdating={isUpdating}
+          onSetMenuOpen={onSetMenuOpen}
+          onStartEdit={onStartEdit}
+          onConfirmDelete={onConfirmDelete}
+          onMoveTask={onMoveTask}
+        />
       )}
     </li>
   );
