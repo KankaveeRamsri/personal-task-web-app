@@ -180,6 +180,12 @@ export default function DashboardPage() {
     return map;
   }, [lists]);
 
+  const listBoardMap = useMemo(() => {
+    const map = new Map<string, string>();
+    lists.forEach((l) => map.set(l.id, l.board_id));
+    return map;
+  }, [lists]);
+
   const listColorMap = useMemo(() => {
     const map = new Map<string, string>();
     let customIdx = 0;
@@ -211,24 +217,30 @@ export default function DashboardPage() {
   const inProgressTasks = tasksByListTitle["In Progress"] ?? 0;
   const completionPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-  const overdueCount = useMemo(() => {
+  const overdueTasks = useMemo(() => {
+    const today = getLocalDate(new Date());
+    return tasks
+      .filter((t) => {
+        if (isCompletedTask(t, listTitleMap)) return false;
+        if (!t.due_date) return false;
+        const target = getLocalDate(new Date(t.due_date + "T00:00:00"));
+        return target < today;
+      })
+      .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime());
+  }, [tasks, listTitleMap]);
+
+  const dueTodayTasks = useMemo(() => {
     const today = getLocalDate(new Date());
     return tasks.filter((t) => {
       if (isCompletedTask(t, listTitleMap)) return false;
       if (!t.due_date) return false;
       const target = getLocalDate(new Date(t.due_date + "T00:00:00"));
-      return target < today;
-    }).length;
+      return target.getTime() === today.getTime();
+    });
   }, [tasks, listTitleMap]);
 
-  const dueTodayCount = useMemo(() => {
-    const today = getLocalDate(new Date());
-    return tasks.filter((t) => {
-      if (!t.due_date) return false;
-      const target = getLocalDate(new Date(t.due_date + "T00:00:00"));
-      return target.getTime() === today.getTime();
-    }).length;
-  }, [tasks]);
+  const dueTodayCount = dueTodayTasks.length;
+  const overdueCount = overdueTasks.length;
 
   const unassignedCount = useMemo(() => tasks.filter((t) => !t.assignee_id).length, [tasks]);
 
@@ -346,6 +358,99 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
+      {/* ── 0. Focus Today Section ────────────────────────── */}
+      <section className="rounded-2xl border-2 border-dashed border-zinc-200/60 bg-zinc-50/30 p-6 dark:border-zinc-800/60 dark:bg-zinc-900/20">
+        <div className="flex items-center gap-2 mb-6">
+          <span className="text-xl">🔥</span>
+          <h2 className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Focus Today</h2>
+        </div>
+
+        {overdueCount === 0 && dueTodayCount === 0 ? (
+          <div className="flex flex-col items-center justify-center py-4 text-center">
+            <span className="text-2xl mb-2">🎉</span>
+            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">You&apos;re all caught up</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Overdue Block */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 px-1">
+                <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-red-500/80">Overdue</h3>
+                <span className="text-xs font-medium text-zinc-400">({overdueCount})</span>
+              </div>
+              <div className="space-y-2">
+                {overdueTasks.slice(0, 3).map((task) => (
+                  <Link
+                    key={task.id}
+                    href={`/dashboard/board?boardId=${listBoardMap.get(task.list_id)}&taskId=${task.id}`}
+                    className="group flex items-center justify-between rounded-xl border border-red-100 bg-white p-3 shadow-sm transition-all hover:border-red-200 hover:shadow-md dark:border-red-900/20 dark:bg-zinc-900"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-zinc-800 dark:text-zinc-200 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+                        {task.title}
+                      </p>
+                      <p className="text-[10px] text-zinc-400 mt-0.5">
+                        {listTitleMap.get(task.list_id) || "Task"} &middot; {new Date(task.due_date!).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </p>
+                    </div>
+                    <svg className="h-4 w-4 text-zinc-300 group-hover:text-red-400 transition-colors" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </Link>
+                ))}
+                {overdueCount > 3 && (
+                  <Link href="/dashboard/tasks" className="block text-center text-[11px] font-bold text-red-500/60 hover:text-red-500 transition-colors py-1">
+                    View all {overdueCount} overdue &rarr;
+                  </Link>
+                )}
+                {overdueCount === 0 && (
+                  <p className="px-3 py-2 text-xs text-zinc-400 italic">No overdue tasks</p>
+                )}
+              </div>
+            </div>
+
+            {/* Due Today Block */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 px-1">
+                <span className="h-2 w-2 rounded-full bg-orange-500" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-orange-500/80">Due Today</h3>
+                <span className="text-xs font-medium text-zinc-400">({dueTodayCount})</span>
+              </div>
+              <div className="space-y-2">
+                {dueTodayTasks.slice(0, 3).map((task) => (
+                  <Link
+                    key={task.id}
+                    href={`/dashboard/board?boardId=${listBoardMap.get(task.list_id)}&taskId=${task.id}`}
+                    className="group flex items-center justify-between rounded-xl border border-orange-100 bg-white p-3 shadow-sm transition-all hover:border-orange-200 hover:shadow-md dark:border-orange-900/20 dark:bg-zinc-900"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-zinc-800 dark:text-zinc-200 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
+                        {task.title}
+                      </p>
+                      <p className="text-[10px] text-zinc-400 mt-0.5">
+                        {listTitleMap.get(task.list_id) || "Task"} &middot; Today
+                      </p>
+                    </div>
+                    <svg className="h-4 w-4 text-zinc-300 group-hover:text-orange-400 transition-colors" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </Link>
+                ))}
+                {dueTodayCount > 3 && (
+                  <Link href="/dashboard/tasks" className="block text-center text-[11px] font-bold text-orange-500/60 hover:text-orange-500 transition-colors py-1">
+                    View all {dueTodayCount} today &rarr;
+                  </Link>
+                )}
+                {dueTodayCount === 0 && (
+                  <p className="px-3 py-2 text-xs text-zinc-400 italic">Nothing due today</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+
       {/* ── A. Welcome Section ──────────────────────────────── */}
       <section className="flex items-start justify-between gap-4">
         <div>
