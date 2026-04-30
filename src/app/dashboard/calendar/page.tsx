@@ -603,6 +603,11 @@ export default function CalendarPage() {
   const openOverflow = useCallback((dateKey: string) => setOverflowDateKey(dateKey), []);
   const closeOverflow = useCallback(() => setOverflowDateKey(null), []);
 
+  // ── Filters state ────────────────────────────────────────────────────────
+  const [filterListId, setFilterListId] = useState<string>("all");
+  const [filterAssigneeId, setFilterAssigneeId] = useState<string>("all");
+  const [filterPriority, setFilterPriority] = useState<string>("all");
+
   // ── Router for calendar → board navigation ─────────────────────────────
   const router = useRouter();
 
@@ -722,13 +727,17 @@ export default function CalendarPage() {
     const m = new Map<string, Task[]>();
     for (const t of tasks) {
       if (!t.due_date) continue;
+      if (filterListId !== "all" && t.list_id !== filterListId) continue;
+      if (filterAssigneeId !== "all" && (t.assignee_id || "unassigned") !== filterAssigneeId) continue;
+      if (filterPriority !== "all" && (t.priority || "none") !== filterPriority) continue;
+
       // Use overridden date if a move is in-flight for this task
       const effectiveKey = optimisticMoves.get(t.id) ?? dueDateKey(t.due_date);
       if (!m.has(effectiveKey)) m.set(effectiveKey, []);
       m.get(effectiveKey)!.push(t);
     }
     return m;
-  }, [tasks, mounted, optimisticMoves]);
+  }, [tasks, mounted, optimisticMoves, filterListId, filterAssigneeId, filterPriority]);
 
   // ── Calendar grid cells ─────────────────────────────────────────────────
   const { cells, todayKey, monthTitle } = useMemo(() => {
@@ -872,6 +881,59 @@ export default function CalendarPage() {
               </div>
             )}
           </div>
+
+          {/* ── Filters Row ──────────────────────────────────────── */}
+          {selectedBoardId && tasks.length > 0 && (
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <select
+                value={filterListId}
+                onChange={(e) => setFilterListId(e.target.value)}
+                className={selectClass}
+              >
+                <option value="all">All Lists</option>
+                {lists.map((l) => (
+                  <option key={l.id} value={l.id}>{l.title}</option>
+                ))}
+              </select>
+
+              <select
+                value={filterAssigneeId}
+                onChange={(e) => setFilterAssigneeId(e.target.value)}
+                className={selectClass}
+              >
+                <option value="all">All Assignees</option>
+                <option value="unassigned">Unassigned</option>
+                {members.map((m) => (
+                  <option key={m.user_id} value={m.user_id}>{m.display_name || m.email}</option>
+                ))}
+              </select>
+
+              <select
+                value={filterPriority}
+                onChange={(e) => setFilterPriority(e.target.value)}
+                className={selectClass}
+              >
+                <option value="all">All Priorities</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+                <option value="none">None</option>
+              </select>
+
+              {(filterListId !== "all" || filterAssigneeId !== "all" || filterPriority !== "all") && (
+                <button
+                  onClick={() => {
+                    setFilterListId("all");
+                    setFilterAssigneeId("all");
+                    setFilterPriority("all");
+                  }}
+                  className="ml-auto text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors"
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
+          )}
 
           {/* ── Main content ─────────────────────────────────────── */}
           {loading ? (
