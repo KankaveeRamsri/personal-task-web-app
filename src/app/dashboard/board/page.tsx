@@ -160,6 +160,57 @@ export default function DashboardPage() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [showMembers]);
 
+  // ── Calendar deep-link: scroll to & highlight a task ──────────────────
+  // Strategy:
+  //   1. Read sessionStorage once on mount → pendingFocusTaskId state.
+  //   2. Watch [tasks, pendingFocusTaskId]: only act when the target task
+  //      actually exists in the tasks array (i.e. it's in the DOM).
+  //   3. Use rAF inside setTimeout so the browser has painted before we query.
+  //
+  // Why NOT depend on [loading]:
+  //   useBoardData sets loading=false after workspace fetch, but tasks are
+  //   fetched later in separate effects — DOM nodes don't exist yet at that point.
+
+  const [pendingFocusTaskId, setPendingFocusTaskId] = useState<string | null>(() => {
+    // Lazily read on first render (client only — runs after mount in client components)
+    try { return sessionStorage.getItem("calendarFocusTaskId"); } catch { return null; }
+  });
+
+  // Clear from sessionStorage immediately so a hard-refresh doesn't re-trigger
+  useEffect(() => {
+    if (!pendingFocusTaskId) return;
+    try { sessionStorage.removeItem("calendarFocusTaskId"); } catch { /* ignore */ }
+  }, [pendingFocusTaskId]);
+
+  // Fire scroll+highlight once the target task appears in the tasks array
+  useEffect(() => {
+    if (!pendingFocusTaskId) return;
+    // Guard: task must be in the loaded tasks list (meaning DOM node exists)
+    const taskExists = tasks.some((t) => t.id === pendingFocusTaskId);
+    if (!taskExists) return;
+
+    // Clear pending so this only runs once
+    const taskId = pendingFocusTaskId;
+    setPendingFocusTaskId(null);
+
+    // Double-buffer: setTimeout(0) waits for React commit, rAF waits for paint
+    const timer = setTimeout(() => {
+      requestAnimationFrame(() => {
+        const el = document.querySelector<HTMLElement>(`[data-task-id="${taskId}"]`);
+        if (!el) return;
+        el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+        el.style.animation = "none"; // reset in case already set
+        // Force reflow so the animation restarts cleanly
+        void el.offsetWidth;
+        el.style.animation = "calendar-highlight 1.8s ease-out forwards";
+        const cleanup = () => { el.style.animation = ""; };
+        el.addEventListener("animationend", cleanup, { once: true });
+      });
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [tasks, pendingFocusTaskId]);
+
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<WorkspaceRole>("member");
   const [inviting, setInviting] = useState(false);

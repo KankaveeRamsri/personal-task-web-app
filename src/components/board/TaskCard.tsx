@@ -238,6 +238,7 @@ export default function TaskCard({
     <li
       ref={setNodeRef}
       style={dragStyle}
+      data-task-id={task.id}
       {...attributes}
       {...listeners}
       className={`group relative rounded-lg border px-3 py-2.5 transition-all duration-200 select-none ${

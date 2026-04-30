@@ -48,3 +48,9 @@ body {
   from { transform: translateX(100%); }
   to { transform: translateX(0); }
 }
+
+@keyframes calendar-highlight {
+  0%   { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.55); background-color: rgba(219, 234, 254, 0.5); }
+  60%  { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);  background-color: rgba(219, 234, 254, 0.3); }
+  100% { box-shadow: 0 0 0 0px rgba(59, 130, 246, 0);    background-color: transparent; }
+}

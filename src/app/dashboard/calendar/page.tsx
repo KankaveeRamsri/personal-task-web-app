@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
-import Link from "next/link";
+import { useMemo, useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useBoardData } from "@/hooks/useBoardData";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
 import type { Task, List } from "@/types/database";
@@ -119,27 +119,25 @@ function TaskChip({
   task,
   list,
   assignee,
-  boardId,
+  onNavigate,
 }: {
   task: Task;
   list: List | undefined;
   assignee: MemberWithProfile | null;
-  boardId: string | null;
+  onNavigate: () => void;
 }) {
   const listTitle = list?.title ?? "";
   const listColor = list?.color || LIST_COLOR_DEFAULTS[listTitle] || "#a1a1aa";
   const done = task.is_completed || isCompletedListTitle(listTitle);
-  const href = boardId ? "/dashboard/board" : "#";
 
   return (
-    <Link
-      href={href}
-      onClick={(e) => e.stopPropagation()}
+    <button
+      onClick={onNavigate}
       title={task.title}
-      className={`group flex items-center gap-1 rounded px-1.5 py-[3px] text-[11px] font-medium leading-tight truncate transition-colors
+      className={`group w-full flex items-center gap-1 rounded px-1.5 py-[3px] text-[11px] font-medium leading-tight truncate transition-colors text-left cursor-pointer
         ${done
           ? "bg-zinc-100 text-zinc-400 line-through dark:bg-zinc-800/60 dark:text-zinc-500"
-          : "bg-white text-zinc-700 hover:bg-zinc-50 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700/80"
+          : "bg-white text-zinc-700 hover:bg-blue-50 hover:text-blue-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-blue-950/40 dark:hover:text-blue-300"
         } border border-zinc-200/80 dark:border-zinc-700/60`}
     >
       {/* Status dot */}
@@ -158,7 +156,7 @@ function TaskChip({
           {getInitials(assignee.email, assignee.display_name)}
         </span>
       )}
-    </Link>
+    </button>
   );
 }
 
@@ -174,6 +172,7 @@ function CalendarCell({
   listMap,
   memberMap,
   boardId,
+  onNavigateToTask,
 }: {
   date: Date;
   isCurrentMonth: boolean;
@@ -182,6 +181,7 @@ function CalendarCell({
   listMap: Map<string, List>;
   memberMap: Map<string, MemberWithProfile>;
   boardId: string | null;
+  onNavigateToTask: (taskId: string) => void;
 }) {
   const visible = tasks.slice(0, MAX_VISIBLE);
   const overflow = tasks.length - MAX_VISIBLE;
@@ -225,7 +225,7 @@ function CalendarCell({
             task={task}
             list={listMap.get(task.list_id)}
             assignee={task.assignee_id ? memberMap.get(task.assignee_id) ?? null : null}
-            boardId={boardId}
+            onNavigate={() => onNavigateToTask(task.id)}
           />
         ))}
         {overflow > 0 && (
@@ -292,6 +292,15 @@ export default function CalendarPage() {
   // The first render must be identical between server and client.
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
+
+  // ── Router for calendar → board navigation ─────────────────────────────
+  const router = useRouter();
+
+  const navigateToTask = useCallback((taskId: string) => {
+    // Write the target task ID so Board page can scroll to and highlight it
+    try { sessionStorage.setItem("calendarFocusTaskId", taskId); } catch { /* ignore */ }
+    router.push("/dashboard/board");
+  }, [router]);
 
   // ── Month navigation state (initialised lazily to avoid SSR mismatch) ──
   const [currentMonth, setCurrentMonth] = useState<Date | null>(null);
@@ -542,6 +551,7 @@ export default function CalendarPage() {
                         listMap={listMap}
                         memberMap={memberMap}
                         boardId={selectedBoardId}
+                        onNavigateToTask={navigateToTask}
                       />
                     );
                   })}
