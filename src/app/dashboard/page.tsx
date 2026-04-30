@@ -557,7 +557,7 @@ export default function DashboardPage() {
           <div className="flex flex-col items-center justify-center py-8 text-center bg-white/50 dark:bg-zinc-900/50 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
             <span className="text-3xl mb-3">🎉</span>
             <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">You&apos;re all caught up</p>
-            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Time to focus on today&apos;s goals</p>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">No urgent tasks for today.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -644,7 +644,7 @@ export default function DashboardPage() {
         )}
       </section>
 
-      {/* ── B. Summary Cards ────────────────────────────────── */}
+      {/* ── B. Overview ────────────────────────────────────── */}
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {statCards.map((card) => (
           <div
@@ -749,9 +749,9 @@ export default function DashboardPage() {
             </ul>
           ) : (
             <div className="flex flex-col items-center justify-center py-10 text-center">
-              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Nothing urgent right now 👍</p>
+              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Nothing urgent right now.</p>
               <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-400">
-                You can relax or start something new.
+                High-priority work will appear here.
               </p>
             </div>
           )}
@@ -844,7 +844,7 @@ export default function DashboardPage() {
           {/* Progress panel */}
           {progressItems.length > 0 ? (
             <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4 px-1">
                 Task Status
               </h2>
               <div className={progressItems.length > 5 ? "space-y-3 max-h-[360px] overflow-y-auto" : "space-y-4"}>
@@ -885,8 +885,8 @@ export default function DashboardPage() {
 
           {/* Assignee summary */}
           <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-              By Assignee
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4 px-1">
+              Team Workload
             </h2>
             {assigneeSummary.length > 0 ? (
               <div className="space-y-3">
@@ -923,8 +923,8 @@ export default function DashboardPage() {
                 })}
               </div>
             ) : (
-              <p className="text-sm text-zinc-400 dark:text-zinc-400">
-                No assignee data yet
+              <p className="text-sm text-zinc-400 dark:text-zinc-400 px-1">
+                No assigned tasks yet.
               </p>
             )}
           </div>
@@ -979,12 +979,10 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-6 text-center">
-                <p className="text-sm text-zinc-400 dark:text-zinc-400">
-                  {selectedBoardId ? "No activity yet" : "Select a board to see activity"}
-                </p>
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">No recent activity yet.</p>
                 <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-400">
-                  Task updates will appear here.
+                  Team updates and task changes will appear here.
                 </p>
               </div>
             )}
