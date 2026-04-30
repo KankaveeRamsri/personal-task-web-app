@@ -296,14 +296,41 @@ export default function DashboardPage() {
     [totalTasks, inProgressTasks, completedTasks, completionPct, overdueCount]
   );
 
-  // Top 5 recent tasks by creation date
-  const recentTasks = useMemo(
-    () =>
-      [...tasks]
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 5),
-    [tasks]
-  );
+  // Priority Tasks: top 5 urgent items
+  const priorityTasks = useMemo(() => {
+    const today = getLocalDate(new Date());
+    return [...tasks]
+      .filter((t) => !isCompletedTask(t, listTitleMap))
+      .sort((a, b) => {
+        const dateA = a.due_date ? getLocalDate(new Date(a.due_date + "T00:00:00")) : null;
+        const dateB = b.due_date ? getLocalDate(new Date(b.due_date + "T00:00:00")) : null;
+
+        // 1. Check overdue
+        const isOverdueA = dateA && dateA < today;
+        const isOverdueB = dateB && dateB < today;
+        if (isOverdueA && !isOverdueB) return -1;
+        if (!isOverdueA && isOverdueB) return 1;
+
+        // 2. Check due today
+        const isTodayA = dateA && dateA.getTime() === today.getTime();
+        const isTodayB = dateB && dateB.getTime() === today.getTime();
+        if (isTodayA && !isTodayB) return -1;
+        if (!isTodayA && isTodayB) return 1;
+
+        // 3. Priority HIGH
+        if (a.priority === "high" && b.priority !== "high") return -1;
+        if (a.priority !== "high" && b.priority === "high") return 1;
+
+        // 4. Sort by due date (nearest first)
+        if (dateA && dateB) return dateA.getTime() - dateB.getTime();
+        if (dateA) return -1;
+        if (dateB) return 1;
+
+        // 5. Default by created_at
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      })
+      .slice(0, 5);
+  }, [tasks, listTitleMap]);
 
   // Progress bars per list
   const progressItems = useMemo(() => {
@@ -542,40 +569,54 @@ export default function DashboardPage() {
 
       {/* ── C. Main Content — 2 columns ─────────────────────── */}
       <section className="grid gap-6 lg:grid-cols-5">
-        {/* Left: Recent Tasks (2/5 width) */}
+        {/* Left: Priority Tasks (2/5 width) */}
         <div className="lg:col-span-2 rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
             <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-              Recent Tasks
+              Priority Tasks
             </h2>
             <span className="text-xs text-zinc-400 dark:text-zinc-400">
-              {recentTasks.length} task{recentTasks.length !== 1 ? "s" : ""}
+              Top {priorityTasks.length}
             </span>
           </div>
-          {recentTasks.length > 0 ? (
+          {priorityTasks.length > 0 ? (
             <ul className="divide-y divide-zinc-100 dark:divide-zinc-800 max-h-80 overflow-y-auto">
-              {recentTasks.map((task) => {
+              {priorityTasks.map((task) => {
                 const listTitle = listTitleMap.get(task.list_id) ?? "";
                 const taskStatus = listTitle === "Done" ? "Completed" : (listTitle || "To Do");
                 const dotColor = listColorMap.get(listTitle) ?? "bg-zinc-300";
+                
+                const today = getLocalDate(new Date());
+                const dueDate = task.due_date ? getLocalDate(new Date(task.due_date + "T00:00:00")) : null;
+                const isOverdue = dueDate && dueDate < today;
+                const isToday = dueDate && dueDate.getTime() === today.getTime();
+
                 return (
                   <li key={task.id}>
                     <Link
-                      href="/dashboard/board"
+                      href={`/dashboard/board?boardId=${listBoardMap.get(task.list_id)}&taskId=${task.id}`}
                       className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
                     >
                       <span className={`h-2 w-2 shrink-0 rounded-full ${dotColor}`} />
                       <div className="min-w-0 flex-1">
-                        <p className={`truncate text-sm font-medium ${task.is_completed ? "line-through text-zinc-400 dark:text-zinc-400" : "text-zinc-800 dark:text-zinc-200"}`}>
-                          {task.title}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="truncate text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                            {task.title}
+                          </p>
+                          {isOverdue && (
+                            <span className="shrink-0 text-[10px] font-bold text-red-500 uppercase tracking-tight">Overdue</span>
+                          )}
+                          {isToday && (
+                            <span className="shrink-0 text-[10px] font-bold text-orange-500 uppercase tracking-tight">Today</span>
+                          )}
+                        </div>
                         <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-400">
-                          {boardName} &middot; {taskStatus}
+                          {taskStatus}
                         </p>
                       </div>
                       {task.priority && task.priority !== "none" && (
                         <span
-                          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${priorityBadge(task.priority)}`}
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${priorityBadge(task.priority)}`}
                         >
                           {task.priority}
                         </span>
@@ -587,16 +628,10 @@ export default function DashboardPage() {
             </ul>
           ) : (
             <div className="flex flex-col items-center justify-center py-10 text-center">
-              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">No recent tasks yet</p>
+              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Nothing urgent right now 👍</p>
               <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-400">
-                Create your first task to get started.
+                You can relax or start something new.
               </p>
-              <Link
-                href="/dashboard/board"
-                className="mt-3 text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
-              >
-                Go to board &rarr;
-              </Link>
             </div>
           )}
           <div className="border-t border-zinc-100 px-5 py-3 dark:border-zinc-800">
