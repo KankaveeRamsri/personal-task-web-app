@@ -135,11 +135,13 @@ export default function TeamPage() {
     setSelectedWorkspaceId,
   } = useBoardData();
 
-  const { members, currentRole, loading, errorMsg, invite } = useWorkspaceMembers(selectedWorkspaceId);
+  const { members, currentRole, loading, errorMsg, invite, updateRole } = useWorkspaceMembers(selectedWorkspaceId);
 
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [optimisticRoles, setOptimisticRoles] = useState<Record<string, WorkspaceRole>>({});
+  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -180,6 +182,38 @@ export default function TeamPage() {
     }
     return email.slice(0, 2).toUpperCase();
   }
+
+  const canEditRole = (targetRole: WorkspaceRole, targetEmail: string) => {
+    if (!currentRole) return false;
+    if (currentUserEmail === targetEmail) return false;
+    if (targetRole === "owner") return false;
+    if (currentRole === "owner") return true;
+    if (currentRole === "admin" && (targetRole === "member" || targetRole === "viewer")) return true;
+    return false;
+  };
+
+  const getAvailableRoles = () => {
+    if (currentRole === "owner") return ["admin", "member", "viewer"];
+    if (currentRole === "admin") return ["member", "viewer"];
+    return [];
+  };
+
+  const handleRoleChange = async (userId: string, newRole: WorkspaceRole) => {
+    setUpdatingUserId(userId);
+    setOptimisticRoles(prev => ({ ...prev, [userId]: newRole }));
+    
+    const res = await updateRole(userId, newRole);
+    
+    setUpdatingUserId(null);
+    if (!res.ok) {
+      alert(res.error || "Failed to change role");
+      setOptimisticRoles(prev => {
+        const next = { ...prev };
+        delete next[userId];
+        return next;
+      });
+    }
+  };
 
   if (!mounted) {
     return (
@@ -322,9 +356,38 @@ export default function TeamPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 align-middle">
-                    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${getRoleBadge(member.role)}`}>
-                      {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
-                    </span>
+                    {canEditRole(member.role, member.email) ? (
+                      <div className="relative inline-block w-32">
+                        <select
+                          value={optimisticRoles[member.user_id] || member.role}
+                          onChange={(e) => handleRoleChange(member.user_id, e.target.value as WorkspaceRole)}
+                          disabled={updatingUserId === member.user_id}
+                          className={`w-full appearance-none rounded-md border border-zinc-200 bg-white py-1.5 pl-3 pr-8 text-xs font-medium text-zinc-700 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:focus:border-indigo-400 dark:focus:ring-indigo-400 ${getRoleBadge(optimisticRoles[member.user_id] || member.role).split(' ')[0]} bg-opacity-10 dark:bg-opacity-20`}
+                        >
+                          {getAvailableRoles().map((r) => (
+                            <option key={r} value={r}>
+                              {r.charAt(0).toUpperCase() + r.slice(1)}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-zinc-500">
+                          {updatingUserId === member.user_id ? (
+                            <svg className="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                          ) : (
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
+                            </svg>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${getRoleBadge(optimisticRoles[member.user_id] || member.role)}`}>
+                        {(optimisticRoles[member.user_id] || member.role).charAt(0).toUpperCase() + (optimisticRoles[member.user_id] || member.role).slice(1)}
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4 align-middle">
                     <span className="text-sm text-zinc-500 dark:text-zinc-400">
