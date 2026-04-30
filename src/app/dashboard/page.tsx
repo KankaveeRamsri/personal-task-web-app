@@ -252,6 +252,21 @@ export default function DashboardPage() {
   const dueTodayCount = dueTodayTasks.length;
   const overdueCount = overdueTasks.length;
 
+  const todayTasks = useMemo(() => {
+    const today = getLocalDate(new Date());
+    return tasks.filter((t) => {
+      if (!t.due_date) return false;
+      const d = getLocalDate(new Date(t.due_date + "T00:00:00"));
+      return d.getTime() === today.getTime();
+    });
+  }, [tasks]);
+
+  const completedTodayCount = useMemo(() => 
+    todayTasks.filter(t => isCompletedTask(t, listTitleMap)).length
+  , [todayTasks, listTitleMap]);
+
+  const totalTodayCount = todayTasks.length;
+
   const unassignedCount = useMemo(() => tasks.filter((t) => !t.assignee_id).length, [tasks]);
 
   const assigneeSummary = useMemo(() => {
@@ -399,102 +414,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
-      {/* ── 0. Focus Today Section ────────────────────────── */}
-      <section className="rounded-2xl border-2 border-dashed border-zinc-200/60 bg-zinc-50/30 p-6 dark:border-zinc-800/60 dark:bg-zinc-900/20">
-        <div className="flex items-center gap-2 mb-6">
-          <span className="text-xl">🔥</span>
-          <h2 className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Focus Today</h2>
-        </div>
-
-        {overdueCount === 0 && dueTodayCount === 0 ? (
-          <div className="flex flex-col items-center justify-center py-4 text-center">
-            <span className="text-2xl mb-2">🎉</span>
-            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">You&apos;re all caught up</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Overdue Block */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 px-1">
-                <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-red-500/80">Overdue</h3>
-                <span className="text-xs font-medium text-zinc-400">({overdueCount})</span>
-              </div>
-              <div className="space-y-2">
-                {overdueTasks.slice(0, 3).map((task) => (
-                  <Link
-                    key={task.id}
-                    href={`/dashboard/board?boardId=${listBoardMap.get(task.list_id)}&taskId=${task.id}`}
-                    className="group flex items-center justify-between rounded-xl border border-red-100 bg-white p-3 shadow-sm transition-all hover:border-red-200 hover:shadow-md dark:border-red-900/20 dark:bg-zinc-900"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-zinc-800 dark:text-zinc-200 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
-                        {task.title}
-                      </p>
-                      <p className="text-[10px] text-zinc-400 mt-0.5">
-                        {listTitleMap.get(task.list_id) || "Task"} &middot; {new Date(task.due_date!).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                      </p>
-                    </div>
-                    <svg className="h-4 w-4 text-zinc-300 group-hover:text-red-400 transition-colors" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                    </svg>
-                  </Link>
-                ))}
-                {overdueCount > 3 && (
-                  <Link href="/dashboard/tasks" className="block text-center text-[11px] font-bold text-red-500/60 hover:text-red-500 transition-colors py-1">
-                    View all {overdueCount} overdue &rarr;
-                  </Link>
-                )}
-                {overdueCount === 0 && (
-                  <p className="px-3 py-2 text-xs text-zinc-400 italic">No overdue tasks</p>
-                )}
-              </div>
-            </div>
-
-            {/* Due Today Block */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 px-1">
-                <span className="h-2 w-2 rounded-full bg-orange-500" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-orange-500/80">Due Today</h3>
-                <span className="text-xs font-medium text-zinc-400">({dueTodayCount})</span>
-              </div>
-              <div className="space-y-2">
-                {dueTodayTasks.slice(0, 3).map((task) => (
-                  <Link
-                    key={task.id}
-                    href={`/dashboard/board?boardId=${listBoardMap.get(task.list_id)}&taskId=${task.id}`}
-                    className="group flex items-center justify-between rounded-xl border border-orange-100 bg-white p-3 shadow-sm transition-all hover:border-orange-200 hover:shadow-md dark:border-orange-900/20 dark:bg-zinc-900"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-zinc-800 dark:text-zinc-200 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
-                        {task.title}
-                      </p>
-                      <p className="text-[10px] text-zinc-400 mt-0.5">
-                        {listTitleMap.get(task.list_id) || "Task"} &middot; Today
-                      </p>
-                    </div>
-                    <svg className="h-4 w-4 text-zinc-300 group-hover:text-orange-400 transition-colors" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                    </svg>
-                  </Link>
-                ))}
-                {dueTodayCount > 3 && (
-                  <Link href="/dashboard/tasks" className="block text-center text-[11px] font-bold text-orange-500/60 hover:text-orange-500 transition-colors py-1">
-                    View all {dueTodayCount} today &rarr;
-                  </Link>
-                )}
-                {dueTodayCount === 0 && (
-                  <p className="px-3 py-2 text-xs text-zinc-400 italic">Nothing due today</p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </section>
-
+    <div className="mx-auto max-w-7xl space-y-8">
       {/* ── A. Welcome Section ──────────────────────────────── */}
-      <section className="flex items-start justify-between gap-4">
+      <section className="flex items-start justify-between gap-4 border-b border-zinc-100 dark:border-zinc-800 pb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
             {getGreeting()}, {displayName}
@@ -567,6 +489,139 @@ export default function DashboardPage() {
             </svg>
           </button>
         </div>
+      </section>
+
+      {/* ── 0. Focus Today Section (Control Panel) ────────── */}
+      <section className="rounded-2xl border-2 border-dashed border-zinc-200/60 bg-zinc-50/30 p-6 dark:border-zinc-800/60 dark:bg-zinc-900/20">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🔥</span>
+              <h2 className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Focus Today</h2>
+            </div>
+            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+              {dueTodayTasks.length} tasks due today &bull; {overdueCount} overdue
+            </p>
+          </div>
+
+          <div className="flex flex-1 max-w-md flex-col gap-2">
+            <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-zinc-400">
+              <span>Progress</span>
+              <span>{completedTodayCount} / {totalTodayCount} completed</span>
+            </div>
+            <div className="h-2 w-full rounded-full bg-zinc-200/50 dark:bg-zinc-800/50 overflow-hidden">
+              <div 
+                className="h-full bg-zinc-900 dark:bg-zinc-100 transition-all duration-500 ease-out"
+                style={{ width: `${totalTodayCount > 0 ? (completedTodayCount / totalTodayCount) * 100 : 0}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => console.log("Complete all today")}
+              className="px-4 py-2 text-xs font-bold bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-lg hover:opacity-90 transition-opacity active:scale-95"
+            >
+              Complete All Today
+            </button>
+            <button 
+              onClick={() => console.log("Start focus mode")}
+              className="px-4 py-2 text-xs font-bold border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors active:scale-95"
+            >
+              Start Focus
+            </button>
+          </div>
+        </div>
+
+        {overdueCount === 0 && dueTodayTasks.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-center bg-white/50 dark:bg-zinc-900/50 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
+            <span className="text-3xl mb-3">🎉</span>
+            <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">You&apos;re all caught up</p>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Time to focus on today&apos;s goals</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Overdue Block */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 px-1">
+                <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-red-500/80">Overdue</h3>
+                <span className="text-xs font-medium text-zinc-400">({overdueCount})</span>
+              </div>
+              <div className="space-y-2">
+                {overdueTasks.slice(0, 3).map((task) => (
+                  <Link
+                    key={task.id}
+                    href={`/dashboard/board?boardId=${listBoardMap.get(task.list_id)}&taskId=${task.id}`}
+                    className="group flex items-center justify-between rounded-xl border border-red-100 bg-white p-3.5 shadow-sm transition-all hover:border-red-200 hover:shadow-md dark:border-red-900/20 dark:bg-zinc-900"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-zinc-800 dark:text-zinc-200 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+                        {task.title}
+                      </p>
+                      <p className="text-[10px] text-zinc-400 mt-1 font-medium">
+                        {listTitleMap.get(task.list_id) || "Task"} &middot; {new Date(task.due_date!).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </p>
+                    </div>
+                    <svg className="h-4 w-4 text-zinc-300 group-hover:text-red-400 transition-colors transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </Link>
+                ))}
+                {overdueCount > 3 && (
+                  <Link href="/dashboard/tasks" className="block text-center text-[11px] font-bold text-red-500/60 hover:text-red-500 transition-colors py-1">
+                    View all {overdueCount} overdue &rarr;
+                  </Link>
+                )}
+                {overdueCount === 0 && (
+                  <div className="py-8 text-center bg-zinc-50/50 dark:bg-zinc-800/20 rounded-xl border border-zinc-100 dark:border-zinc-800/50">
+                    <p className="text-xs font-medium text-zinc-400 italic">No overdue tasks</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Due Today Block */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 px-1">
+                <span className="h-2 w-2 rounded-full bg-orange-500" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-orange-500/80">Due Today</h3>
+                <span className="text-xs font-medium text-zinc-400">({dueTodayTasks.length})</span>
+              </div>
+              <div className="space-y-2">
+                {dueTodayTasks.slice(0, 3).map((task) => (
+                  <Link
+                    key={task.id}
+                    href={`/dashboard/board?boardId=${listBoardMap.get(task.list_id)}&taskId=${task.id}`}
+                    className="group flex items-center justify-between rounded-xl border border-orange-100 bg-white p-3.5 shadow-sm transition-all hover:border-orange-200 hover:shadow-md dark:border-orange-900/20 dark:bg-zinc-900"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-zinc-800 dark:text-zinc-200 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
+                        {task.title}
+                      </p>
+                      <p className="text-[10px] text-zinc-400 mt-1 font-medium">
+                        {listTitleMap.get(task.list_id) || "Task"} &middot; Today
+                      </p>
+                    </div>
+                    <svg className="h-4 w-4 text-zinc-300 group-hover:text-orange-400 transition-colors transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </Link>
+                ))}
+                {dueTodayTasks.length > 3 && (
+                  <Link href="/dashboard/tasks" className="block text-center text-[11px] font-bold text-orange-500/60 hover:text-orange-500 transition-colors py-1">
+                    View all {dueTodayTasks.length} today &rarr;
+                  </Link>
+                )}
+                {dueTodayTasks.length === 0 && (
+                  <div className="py-8 text-center bg-zinc-50/50 dark:bg-zinc-800/20 rounded-xl border border-zinc-100 dark:border-zinc-800/50">
+                    <p className="text-xs font-medium text-zinc-400 italic">Nothing due today</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* ── B. Summary Cards ────────────────────────────────── */}
