@@ -664,30 +664,59 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Quick actions */}
+          {/* Smart Quick actions */}
           <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-              Quick Actions
+              Smart Quick Actions
             </h2>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Link
                 href="/dashboard/board"
-                className="flex items-center gap-2.5 rounded-xl bg-zinc-800 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-zinc-900/10 transition-all hover:bg-zinc-800 active:scale-[0.98] dark:bg-zinc-100 dark:text-zinc-900 dark:shadow-none dark:hover:bg-zinc-200"
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
                 New Task
               </Link>
-              <Link
-                href="/dashboard/board"
-                className="flex items-center gap-2.5 rounded-xl border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 hover:border-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:border-zinc-600"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
-                </svg>
-                Open Board
-              </Link>
+
+              {overdueCount > 0 && (
+                <Link
+                  href="/dashboard/board"
+                  className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-red-200 bg-red-50/50 px-4 py-2.5 text-sm font-semibold text-red-700 transition-all hover:bg-red-50 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/20"
+                >
+                  <span className="text-base">⚠️</span>
+                  Fix Overdue Tasks
+                </Link>
+              )}
+
+              {dueTodayCount > 0 && (
+                <Link
+                  href="/dashboard/tasks"
+                  className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-orange-200 bg-orange-50/50 px-4 py-2.5 text-sm font-semibold text-orange-700 transition-all hover:bg-orange-50 dark:border-orange-900/30 dark:bg-orange-900/10 dark:text-orange-400 dark:hover:bg-orange-900/20"
+                >
+                  <span className="text-base">📅</span>
+                  Plan Today
+                </Link>
+              )}
+
+              {members.length < 2 ? (
+                <Link
+                  href="/dashboard/team"
+                  className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-all hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700/50"
+                >
+                  <span className="text-base">👥</span>
+                  Invite Team
+                </Link>
+              ) : (
+                <Link
+                  href="/dashboard/board"
+                  className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-all hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700/50"
+                >
+                  <span className="text-base">📂</span>
+                  Open Board
+                </Link>
+              )}
             </div>
           </div>
 
