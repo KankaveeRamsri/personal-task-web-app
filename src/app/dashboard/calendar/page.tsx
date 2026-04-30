@@ -611,7 +611,7 @@ function EmptyState({
   message,
   sub,
 }: {
-  icon: "workspace" | "board" | "calendar";
+  icon: "workspace" | "board" | "calendar" | "error" | "loading";
   message: string;
   sub?: string;
 }) {
@@ -631,6 +631,17 @@ function EmptyState({
         {icon === "board" && (
           <svg className="h-5 w-5 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+          </svg>
+        )}
+        {icon === "error" && (
+          <svg className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        )}
+        {icon === "loading" && (
+          <svg className="h-5 w-5 animate-spin text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
         )}
       </div>
@@ -700,6 +711,7 @@ export default function CalendarPage() {
     lists,
     tasks,
     loading,
+    errorMsg,
     setSelectedWorkspaceId,
     setSelectedBoardId,
     updateTask,
@@ -894,12 +906,7 @@ export default function CalendarPage() {
            Before mounted, render a single deterministic spinner so
            server HTML and client first-render are identical.       */}
       {!mounted ? (
-        <div className="flex items-center justify-center py-24">
-          <svg className="h-6 w-6 animate-spin text-zinc-400" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-        </div>
+        <EmptyState icon="loading" message="Loading calendar data..." />
       ) : (
         <>
           {/* ── Toolbar: workspace/board + month navigation ─────── */}
@@ -1036,16 +1043,19 @@ export default function CalendarPage() {
 
           {/* ── Main content ─────────────────────────────────────── */}
           {loading ? (
-            <div className="flex items-center justify-center py-24">
-              <svg className="h-6 w-6 animate-spin text-zinc-400" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-            </div>
+            <EmptyState icon="loading" message="Loading calendar data..." />
+          ) : errorMsg ? (
+            <EmptyState icon="error" message="Failed to load calendar" sub={errorMsg} />
           ) : !selectedWorkspaceId ? (
             <EmptyState icon="workspace" message="Select a workspace to view the calendar" />
           ) : !selectedBoardId ? (
             <EmptyState icon="board" message="Select a board to view scheduled tasks" />
+          ) : tasksByDate.size === 0 ? (
+            <EmptyState
+              icon="calendar"
+              message="No tasks match your filters"
+              sub="Try clearing filters or assigning due dates to tasks."
+            />
           ) : viewType === "month" ? (
             /* ── Month grid ──────────────────────────────────────── */
             <DndContext
@@ -1053,31 +1063,32 @@ export default function CalendarPage() {
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
             >
-              <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden dark:border-zinc-700 dark:bg-zinc-900">
-                {/* Weekday header row */}
-                <div className="grid grid-cols-7 border-b border-zinc-200 dark:border-zinc-700">
-                  {WEEKDAY_LABELS.map((label) => (
-                    <div
-                      key={label}
-                      className={`py-2 text-center text-[11px] font-semibold uppercase tracking-wide
-                        ${label === "Sat" || label === "Sun"
-                          ? "text-zinc-400 dark:text-zinc-500"
-                          : "text-zinc-500 dark:text-zinc-400"
-                        }`}
-                    >
-                      {label}
-                    </div>
-                  ))}
-                </div>
+              <div className="rounded-xl border border-zinc-200 bg-white overflow-x-auto dark:border-zinc-700 dark:bg-zinc-900">
+                <div className="min-w-[700px]">
+                  {/* Weekday header row */}
+                  <div className="grid grid-cols-7 border-b border-zinc-200 dark:border-zinc-700">
+                    {WEEKDAY_LABELS.map((label) => (
+                      <div
+                        key={label}
+                        className={`py-2 text-center text-[11px] font-semibold uppercase tracking-wide
+                          ${label === "Sat" || label === "Sun"
+                            ? "text-zinc-400 dark:text-zinc-500"
+                            : "text-zinc-500 dark:text-zinc-400"
+                          }`}
+                      >
+                        {label}
+                      </div>
+                    ))}
+                  </div>
 
-                {/* Day cells grid */}
-                {cells.length > 0 && currentMonth && (
-                  <div
-                    className="grid grid-cols-7"
-                    style={{
-                      gridTemplateRows: `repeat(${Math.ceil(cells.length / 7)}, minmax(100px, auto))`,
-                    }}
-                  >
+                  {/* Day cells grid */}
+                  {cells.length > 0 && currentMonth && (
+                    <div
+                      className="grid grid-cols-7"
+                      style={{
+                        gridTemplateRows: `repeat(${Math.ceil(cells.length / 7)}, minmax(100px, auto))`,
+                      }}
+                    >
                     {cells.map((date) => {
                       const key = toDateKey(date);
                       const isCurrentMonth =
@@ -1105,16 +1116,7 @@ export default function CalendarPage() {
                     })}
                   </div>
                 )}
-
-                {/* Empty month hint — grid shows but no tasks */}
-                {cells.length > 0 && tasksByDate.size === 0 && (
-                  <div className="py-10 text-center text-sm text-zinc-400 dark:text-zinc-500 border-t border-zinc-100 dark:border-zinc-800">
-                    No tasks with due dates this month.
-                    <span className="block text-xs mt-1 text-zinc-300 dark:text-zinc-600">
-                      Tasks from other months may still appear in their cells.
-                    </span>
-                  </div>
-                )}
+                </div>
               </div>
               
               {/* Drag overlay for visual feedback */}
@@ -1139,16 +1141,9 @@ export default function CalendarPage() {
           ) : (
             /* ── Agenda view ─────────────────────────────────────── */
             <div className="flex flex-col gap-8 pb-10">
-              {tasksByDate.size === 0 ? (
-                <EmptyState
-                  icon="calendar"
-                  message="No tasks match your filters"
-                  sub="Try clearing filters or assigning due dates to tasks."
-                />
-              ) : (
-                Array.from(tasksByDate.entries())
-                  .sort((a, b) => a[0].localeCompare(b[0]))
-                  .map(([dateKey, dayTasks]) => {
+              {Array.from(tasksByDate.entries())
+                .sort((a, b) => a[0].localeCompare(b[0]))
+                .map(([dateKey, dayTasks]) => {
                     const date = parseDateKey(dateKey);
                     const isPast = date < localMidnight(new Date());
                     const isToday = dateKey === todayKey;
@@ -1179,8 +1174,7 @@ export default function CalendarPage() {
                         </div>
                       </div>
                     );
-                  })
-              )}
+                  })}
             </div>
           )}
         </>
