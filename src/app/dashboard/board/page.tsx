@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
@@ -25,7 +26,7 @@ import BoardFilterBar from "@/components/board/BoardFilterBar";
 import { logActivity } from "@/lib/activity-log";
 import { createClient } from "@/lib/supabase";
 
-export default function DashboardPage() {
+function DashboardBoard() {
   const {
     workspaces,
     selectedWorkspaceId,
@@ -52,9 +53,14 @@ export default function DashboardPage() {
     reorderTasks,
     deleteBoard,
     deleteWorkspace,
+    fetchTasks,
     clearError,
     setErrorMsg,
   } = useBoardData();
+
+  const searchParams = useSearchParams();
+  const boardIdParam = searchParams.get("boardId");
+  const taskIdParam = searchParams.get("taskId");
 
   // Selection state (bulk actions foundation)
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
@@ -173,8 +179,22 @@ export default function DashboardPage() {
 
   const [pendingFocusTaskId, setPendingFocusTaskId] = useState<string | null>(() => {
     // Lazily read on first render (client only — runs after mount in client components)
-    try { return sessionStorage.getItem("calendarFocusTaskId"); } catch { return null; }
+    try {
+      const saved = sessionStorage.getItem("calendarFocusTaskId");
+      if (saved) return saved;
+    } catch { /* ignore */ }
+    return null;
   });
+
+  // Handle URL deep-links
+  useEffect(() => {
+    if (boardIdParam && boardIdParam !== selectedBoardId) {
+      setSelectedBoardId(boardIdParam);
+    }
+    if (taskIdParam) {
+      setPendingFocusTaskId(taskIdParam);
+    }
+  }, [boardIdParam, taskIdParam, selectedBoardId, setSelectedBoardId]);
 
   // Clear from sessionStorage immediately so a hard-refresh doesn't re-trigger
   useEffect(() => {
@@ -1178,5 +1198,13 @@ export default function DashboardPage() {
         onClearSelection={clearSelection}
       />}
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={null}>
+      <DashboardBoard />
+    </Suspense>
   );
 }

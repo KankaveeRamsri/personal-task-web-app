@@ -349,10 +349,21 @@ export default function NotificationsPage() {
                   const TEAM_ACTIONS = new Set(["invited", "role_changed", "removed"]);
                   const isTeamAction = TEAM_ACTIONS.has(item.action);
 
+                  const getHref = () => {
+                    if (isTeamAction) return "/dashboard/team";
+                    if (item.board_id && item.task_id) {
+                      return `/dashboard/board?boardId=${item.board_id}&taskId=${item.task_id}`;
+                    }
+                    if (item.board_id) {
+                      return `/dashboard/board?boardId=${item.board_id}`;
+                    }
+                    return "/dashboard/tasks";
+                  };
+
                   elements.push(
                     <a
                       key={item.id}
-                      href={isTeamAction ? "/dashboard/team" : "/dashboard/board"}
+                      href={getHref()}
                       className={`group flex items-start gap-3 px-3 py-2.5 transition-colors ${
                         item.is_read
                           ? "hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
