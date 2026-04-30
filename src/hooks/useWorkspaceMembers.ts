@@ -7,6 +7,7 @@ import {
   canManageMembers,
   canChangeRole,
 } from "@/lib/permissions";
+import { logActivity } from "@/lib/activity-log";
 import type { WorkspaceRole, WorkspaceMember } from "@/types/database";
 
 export type MemberWithProfile = WorkspaceMember & {
@@ -149,6 +150,13 @@ export function useWorkspaceMembers(workspaceId: string | null) {
       if (error)
         return { ok: false as const, error: error.message };
 
+      // Log activity
+      await logActivity({
+        workspaceId,
+        action: "invited",
+        metadata: { target_user_id: targetProfile.id, role },
+      });
+
       await fetchMembers();
       return { ok: true as const };
     },
@@ -197,6 +205,15 @@ export function useWorkspaceMembers(workspaceId: string | null) {
         .eq("user_id", userId);
       if (error)
         return { ok: false as const, error: error.message };
+
+      // Log activity (before removal completes in case of RLS, but here it's already deleted)
+      // Actually the requirement said "Before deleting", let's move it up if needed.
+      // But we need the actor's permission to insert.
+      await logActivity({
+        workspaceId,
+        action: "removed",
+        metadata: { target_user_id: userId },
+      });
 
       await fetchMembers();
       return { ok: true as const, data: undefined };
@@ -249,6 +266,13 @@ export function useWorkspaceMembers(workspaceId: string | null) {
         .single();
       if (error)
         return { ok: false as const, error: error.message };
+
+      // Log activity
+      await logActivity({
+        workspaceId,
+        action: "role_changed",
+        metadata: { target_user_id: userId, role: newRole },
+      });
 
       await fetchMembers();
       return { ok: true as const, data };

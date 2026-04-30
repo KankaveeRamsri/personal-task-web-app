@@ -159,6 +159,48 @@ export function useNotifications() {
         }
       }
 
+      // ─── Team Notifications ───
+      // Actions where current user is the target
+      const { data: teamActivities } = await supabase
+        .from("task_activities")
+        .select("*")
+        .in("action", ["invited", "role_changed", "removed"])
+        .eq("metadata->>target_user_id", user.id)
+        .neq("actor_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (teamActivities && teamActivities.length > 0) {
+        rawActivities = [...rawActivities, ...teamActivities].sort(
+          (a, b) =>
+            new Date(b.created_at as string).getTime() -
+            new Date(a.created_at as string).getTime()
+        );
+
+        // Fetch extra profiles for team actions if actors not already in profileMap
+        const teamActorIds = [
+          ...new Set(teamActivities.map((a) => a.actor_id as string)),
+        ].filter((id) => !profileMap.has(id));
+
+        if (teamActorIds.length > 0) {
+          const { data: teamProfiles } = await supabase
+            .from("profiles")
+            .select("id, email, display_name")
+            .in("id", teamActorIds);
+          for (const p of teamProfiles ?? []) {
+            profileMap.set(p.id, p);
+          }
+        }
+      }
+
+      // Fetch Workspace names for context
+      const allWsIds = [...new Set(rawActivities.map((a) => a.workspace_id as string))];
+      const { data: wsData } = await supabase
+        .from("workspaces")
+        .select("id, name")
+        .in("id", allWsIds);
+      const wsMap = new Map(wsData?.map((w) => [w.id, w.name]));
+
       // Fetch read state
       const activityIds = rawActivities.map((a) => a.id as string);
       const { data: reads } = await supabase
@@ -181,10 +223,12 @@ export function useNotifications() {
 
         const action = a.action as string;
         const taskId = a.task_id as string;
+        const TEAM_ACTIONS = new Set(["invited", "role_changed", "removed"]);
         const isImportant =
-          IMPORTANT_ACTIONS.has(action) &&
-          !!taskId &&
-          taskAssigneeMap.get(taskId) === user.id;
+          (IMPORTANT_ACTIONS.has(action) &&
+            !!taskId &&
+            taskAssigneeMap.get(taskId) === user.id) ||
+          TEAM_ACTIONS.has(action);
 
         return {
           id: a.id as string,
@@ -199,7 +243,7 @@ export function useNotifications() {
           actor_display_name:
             profileMap.get(a.actor_id as string)?.display_name ?? "",
           task_title: taskTitle,
-          board_title: boardMap.get(a.board_id as string)?.title,
+          board_title: boardMap.get(a.board_id as string)?.title || wsMap.get(a.workspace_id as string),
           is_read: readSet.has(a.id as string),
           is_important: isImportant,
         };
