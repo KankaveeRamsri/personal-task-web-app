@@ -407,8 +407,28 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900 dark:border-zinc-700 dark:border-t-zinc-100" />
+      <div className="mx-auto max-w-7xl space-y-8">
+        <div className="flex items-start justify-between gap-4 border-b border-zinc-100 dark:border-zinc-800 pb-6">
+          <div className="space-y-2">
+            <div className="h-8 w-64 animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800" />
+            <div className="h-4 w-48 animate-pulse rounded-lg bg-zinc-100/60 dark:bg-zinc-800/60" />
+          </div>
+          <div className="flex gap-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-8 w-8 animate-pulse rounded-full bg-zinc-100 dark:bg-zinc-800" />
+            ))}
+          </div>
+        </div>
+        <div className="h-64 w-full animate-pulse rounded-2xl bg-zinc-50 dark:bg-zinc-800/20" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-32 animate-pulse rounded-2xl bg-zinc-50 dark:bg-zinc-800/20" />
+          ))}
+        </div>
+        <div className="grid gap-6 lg:grid-cols-5">
+          <div className="lg:col-span-2 h-96 animate-pulse rounded-2xl bg-zinc-50 dark:bg-zinc-800/20" />
+          <div className="lg:col-span-3 h-96 animate-pulse rounded-2xl bg-zinc-50 dark:bg-zinc-800/20" />
+        </div>
       </div>
     );
   }
@@ -629,10 +649,10 @@ export default function DashboardPage() {
         {statCards.map((card) => (
           <div
             key={card.label}
-            className="flex flex-col rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
+            className="group flex flex-col rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
           >
             <div className="flex items-center justify-between">
-              <span className={`flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800 ${card.accent}`}>
+              <span className={`flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800 transition-colors group-hover:bg-zinc-200 dark:group-hover:bg-zinc-700 ${card.accent}`}>
                 {card.icon}
               </span>
               {card.badge && (
@@ -658,7 +678,7 @@ export default function DashboardPage() {
               {card.progressPct !== undefined && (
                 <div className="h-1.5 w-full rounded-full bg-zinc-100 dark:bg-zinc-800">
                   <div
-                    className="h-1.5 rounded-full bg-emerald-500 transition-all"
+                    className="h-1.5 rounded-full bg-emerald-500 transition-all duration-700"
                     style={{ width: `${card.progressPct}%` }}
                   />
                 </div>
@@ -773,7 +793,7 @@ export default function DashboardPage() {
             <div className="space-y-2">
               <Link
                 href="/dashboard/board"
-                className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-zinc-900/10 transition-all hover:bg-zinc-800 active:scale-[0.98] dark:bg-zinc-100 dark:text-zinc-900 dark:shadow-none dark:hover:bg-zinc-200"
+                className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-zinc-900/10 transition-all hover:-translate-y-0.5 hover:bg-zinc-800 active:scale-95 active:translate-y-0 dark:bg-zinc-100 dark:text-zinc-900 dark:shadow-none dark:hover:bg-zinc-200"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -784,7 +804,7 @@ export default function DashboardPage() {
               {overdueCount > 0 && (
                 <Link
                   href="/dashboard/board"
-                  className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-red-200 bg-red-50/50 px-4 py-2.5 text-sm font-semibold text-red-700 transition-all hover:bg-red-50 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/20"
+                  className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-red-200 bg-red-50/50 px-4 py-2.5 text-sm font-semibold text-red-700 transition-all hover:bg-red-50 hover:border-red-300 active:scale-95 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/20"
                 >
                   <span className="text-base">⚠️</span>
                   Fix Overdue Tasks
@@ -794,7 +814,7 @@ export default function DashboardPage() {
               {dueTodayCount > 0 && (
                 <Link
                   href="/dashboard/tasks"
-                  className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-orange-200 bg-orange-50/50 px-4 py-2.5 text-sm font-semibold text-orange-700 transition-all hover:bg-orange-50 dark:border-orange-900/30 dark:bg-orange-900/10 dark:text-orange-400 dark:hover:bg-orange-900/20"
+                  className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-orange-200 bg-orange-50/50 px-4 py-2.5 text-sm font-semibold text-orange-700 transition-all hover:bg-orange-50 hover:border-orange-300 active:scale-95 dark:border-orange-900/30 dark:bg-orange-900/10 dark:text-orange-400 dark:hover:bg-orange-900/20"
                 >
                   <span className="text-base">📅</span>
                   Plan Today
@@ -804,7 +824,7 @@ export default function DashboardPage() {
               {members.length < 2 ? (
                 <Link
                   href="/dashboard/team"
-                  className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-all hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700/50"
+                  className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-all hover:bg-zinc-50 hover:border-zinc-300 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700/50"
                 >
                   <span className="text-base">👥</span>
                   Invite Team
@@ -812,7 +832,7 @@ export default function DashboardPage() {
               ) : (
                 <Link
                   href="/dashboard/board"
-                  className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-all hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700/50"
+                  className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-all hover:bg-zinc-50 hover:border-zinc-300 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700/50"
                 >
                   <span className="text-base">📂</span>
                   Open Board
@@ -927,7 +947,7 @@ export default function DashboardPage() {
                       {group.items.map((a) => {
                         const link = getActivityLink(a);
                         const Content = (
-                          <div className="flex items-start gap-3">
+                          <div className="flex items-start gap-3 rounded-xl p-2 -m-2 transition-all hover:bg-zinc-50 dark:hover:bg-zinc-800/50 group-hover:px-3">
                             <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold transition-transform group-hover:scale-110 ${actionIcon[a.action] ?? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
                               {(a.actor_display_name || a.actor_email || "?").slice(0, 1).toUpperCase()}
                             </span>
@@ -943,7 +963,7 @@ export default function DashboardPage() {
                         );
 
                         return (
-                          <li key={a.id} className="group">
+                          <li key={a.id} className="group active:scale-[0.99] transition-transform">
                             {link ? (
                               <Link href={link} className="block cursor-pointer">
                                 {Content}
