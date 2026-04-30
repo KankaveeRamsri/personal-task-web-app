@@ -195,6 +195,7 @@ function CalendarCell({
   memberMap,
   canEdit,
   onPreviewTask,
+  onShowMore,
 }: {
   dateKey: string;
   date: Date;
@@ -206,6 +207,7 @@ function CalendarCell({
   boardId: string | null;
   canEdit: boolean;
   onPreviewTask: (task: Task) => void;
+  onShowMore?: (dateKey: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `cal-date-${dateKey}`,
@@ -262,9 +264,15 @@ function CalendarCell({
           />
         ))}
         {overflow > 0 && (
-          <span className="px-1.5 text-[10px] font-medium text-zinc-400 dark:text-zinc-500 cursor-default">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onShowMore?.(dateKey);
+            }}
+            className="w-full text-left px-1.5 py-0.5 mt-0.5 text-[10px] font-medium text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 rounded transition-colors dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800"
+          >
             +{overflow} more
-          </span>
+          </button>
         )}
       </div>
     </div>
@@ -430,6 +438,80 @@ function TaskPreviewModal({
 }
 
 // ---------------------------------------------------------------------------
+// DayTasksModal — portal overlay showing all tasks for a specific day
+// ---------------------------------------------------------------------------
+
+function DayTasksModal({
+  dateKey,
+  tasks,
+  listMap,
+  memberMap,
+  onClose,
+  onPreviewTask,
+}: {
+  dateKey: string;
+  tasks: Task[];
+  listMap: Map<string, List>;
+  memberMap: Map<string, MemberWithProfile>;
+  onClose: () => void;
+  onPreviewTask: (task: Task) => void;
+}) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const date = parseDateKey(dateKey);
+  const title = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+
+  return createPortal(
+    <>
+      <div
+        className="fixed inset-0 z-[150] bg-black/20 backdrop-blur-[1px]"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="fixed z-[151] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[320px] flex flex-col bg-white dark:bg-zinc-900 shadow-xl border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden"
+        style={{ animation: "panel-in 0.15s ease-out" }}
+      >
+        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/50">
+          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{title}</h2>
+          <button
+            onClick={onClose}
+            className="shrink-0 flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-200 hover:text-zinc-700 transition-colors dark:hover:bg-zinc-700 dark:hover:text-zinc-200 focus:outline-none"
+            aria-label="Close modal"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="p-3 max-h-[60vh] overflow-y-auto flex flex-col gap-1">
+          {tasks.map((task) => (
+            <TaskChip
+              key={task.id}
+              task={task}
+              list={listMap.get(task.list_id)}
+              assignee={task.assignee_id ? memberMap.get(task.assignee_id) ?? null : null}
+              onPreview={() => {
+                onPreviewTask(task);
+              }}
+              fromDate={dateKey}
+              canEdit={false} // Disable drag inside modal
+            />
+          ))}
+        </div>
+      </div>
+    </>,
+    document.body
+  );
+}
+
+// ---------------------------------------------------------------------------
 // EmptyState
 // ---------------------------------------------------------------------------
 
@@ -488,6 +570,11 @@ export default function CalendarPage() {
   const [previewTask, setPreviewTask] = useState<Task | null>(null);
   const openPreview = useCallback((task: Task) => setPreviewTask(task), []);
   const closePreview = useCallback(() => setPreviewTask(null), []);
+
+  // ── Overflow modal state ────────────────────────────────────────────────
+  const [overflowDateKey, setOverflowDateKey] = useState<string | null>(null);
+  const openOverflow = useCallback((dateKey: string) => setOverflowDateKey(dateKey), []);
+  const closeOverflow = useCallback(() => setOverflowDateKey(null), []);
 
   // ── Router for calendar → board navigation ─────────────────────────────
   const router = useRouter();
@@ -814,6 +901,7 @@ export default function CalendarPage() {
                           boardId={selectedBoardId}
                           canEdit={canEdit}
                           onPreviewTask={openPreview}
+                          onShowMore={openOverflow}
                         />
                       );
                     })}
@@ -853,6 +941,21 @@ export default function CalendarPage() {
           )}
         </>
       )}
+
+      {/* ── Overflow modal — rendered into document.body via portal ── */}
+      {mounted && overflowDateKey && (() => {
+        const overflowTasks = tasksByDate.get(overflowDateKey) ?? [];
+        return (
+          <DayTasksModal
+            dateKey={overflowDateKey}
+            tasks={overflowTasks}
+            listMap={listMap}
+            memberMap={memberMap}
+            onClose={closeOverflow}
+            onPreviewTask={openPreview}
+          />
+        );
+      })()}
 
       {/* ── Task preview modal — rendered into document.body via portal ── */}
       {mounted && previewTask && (() => {
