@@ -17,6 +17,7 @@ import {
 } from "@dnd-kit/core";
 import { useBoardData } from "@/hooks/useBoardData";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
+import { logActivity } from "@/lib/activity-log";
 import type { Task, List, Board } from "@/types/database";
 import type { MemberWithProfile } from "@/hooks/useWorkspaceMembers";
 
@@ -764,6 +765,25 @@ export default function CalendarPage() {
     // Persist via existing hook (updates tasks state on success, noop on error)
     const result = await updateTask(taskId, { due_date: toDate } as Partial<Task>);
 
+    if (result && selectedWorkspaceId) {
+      const task = tasks.find(t => t.id === taskId);
+      const list = lists.find(l => l.id === task?.list_id);
+      if (task && list) {
+        await logActivity({
+          workspaceId: selectedWorkspaceId,
+          boardId: list.board_id,
+          taskId: task.id,
+          action: "due_date_changed",
+          metadata: {
+            task_title: task.title,
+            old_due_date: fromDate,
+            new_due_date: toDate,
+            target_user_id: task.assignee_id,
+          },
+        });
+      }
+    }
+
     // Always clear the optimistic override after the request resolves.
     // On success: hook state is now updated, override is redundant.
     // On failure: hook state unchanged, clearing reverts the UI.
@@ -774,17 +794,40 @@ export default function CalendarPage() {
     });
 
     void result; // suppress lint
-  }, [canEdit, updateTask]);
+  }, [canEdit, updateTask, tasks, lists, selectedWorkspaceId]);
 
   const handleReschedule = useCallback(async (taskId: string, newDate: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    const oldDate = task.due_date;
+
     setOptimisticMoves((prev) => new Map(prev).set(taskId, newDate));
-    await updateTask(taskId, { due_date: newDate } as Partial<Task>);
+    const result = await updateTask(taskId, { due_date: newDate } as Partial<Task>);
+
+    if (result && selectedWorkspaceId) {
+      const list = lists.find(l => l.id === task.list_id);
+      if (list) {
+        await logActivity({
+          workspaceId: selectedWorkspaceId,
+          boardId: list.board_id,
+          taskId: task.id,
+          action: "due_date_changed",
+          metadata: {
+            task_title: task.title,
+            old_due_date: oldDate,
+            new_due_date: newDate,
+            target_user_id: task.assignee_id,
+          },
+        });
+      }
+    }
+
     setOptimisticMoves((prev) => {
       const next = new Map(prev);
       next.delete(taskId);
       return next;
     });
-  }, [updateTask]);
+  }, [updateTask, tasks, lists, selectedWorkspaceId]);
 
   // ── Lookup maps ─────────────────────────────────────────────────────────
   const listMap = useMemo(() => {
