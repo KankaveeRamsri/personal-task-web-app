@@ -291,6 +291,70 @@ const PRIORITY_COLOR: Record<string, string> = {
 };
 
 
+// ---------------------------------------------------------------------------
+// AgendaTaskRow — single task in the agenda view
+// ---------------------------------------------------------------------------
+
+function AgendaTaskRow({
+  task,
+  list,
+  assignee,
+  onPreview,
+}: {
+  task: Task;
+  list: List | undefined;
+  assignee: MemberWithProfile | null;
+  onPreview: () => void;
+}) {
+  const listTitle = list?.title ?? "—";
+  const displayTitle = listTitle === "Done" ? "Completed" : listTitle;
+  const listColor = list?.color || LIST_COLOR_DEFAULTS[listTitle] || "#a1a1aa";
+  const done = task.is_completed || isCompletedListTitle(listTitle);
+  const priority = task.priority ?? "none";
+
+  return (
+    <button
+      onClick={onPreview}
+      className={`group flex w-full items-center justify-between gap-4 rounded-xl border p-3 text-left transition-all hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40
+        ${done 
+          ? "border-zinc-200/60 bg-zinc-50/50 dark:border-zinc-800/60 dark:bg-zinc-900/30" 
+          : "border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-zinc-600"
+        }`}
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="shrink-0 flex h-4 w-4 items-center justify-center">
+          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: done ? "#a1a1aa" : listColor }} />
+        </div>
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <span className={`truncate text-sm font-medium ${done ? "line-through text-zinc-500 dark:text-zinc-500" : "text-zinc-900 dark:text-zinc-100"}`}>
+            {task.title}
+          </span>
+          <div className="flex items-center gap-2 text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+            <span>{displayTitle}</span>
+            {priority !== "none" && (
+              <>
+                <span className="h-1 w-1 rounded-full bg-zinc-300 dark:bg-zinc-600" />
+                <span className={PRIORITY_COLOR[priority] ?? ""}>{PRIORITY_LABEL[priority]}</span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="shrink-0 flex items-center gap-3">
+        {assignee && (
+          <span
+            className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-zinc-200 text-[9px] font-semibold text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300 ring-2 ring-white dark:ring-zinc-900"
+            title={assignee.display_name || assignee.email}
+          >
+            {getInitials(assignee.email, assignee.display_name)}
+          </span>
+        )}
+      </div>
+    </button>
+  );
+}
+
 function TaskPreviewModal({
   task,
   list,
@@ -593,6 +657,9 @@ export default function CalendarPage() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
+  // ── View Toggle State ───────────────────────────────────────────────────
+  const [viewType, setViewType] = useState<"month" | "agenda">("month");
+
   // ── Task preview state ──────────────────────────────────────────────────
   const [previewTask, setPreviewTask] = useState<Task | null>(null);
   const openPreview = useCallback((task: Task) => setPreviewTask(task), []);
@@ -777,18 +844,50 @@ export default function CalendarPage() {
   return (
     <div className="mx-auto max-w-7xl">
       {/* ── Static header — safe for SSR ───────────────────────── */}
-      <div className="mb-5">
-        <div className="flex items-center gap-2 mb-1">
-          <svg className="h-5 w-5 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
-          </svg>
-          <h1 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-            Calendar
-          </h1>
+      <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <svg className="h-5 w-5 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+            </svg>
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+              Calendar
+            </h1>
+          </div>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            View tasks by due date
+          </p>
         </div>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Monthly view of tasks by due date
-        </p>
+
+        {/* View Toggle */}
+        <div className="flex items-center rounded-lg bg-zinc-100/80 p-1 ring-1 ring-inset ring-zinc-200/50 dark:bg-zinc-800/80 dark:ring-zinc-700/50 w-fit">
+          <button
+            onClick={() => setViewType("month")}
+            className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600 ${
+              viewType === "month"
+                ? "bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200/50 dark:bg-zinc-700 dark:text-zinc-100 dark:ring-zinc-600/50"
+                : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+            }`}
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+            </svg>
+            Month
+          </button>
+          <button
+            onClick={() => setViewType("agenda")}
+            className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600 ${
+              viewType === "agenda"
+                ? "bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200/50 dark:bg-zinc-700 dark:text-zinc-100 dark:ring-zinc-600/50"
+                : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+            }`}
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+            </svg>
+            Agenda
+          </button>
+        </div>
       </div>
 
       {/* ── Everything below is client-only ────────────────────────
@@ -846,7 +945,7 @@ export default function CalendarPage() {
             <div className="flex-1" />
 
             {/* Month navigation */}
-            {currentMonth && (
+            {currentMonth && viewType === "month" && (
               <div className="flex items-center gap-1.5">
                 <button
                   onClick={() => setCurrentMonth((m) => m ? addMonths(m, -1) : m)}
@@ -947,7 +1046,7 @@ export default function CalendarPage() {
             <EmptyState icon="workspace" message="Select a workspace to view the calendar" />
           ) : !selectedBoardId ? (
             <EmptyState icon="board" message="Select a board to view scheduled tasks" />
-          ) : (
+          ) : viewType === "month" ? (
             /* ── Month grid ──────────────────────────────────────── */
             <DndContext
               sensors={sensors}
@@ -1037,6 +1136,52 @@ export default function CalendarPage() {
                 document.body
               )}
             </DndContext>
+          ) : (
+            /* ── Agenda view ─────────────────────────────────────── */
+            <div className="flex flex-col gap-8 pb-10">
+              {tasksByDate.size === 0 ? (
+                <EmptyState
+                  icon="calendar"
+                  message="No tasks match your filters"
+                  sub="Try clearing filters or assigning due dates to tasks."
+                />
+              ) : (
+                Array.from(tasksByDate.entries())
+                  .sort((a, b) => a[0].localeCompare(b[0]))
+                  .map(([dateKey, dayTasks]) => {
+                    const date = parseDateKey(dateKey);
+                    const isPast = date < localMidnight(new Date());
+                    const isToday = dateKey === todayKey;
+                    
+                    let dateTitle = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+                    if (isToday) {
+                      dateTitle = `Today • ${dateTitle}`;
+                    }
+
+                    return (
+                      <div key={dateKey} className="flex flex-col gap-3 relative">
+                        <div className="flex items-center gap-3 pt-1 pb-2">
+                          <h3 className={`text-sm font-bold tracking-tight ${isPast && !isToday ? "text-zinc-500 dark:text-zinc-400" : isToday ? "text-blue-600 dark:text-blue-400" : "text-zinc-900 dark:text-zinc-100"}`}>
+                            {dateTitle}
+                          </h3>
+                          <div className="h-px flex-1 bg-zinc-200/60 dark:bg-zinc-800/60" />
+                        </div>
+                        <div className="grid grid-cols-1 gap-2">
+                          {dayTasks.map((task) => (
+                            <AgendaTaskRow
+                              key={task.id}
+                              task={task}
+                              list={listMap.get(task.list_id)}
+                              assignee={task.assignee_id ? memberMap.get(task.assignee_id) ?? null : null}
+                              onPreview={() => openPreview(task)}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
+            </div>
           )}
         </>
       )}
