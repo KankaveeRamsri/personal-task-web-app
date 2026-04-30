@@ -1,9 +1,132 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useBoardData } from "@/hooks/useBoardData";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
 import { createClient } from "@/lib/supabase";
+import { canInviteMembers } from "@/lib/permissions";
+import type { WorkspaceRole } from "@/types/database";
+
+function InviteModal({
+  onClose,
+  onInvite,
+}: {
+  onClose: () => void;
+  onInvite: (email: string, role: WorkspaceRole) => Promise<{ ok: boolean; error?: string }>;
+}) {
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<WorkspaceRole>("member");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
+      <div 
+        className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800"
+        style={{ animation: "panel-in 0.2s ease-out" }}
+      >
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Invite Member</h2>
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Add a member to the current workspace by email.</p>
+        </div>
+        
+        {success ? (
+          <div className="mt-4 flex flex-col items-center justify-center py-6 text-center">
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+              <svg className="h-5 w-5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Member invited successfully!</p>
+          </div>
+        ) : (
+          <form
+            className="mt-4 space-y-4"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setError("");
+              setSubmitting(true);
+              const res = await onInvite(email, role);
+              setSubmitting(false);
+              if (!res.ok) {
+                setError(res.error || "Failed to invite");
+              } else {
+                setSuccess(true);
+                setTimeout(onClose, 1500);
+              }
+            }}
+          >
+            {error && (
+              <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                {error}
+              </div>
+            )}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Email address</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-400"
+                placeholder="colleague@example.com"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Role</label>
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value as WorkspaceRole)}
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-400"
+              >
+                <option value="admin">Admin</option>
+                <option value="member">Member</option>
+                <option value="viewer">Viewer</option>
+              </select>
+            </div>
+            
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              >
+                {submitting ? (
+                  <>
+                    <svg className="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Inviting...
+                  </>
+                ) : "Invite"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>,
+    document.body
+  );
+}
 
 export default function TeamPage() {
   const {
@@ -12,9 +135,15 @@ export default function TeamPage() {
     setSelectedWorkspaceId,
   } = useBoardData();
 
-  const { members, loading, errorMsg } = useWorkspaceMembers(selectedWorkspaceId);
+  const { members, currentRole, loading, errorMsg, invite } = useWorkspaceMembers(selectedWorkspaceId);
 
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,6 +181,24 @@ export default function TeamPage() {
     return email.slice(0, 2).toUpperCase();
   }
 
+  if (!mounted) {
+    return (
+      <div className="mx-auto max-w-5xl">
+        <div className="mb-6">
+          <h1 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+            Team
+          </h1>
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            Overview of members in your workspace
+          </p>
+        </div>
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 py-20 dark:border-zinc-700">
+          <p className="text-sm font-medium text-zinc-400 dark:text-zinc-500">Loading team...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-5xl">
       {/* Header */}
@@ -64,20 +211,34 @@ export default function TeamPage() {
         </p>
       </div>
 
-      {/* Context selectors */}
-      <div className="mb-6 flex items-center gap-2">
-        {workspaces.length > 0 && (
-          <select
-            value={selectedWorkspaceId ?? ""}
-            onChange={(e) => setSelectedWorkspaceId(e.target.value)}
-            className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-semibold text-zinc-900 shadow-md ring-1 ring-zinc-900/[0.08] transition-all hover:shadow-lg hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/[0.06] dark:hover:border-zinc-500 dark:focus:ring-zinc-500"
+      {/* Context selectors & Actions */}
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          {workspaces.length > 0 && (
+            <select
+              value={selectedWorkspaceId ?? ""}
+              onChange={(e) => setSelectedWorkspaceId(e.target.value)}
+              className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-semibold text-zinc-900 shadow-md ring-1 ring-zinc-900/[0.08] transition-all hover:shadow-lg hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/[0.06] dark:hover:border-zinc-500 dark:focus:ring-zinc-500"
+            >
+              {workspaces.map((ws) => (
+                <option key={ws.id} value={ws.id}>
+                  {ws.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+        
+        {currentRole && canInviteMembers(currentRole) && (
+          <button
+            onClick={() => setIsInviteModalOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
           >
-            {workspaces.map((ws) => (
-              <option key={ws.id} value={ws.id}>
-                {ws.name}
-              </option>
-            ))}
-          </select>
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Invite Member
+          </button>
         )}
       </div>
 
@@ -179,6 +340,12 @@ export default function TeamPage() {
             </tbody>
           </table>
         </div>
+      )}
+      {mounted && isInviteModalOpen && (
+        <InviteModal 
+          onClose={() => setIsInviteModalOpen(false)} 
+          onInvite={invite} 
+        />
       )}
     </div>
   );
