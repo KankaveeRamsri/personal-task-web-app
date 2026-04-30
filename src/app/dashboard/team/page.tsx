@@ -128,6 +128,69 @@ function InviteModal({
   );
 }
 
+function RemoveModal({
+  member,
+  onClose,
+  onConfirm,
+}: {
+  member: { display_name: string; email: string };
+  onClose: () => void;
+  onConfirm: () => Promise<void>;
+}) {
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
+      <div 
+        className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800"
+        style={{ animation: "panel-in 0.2s ease-out" }}
+      >
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+          <svg className="h-6 w-6 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Remove Member</h2>
+        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+          Are you sure you want to remove <span className="font-semibold text-zinc-700 dark:text-zinc-300">{member.display_name || member.email}</span> from this workspace? They will lose access to all boards and tasks.
+        </p>
+        
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={async () => {
+              setSubmitting(true);
+              await onConfirm();
+              setSubmitting(false);
+            }}
+            className="inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50 dark:bg-red-500 dark:hover:bg-red-600"
+          >
+            {submitting ? "Removing..." : "Remove"}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 export default function TeamPage() {
   const {
     workspaces,
@@ -135,13 +198,14 @@ export default function TeamPage() {
     setSelectedWorkspaceId,
   } = useBoardData();
 
-  const { members, currentRole, loading, errorMsg, invite, updateRole } = useWorkspaceMembers(selectedWorkspaceId);
+  const { members, currentRole, loading, errorMsg, invite, updateRole, remove } = useWorkspaceMembers(selectedWorkspaceId);
 
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [optimisticRoles, setOptimisticRoles] = useState<Record<string, WorkspaceRole>>({});
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+  const [memberToRemove, setMemberToRemove] = useState<{ id: string; user_id: string; display_name: string; email: string } | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -192,6 +256,11 @@ export default function TeamPage() {
     return false;
   };
 
+  const canRemoveMember = (targetRole: WorkspaceRole, targetEmail: string) => {
+    // Same logic as editing role
+    return canEditRole(targetRole, targetEmail);
+  };
+
   const getAvailableRoles = () => {
     if (currentRole === "owner") return ["admin", "member", "viewer"];
     if (currentRole === "admin") return ["member", "viewer"];
@@ -212,6 +281,16 @@ export default function TeamPage() {
         delete next[userId];
         return next;
       });
+    }
+  };
+
+  const handleRemoveMember = async () => {
+    if (!memberToRemove) return;
+    const res = await remove(memberToRemove.user_id);
+    if (!res.ok) {
+      alert(res.error || "Failed to remove member");
+    } else {
+      setMemberToRemove(null);
     }
   };
 
@@ -328,6 +407,9 @@ export default function TeamPage() {
                 <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                   Joined
                 </th>
+                <th className="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -398,6 +480,19 @@ export default function TeamPage() {
                       })}
                     </span>
                   </td>
+                  <td className="px-6 py-4 align-middle text-right">
+                    {canRemoveMember(member.role, member.email) && (
+                      <button
+                        onClick={() => setMemberToRemove(member)}
+                        className="text-zinc-400 transition-colors hover:text-red-500 dark:text-zinc-500 dark:hover:text-red-400 p-1"
+                        title="Remove member"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                        </svg>
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -408,6 +503,13 @@ export default function TeamPage() {
         <InviteModal 
           onClose={() => setIsInviteModalOpen(false)} 
           onInvite={invite} 
+        />
+      )}
+      {mounted && memberToRemove && (
+        <RemoveModal
+          member={memberToRemove}
+          onClose={() => setMemberToRemove(null)}
+          onConfirm={handleRemoveMember}
         />
       )}
     </div>
