@@ -18,15 +18,18 @@ export function useWorkspaceMembers(workspaceId: string | null) {
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
   const [currentRole, setCurrentRole] = useState<WorkspaceRole | null>(null);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const fetchMembers = useCallback(async () => {
     if (!workspaceId) {
       setMembers([]);
       setCurrentRole(null);
+      setErrorMsg(null);
       return;
     }
 
     setLoading(true);
+    setErrorMsg(null);
     const supabase = createClient();
 
     const {
@@ -39,10 +42,16 @@ export function useWorkspaceMembers(workspaceId: string | null) {
       return;
     }
 
-    const { data: memberRows } = await supabase
+    const { data: memberRows, error: memberError } = await supabase
       .from("workspace_members")
       .select("*")
       .eq("workspace_id", workspaceId);
+
+    if (memberError) {
+      setErrorMsg(memberError.message);
+      setLoading(false);
+      return;
+    }
 
     if (!memberRows || memberRows.length === 0) {
       setMembers([]);
@@ -52,10 +61,16 @@ export function useWorkspaceMembers(workspaceId: string | null) {
     }
 
     const userIds = memberRows.map((m) => m.user_id);
-    const { data: profileRows } = await supabase
+    const { data: profileRows, error: profileError } = await supabase
       .from("profiles")
       .select("*")
       .in("id", userIds);
+
+    if (profileError) {
+      setErrorMsg(profileError.message);
+      setLoading(false);
+      return;
+    }
 
     const profileMap = new Map((profileRows ?? []).map((p) => [p.id, p]));
 
@@ -245,6 +260,7 @@ export function useWorkspaceMembers(workspaceId: string | null) {
     members,
     currentRole,
     loading,
+    errorMsg,
     refresh: fetchMembers,
     invite,
     remove,
