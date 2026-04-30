@@ -2,9 +2,10 @@
 
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import { useBoardData } from "@/hooks/useBoardData";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
-import type { Task, List } from "@/types/database";
+import type { Task, List, Board } from "@/types/database";
 import type { MemberWithProfile } from "@/hooks/useWorkspaceMembers";
 
 // ---------------------------------------------------------------------------
@@ -119,12 +120,12 @@ function TaskChip({
   task,
   list,
   assignee,
-  onNavigate,
+  onPreview,
 }: {
   task: Task;
   list: List | undefined;
   assignee: MemberWithProfile | null;
-  onNavigate: () => void;
+  onPreview: () => void;
 }) {
   const listTitle = list?.title ?? "";
   const listColor = list?.color || LIST_COLOR_DEFAULTS[listTitle] || "#a1a1aa";
@@ -132,7 +133,7 @@ function TaskChip({
 
   return (
     <button
-      onClick={onNavigate}
+      onClick={onPreview}
       title={task.title}
       className={`group w-full flex items-center gap-1 rounded px-1.5 py-[3px] text-[11px] font-medium leading-tight truncate transition-colors text-left cursor-pointer
         ${done
@@ -140,14 +141,8 @@ function TaskChip({
           : "bg-white text-zinc-700 hover:bg-blue-50 hover:text-blue-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-blue-950/40 dark:hover:text-blue-300"
         } border border-zinc-200/80 dark:border-zinc-700/60`}
     >
-      {/* Status dot */}
-      <span
-        className="shrink-0 h-1.5 w-1.5 rounded-full"
-        style={{ backgroundColor: done ? "#a1a1aa" : listColor }}
-      />
-      {/* Title */}
+      <span className="shrink-0 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: done ? "#a1a1aa" : listColor }} />
       <span className="truncate">{task.title}</span>
-      {/* Assignee avatar */}
       {assignee && (
         <span
           className="shrink-0 ml-auto inline-flex h-4 w-4 items-center justify-center rounded-full bg-zinc-200 text-[8px] font-semibold text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300"
@@ -171,8 +166,7 @@ function CalendarCell({
   tasks,
   listMap,
   memberMap,
-  boardId,
-  onNavigateToTask,
+  onPreviewTask,
 }: {
   date: Date;
   isCurrentMonth: boolean;
@@ -181,7 +175,7 @@ function CalendarCell({
   listMap: Map<string, List>;
   memberMap: Map<string, MemberWithProfile>;
   boardId: string | null;
-  onNavigateToTask: (taskId: string) => void;
+  onPreviewTask: (task: Task) => void;
 }) {
   const visible = tasks.slice(0, MAX_VISIBLE);
   const overflow = tasks.length - MAX_VISIBLE;
@@ -225,7 +219,7 @@ function CalendarCell({
             task={task}
             list={listMap.get(task.list_id)}
             assignee={task.assignee_id ? memberMap.get(task.assignee_id) ?? null : null}
-            onNavigate={() => onNavigateToTask(task.id)}
+            onPreview={() => onPreviewTask(task)}
           />
         ))}
         {overflow > 0 && (
@@ -235,6 +229,164 @@ function CalendarCell({
         )}
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// TaskPreviewModal — portal overlay showing task details
+// ---------------------------------------------------------------------------
+
+const PRIORITY_LABEL: Record<string, string> = {
+  none: "None", low: "Low", medium: "Medium", high: "High",
+};
+const PRIORITY_COLOR: Record<string, string> = {
+  none: "text-zinc-400", low: "text-blue-500", medium: "text-amber-500", high: "text-red-500",
+};
+
+function TaskPreviewModal({
+  task,
+  list,
+  assignee,
+  board,
+  onClose,
+  onOpenInBoard,
+}: {
+  task: Task;
+  list: List | undefined;
+  assignee: MemberWithProfile | null;
+  board: Board | undefined;
+  onClose: () => void;
+  onOpenInBoard: (taskId: string) => void;
+}) {
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const listTitle = list?.title ?? "—";
+  const displayTitle = listTitle === "Done" ? "Completed" : listTitle;
+  const listColor = list?.color || LIST_COLOR_DEFAULTS[listTitle] || "#a1a1aa";
+  const done = task.is_completed || isCompletedListTitle(listTitle);
+
+  // Format due date — deterministic (pure string split, no locale)
+  let dueDateDisplay = "—";
+  if (task.due_date) {
+    const [y, m, d] = task.due_date.slice(0, 10).split("-").map(Number);
+    dueDateDisplay = `${MONTH_NAMES[m - 1]} ${d}, ${y}`;
+  }
+
+  const priority = task.priority ?? "none";
+
+  return createPortal(
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-[200] bg-black/30 backdrop-blur-[2px]"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      {/* Panel */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={task.title}
+        className="fixed z-[201] inset-y-0 right-0 w-full max-w-sm flex flex-col bg-white dark:bg-zinc-900 shadow-2xl border-l border-zinc-200 dark:border-zinc-700"
+        style={{ animation: "panel-in 0.22s ease-out" }}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-4 border-b border-zinc-100 dark:border-zinc-800">
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1">Task</p>
+            <h2 className={`text-base font-semibold leading-snug ${
+              done ? "line-through text-zinc-400 dark:text-zinc-500" : "text-zinc-900 dark:text-zinc-100"
+            }`}>{task.title}</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="shrink-0 mt-0.5 flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 transition-colors dark:hover:bg-zinc-800 dark:hover:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600"
+            aria-label="Close preview"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          {/* Description */}
+          {task.description && (
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1">Description</p>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed whitespace-pre-wrap">{task.description}</p>
+            </div>
+          )}
+
+          {/* Meta grid */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Status */}
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1">Status</p>
+              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: listColor }} />
+                {displayTitle}
+              </span>
+            </div>
+
+            {/* Priority */}
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1">Priority</p>
+              <span className={`text-sm font-medium ${PRIORITY_COLOR[priority] ?? "text-zinc-400"}`}>
+                {PRIORITY_LABEL[priority] ?? "—"}
+              </span>
+            </div>
+
+            {/* Due date */}
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1">Due Date</p>
+              <span className="text-sm text-zinc-700 dark:text-zinc-300">{dueDateDisplay}</span>
+            </div>
+
+            {/* Board */}
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1">Board</p>
+              <span className="text-sm text-zinc-700 dark:text-zinc-300 truncate">{board?.title ?? "—"}</span>
+            </div>
+          </div>
+
+          {/* Assignee */}
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1">Assignee</p>
+            {assignee ? (
+              <span className="inline-flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-zinc-200 text-[9px] font-semibold text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
+                  {getInitials(assignee.email, assignee.display_name)}
+                </span>
+                {assignee.display_name || assignee.email}
+              </span>
+            ) : (
+              <span className="text-sm text-zinc-400 dark:text-zinc-500">Unassigned</span>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 border-t border-zinc-100 dark:border-zinc-800">
+          <button
+            onClick={() => { onClose(); onOpenInBoard(task.id); }}
+            className="w-full flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-600"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+            </svg>
+            Open in Board
+          </button>
+        </div>
+      </div>
+    </>,
+    document.body
   );
 }
 
@@ -292,6 +444,11 @@ export default function CalendarPage() {
   // The first render must be identical between server and client.
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
+
+  // ── Task preview state ──────────────────────────────────────────────────
+  const [previewTask, setPreviewTask] = useState<Task | null>(null);
+  const openPreview = useCallback((task: Task) => setPreviewTask(task), []);
+  const closePreview = useCallback(() => setPreviewTask(null), []);
 
   // ── Router for calendar → board navigation ─────────────────────────────
   const router = useRouter();
@@ -551,7 +708,7 @@ export default function CalendarPage() {
                         listMap={listMap}
                         memberMap={memberMap}
                         boardId={selectedBoardId}
-                        onNavigateToTask={navigateToTask}
+                        onPreviewTask={openPreview}
                       />
                     );
                   })}
@@ -571,6 +728,23 @@ export default function CalendarPage() {
           )}
         </>
       )}
+
+      {/* ── Task preview modal — rendered into document.body via portal ── */}
+      {mounted && previewTask && (() => {
+        const previewList = listMap.get(previewTask.list_id);
+        const previewAssignee = previewTask.assignee_id ? memberMap.get(previewTask.assignee_id) ?? null : null;
+        const previewBoard = boards.find((b) => b.id === selectedBoardId);
+        return (
+          <TaskPreviewModal
+            task={previewTask}
+            list={previewList}
+            assignee={previewAssignee}
+            board={previewBoard}
+            onClose={closePreview}
+            onOpenInBoard={navigateToTask}
+          />
+        );
+      })()}
     </div>
   );
 }
