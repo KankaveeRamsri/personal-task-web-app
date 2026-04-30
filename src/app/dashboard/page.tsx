@@ -76,6 +76,7 @@ function formatActivityLine(a: Activity): string {
   const name = a.actor_display_name || a.actor_email || "Someone";
   const m = a.metadata ?? {};
   const title = (m.task_title as string) ?? "a task";
+  const targetName = (m.target_user_name as string) ?? (m.target_user_email as string) ?? "someone";
   const fmt = (col: string) => col === "Done" ? "Completed" : col;
 
   switch (a.action) {
@@ -97,8 +98,14 @@ function formatActivityLine(a: Activity): string {
       return `${name} moved ${m.count} task${(m.count as number) > 1 ? "s" : ""} to ${fmt((m.to as string) ?? "")}`;
     case "bulk_deleted":
       return `${name} deleted ${m.count} task${(m.count as number) > 1 ? "s" : ""}`;
+    case "invited":
+      return `${name} invited ${targetName} to team`;
+    case "role_changed":
+      return `${name} changed role of ${targetName} to ${m.new_role}`;
+    case "removed":
+      return `${name} removed ${targetName} from team`;
     default:
-      return `${name} ${a.action}`;
+      return `${name} ${a.action.replace(/_/g, " ")}`;
   }
 }
 
@@ -123,6 +130,9 @@ const actionIcon: Record<string, string> = {
   task_deleted: "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400",
   bulk_moved: "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400",
   bulk_deleted: "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400",
+  invited: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400",
+  role_changed: "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400",
+  removed: "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400",
 };
 
 // ── Dashboard Page ───────────────────────────────────────────────
@@ -341,6 +351,42 @@ export default function DashboardPage() {
       color: listColorMap.get(l.title) ?? "bg-zinc-400",
     }));
   }, [lists, tasksByListTitle, totalTasks, listColorMap]);
+
+  const groupedActivities = useMemo(() => {
+    const today = getLocalDate(new Date());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const groups: { title: string; items: Activity[] }[] = [
+      { title: "Today", items: [] },
+      { title: "Yesterday", items: [] },
+      { title: "Earlier", items: [] },
+    ];
+
+    activities.slice(0, 10).forEach((a) => {
+      const d = getLocalDate(new Date(a.created_at));
+      if (d.getTime() === today.getTime()) {
+        groups[0].items.push(a);
+      } else if (d.getTime() === yesterday.getTime()) {
+        groups[1].items.push(a);
+      } else {
+        groups[2].items.push(a);
+      }
+    });
+
+    return groups.filter((g) => g.items.length > 0);
+  }, [activities]);
+
+  const getActivityLink = (a: Activity) => {
+    const m = a.metadata ?? {};
+    if (["invited", "role_changed", "removed"].includes(a.action)) {
+      return "/dashboard/team";
+    }
+    if (m.task_id && m.board_id) {
+      return `/dashboard/board?boardId=${m.board_id}&taskId=${m.task_id}`;
+    }
+    return null;
+  };
 
   // ── Loading ──────────────────────────────────────────────────
 
@@ -808,36 +854,55 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Recent Activity */}
+          {/* Activity Timeline */}
           <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                Recent Activity
+                Activity Timeline
               </h2>
-              {activities.length > 0 && (
-                <span className="text-xs text-zinc-400 dark:text-zinc-400">
-                  Latest {activities.length}
-                </span>
-              )}
             </div>
-            {activities.length > 0 ? (
-              <ul className="space-y-2.5 max-h-72 overflow-y-auto">
-                {activities.map((a) => (
-                  <li key={a.id} className="flex items-start gap-3">
-                    <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${actionIcon[a.action] ?? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
-                      {(a.actor_display_name || a.actor_email || "?").slice(0, 1).toUpperCase()}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13px] leading-snug text-zinc-700 dark:text-zinc-300">
-                        {formatActivityLine(a)}
-                      </p>
-                      <p className="mt-0.5 text-[11px] text-zinc-400 dark:text-zinc-400">
-                        {timeAgo(a.created_at)}
-                      </p>
-                    </div>
-                  </li>
+            {groupedActivities.length > 0 ? (
+              <div className="space-y-6 max-h-[500px] overflow-y-auto pr-1">
+                {groupedActivities.map((group) => (
+                  <div key={group.title} className="space-y-3">
+                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 border-b border-zinc-50 dark:border-zinc-800 pb-1">
+                      {group.title}
+                    </h3>
+                    <ul className="space-y-4">
+                      {group.items.map((a) => {
+                        const link = getActivityLink(a);
+                        const Content = (
+                          <div className="flex items-start gap-3">
+                            <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold transition-transform group-hover:scale-110 ${actionIcon[a.action] ?? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
+                              {(a.actor_display_name || a.actor_email || "?").slice(0, 1).toUpperCase()}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[13px] leading-snug text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-colors">
+                                {formatActivityLine(a)}
+                              </p>
+                              <p className="mt-1 text-[11px] text-zinc-400 dark:text-zinc-500">
+                                {timeAgo(a.created_at)}
+                              </p>
+                            </div>
+                          </div>
+                        );
+
+                        return (
+                          <li key={a.id} className="group">
+                            {link ? (
+                              <Link href={link} className="block cursor-pointer">
+                                {Content}
+                              </Link>
+                            ) : (
+                              Content
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
                 ))}
-              </ul>
+              </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-6 text-center">
                 <p className="text-sm text-zinc-400 dark:text-zinc-400">
