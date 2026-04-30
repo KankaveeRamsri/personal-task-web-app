@@ -434,22 +434,22 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8">
+    <div className="mx-auto max-w-7xl space-y-6 sm:space-y-8 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
       {/* ── A. Welcome Section ──────────────────────────────── */}
-      <section className="flex items-start justify-between gap-4 border-b border-zinc-100 dark:border-zinc-800 pb-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+      <section className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 border-b border-zinc-100 dark:border-zinc-800 pb-6">
+        <div className="space-y-1">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
             {getGreeting()}, {displayName}
           </h1>
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-            <span>{formatDate()}</span>
+          <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
+            <span className="whitespace-nowrap">{formatDate()}</span>
             {workspaces.length > 0 && selectedWorkspaceId && (
-              <>
-                <span className="text-zinc-300 dark:text-zinc-700">&middot;</span>
+              <div className="flex items-center gap-2">
+                <span className="hidden sm:inline text-zinc-300 dark:text-zinc-700">&middot;</span>
                 <select
                   value={selectedWorkspaceId ?? ""}
                   onChange={(e) => setSelectedWorkspaceId(e.target.value)}
-                  className="rounded-md border border-zinc-200 bg-transparent px-2 py-0.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:focus:ring-zinc-600"
+                  className="rounded-md border border-zinc-200 bg-transparent px-2 py-0.5 text-xs sm:text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:focus:ring-zinc-600"
                 >
                   {workspaces.map((ws) => (
                     <option key={ws.id} value={ws.id}>
@@ -457,15 +457,15 @@ export default function DashboardPage() {
                     </option>
                   ))}
                 </select>
-              </>
+              </div>
             )}
             {selectedWorkspaceId && boards.length > 0 && selectedBoardId && (
-              <>
+              <div className="flex items-center gap-2">
                 <span className="text-zinc-300 dark:text-zinc-700">/</span>
                 <select
                   value={selectedBoardId ?? ""}
                   onChange={(e) => setSelectedBoardId(e.target.value)}
-                  className="rounded-md border border-zinc-200 bg-transparent px-2 py-0.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:focus:ring-zinc-600"
+                  className="rounded-md border border-zinc-200 bg-transparent px-2 py-0.5 text-xs sm:text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:focus:ring-zinc-600"
                 >
                   {boards.map((b) => (
                     <option key={b.id} value={b.id}>
@@ -473,11 +473,11 @@ export default function DashboardPage() {
                     </option>
                   ))}
                 </select>
-              </>
+              </div>
             )}
           </div>
         </div>
-        <div className="hidden sm:flex items-center">
+        <div className="flex items-center self-start">
           {members.slice(0, 4).map((m, i) => {
             const name = m.display_name || m.email;
             const initials = name.split(/[\s._-]+/).map(w => w[0]).join("").slice(0, 2).toUpperCase() || name[0]?.toUpperCase() || "?";
@@ -486,7 +486,7 @@ export default function DashboardPage() {
               <div
                 key={m.user_id}
                 title={`${m.display_name || m.email}${m.role !== "member" ? ` (${m.role})` : ""}`}
-                className={`flex h-8 w-8 items-center justify-center rounded-full ${colors[i % colors.length]} text-[11px] font-semibold text-white ring-2 ring-white dark:ring-zinc-950 transition-transform hover:scale-110 hover:z-10 cursor-default ${i > 0 ? "-ml-2" : ""}`}
+                className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full ${colors[i % colors.length]} text-[10px] sm:text-[11px] font-semibold text-white ring-2 ring-white dark:ring-zinc-950 transition-transform hover:scale-110 hover:z-10 cursor-default ${i > 0 ? "-ml-2" : ""}`}
               >
                 {initials}
               </div>
@@ -495,16 +495,16 @@ export default function DashboardPage() {
           {members.length > 4 && (
             <div
               title={`${members.length - 4} more member${members.length - 4 > 1 ? "s" : ""}`}
-              className="flex h-8 w-8 -ml-2 items-center justify-center rounded-full bg-zinc-200 text-[11px] font-semibold text-zinc-600 ring-2 ring-white dark:bg-zinc-700 dark:text-zinc-300 dark:ring-zinc-950 transition-transform hover:scale-110 hover:z-10 cursor-default"
+              className="flex h-7 w-7 sm:h-8 sm:w-8 -ml-2 items-center justify-center rounded-full bg-zinc-200 text-[10px] sm:text-[11px] font-semibold text-zinc-600 ring-2 ring-white dark:bg-zinc-700 dark:text-zinc-300 dark:ring-zinc-950 transition-transform hover:scale-110 hover:z-10 cursor-default"
             >
               +{members.length - 4}
             </div>
           )}
           <button
             title="Invite members"
-            className="flex h-8 w-8 -ml-2 items-center justify-center rounded-full border-2 border-dashed border-zinc-300 text-zinc-400 ring-2 ring-white transition-all hover:scale-110 hover:border-zinc-400 hover:text-zinc-600 dark:border-zinc-600 dark:text-zinc-500 dark:ring-zinc-950 dark:hover:border-zinc-400 dark:hover:text-zinc-300"
+            className="flex h-7 w-7 sm:h-8 sm:w-8 -ml-2 items-center justify-center rounded-full border-2 border-dashed border-zinc-300 text-zinc-400 ring-2 ring-white transition-all hover:scale-110 hover:border-zinc-400 hover:text-zinc-600 dark:border-zinc-600 dark:text-zinc-500 dark:ring-zinc-950 dark:hover:border-zinc-400 dark:hover:text-zinc-300"
           >
-            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <svg className="h-3 sm:h-3.5 w-3 sm:w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
           </button>
@@ -512,24 +512,24 @@ export default function DashboardPage() {
       </section>
 
       {/* ── 0. Focus Today Section (Control Panel) ────────── */}
-      <section className="rounded-2xl border-2 border-dashed border-zinc-200/60 bg-zinc-50/30 p-6 dark:border-zinc-800/60 dark:bg-zinc-900/20">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-          <div>
+      <section className="rounded-2xl border-2 border-dashed border-zinc-200/60 bg-zinc-50/30 p-4 sm:p-6 dark:border-zinc-800/60 dark:bg-zinc-900/20">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
+          <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-xl">🔥</span>
-              <h2 className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Focus Today</h2>
+              <span className="text-lg sm:text-xl">🔥</span>
+              <h2 className="text-base sm:text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Focus Today</h2>
             </div>
-            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
               {dueTodayTasks.length} tasks due today &bull; {overdueCount} overdue
             </p>
           </div>
 
-          <div className="flex flex-1 max-w-md flex-col gap-2">
-            <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-zinc-400">
+          <div className="flex flex-1 max-w-full lg:max-w-md flex-col gap-2">
+            <div className="flex items-center justify-between text-[10px] sm:text-xs font-bold uppercase tracking-wider text-zinc-400">
               <span>Progress</span>
               <span>{completedTodayCount} / {totalTodayCount} completed</span>
             </div>
-            <div className="h-2 w-full rounded-full bg-zinc-200/50 dark:bg-zinc-800/50 overflow-hidden">
+            <div className="h-1.5 sm:h-2 w-full rounded-full bg-zinc-200/50 dark:bg-zinc-800/50 overflow-hidden">
               <div 
                 className="h-full bg-zinc-900 dark:bg-zinc-100 transition-all duration-500 ease-out"
                 style={{ width: `${totalTodayCount > 0 ? (completedTodayCount / totalTodayCount) * 100 : 0}%` }}
@@ -537,16 +537,16 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:self-end lg:self-center">
             <button 
               onClick={() => console.log("Complete all today")}
-              className="px-4 py-2 text-xs font-bold bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-lg hover:opacity-90 transition-opacity active:scale-95"
+              className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-[11px] sm:text-xs font-bold bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-lg hover:opacity-90 transition-opacity active:scale-95"
             >
-              Complete All Today
+              Complete All
             </button>
             <button 
               onClick={() => console.log("Start focus mode")}
-              className="px-4 py-2 text-xs font-bold border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors active:scale-95"
+              className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-[11px] sm:text-xs font-bold border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors active:scale-95"
             >
               Start Focus
             </button>
@@ -645,7 +645,7 @@ export default function DashboardPage() {
       </section>
 
       {/* ── B. Summary Cards ────────────────────────────────── */}
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {statCards.map((card) => (
           <div
             key={card.label}
@@ -689,9 +689,9 @@ export default function DashboardPage() {
       </section>
 
       {/* ── C. Main Content — 2 columns ─────────────────────── */}
-      <section className="grid gap-6 lg:grid-cols-5">
+      <section className="grid gap-6 lg:grid-cols-5 items-start">
         {/* Left: Priority Tasks (2/5 width) */}
-        <div className="lg:col-span-2 rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="lg:col-span-2 rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
           <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
             <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
               Priority Tasks
@@ -786,11 +786,11 @@ export default function DashboardPage() {
           </div>
 
           {/* Smart Quick actions */}
-          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 sm:p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4 px-1">
               Smart Quick Actions
             </h2>
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-2">
               <Link
                 href="/dashboard/board"
                 className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-zinc-900/10 transition-all hover:-translate-y-0.5 hover:bg-zinc-800 active:scale-95 active:translate-y-0 dark:bg-zinc-100 dark:text-zinc-900 dark:shadow-none dark:hover:bg-zinc-200"
@@ -807,7 +807,7 @@ export default function DashboardPage() {
                   className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-red-200 bg-red-50/50 px-4 py-2.5 text-sm font-semibold text-red-700 transition-all hover:bg-red-50 hover:border-red-300 active:scale-95 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/20"
                 >
                   <span className="text-base">⚠️</span>
-                  Fix Overdue Tasks
+                  Fix Overdue
                 </Link>
               )}
 
@@ -930,14 +930,14 @@ export default function DashboardPage() {
           </div>
 
           {/* Activity Timeline */}
-          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="flex items-center justify-between mb-4">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 sm:p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
+            <div className="flex items-center justify-between mb-4 px-1">
               <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                 Activity Timeline
               </h2>
             </div>
             {groupedActivities.length > 0 ? (
-              <div className="space-y-6 max-h-[500px] overflow-y-auto pr-1">
+              <div className="space-y-6 max-h-[400px] lg:max-h-[500px] overflow-y-auto pr-1">
                 {groupedActivities.map((group) => (
                   <div key={group.title} className="space-y-3">
                     <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 border-b border-zinc-50 dark:border-zinc-800 pb-1">
