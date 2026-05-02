@@ -600,68 +600,70 @@ export default function DashboardPage() {
         {/* LEFT: Focus Today + Priority Tasks */}
         <div className="space-y-6">
           {/* Focus Today */}
-          <section className="rounded-2xl border-2 border-dashed border-zinc-200/60 bg-zinc-50/30 p-4 sm:p-6 dark:border-zinc-800/60 dark:bg-zinc-900/20">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
+          <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            {/* Header: title + buttons */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-lg sm:text-xl">🔥</span>
-                  <h2 className="text-base sm:text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Focus Today</h2>
+                  <span className="text-lg">🔥</span>
+                  <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Focus Today</h2>
                 </div>
-                <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
-                  {dueTodayTasks.length} tasks due today &bull; {overdueCount} overdue
+                <p className="text-xs text-zinc-400 dark:text-zinc-500 pl-7">
+                  {dueTodayTasks.length} due today &bull; {overdueCount} overdue
                 </p>
               </div>
-
-              <div className="flex flex-1 max-w-full lg:max-w-md flex-col gap-2">
-                <div className="flex items-center justify-between text-[10px] sm:text-xs font-bold uppercase tracking-wider text-zinc-400">
-                  <span>Progress</span>
-                  <span>{completedTodayCount} / {totalTodayCount} completed</span>
-                </div>
-                <div className="h-1.5 sm:h-2 w-full rounded-full bg-zinc-200/50 dark:bg-zinc-800/50 overflow-hidden">
-                  <div
-                    className="h-full bg-zinc-900 dark:bg-zinc-100 transition-all duration-500 ease-out"
-                    style={{ width: `${totalTodayCount > 0 ? (completedTodayCount / totalTodayCount) * 100 : 0}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 sm:self-end lg:self-center">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => console.log("Complete all today")}
-                  className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-[11px] sm:text-xs font-bold bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-lg hover:opacity-90 transition-opacity active:scale-95"
+                  className="px-3 py-1.5 text-xs font-semibold bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-lg hover:opacity-90 transition-opacity active:scale-95"
                 >
                   Complete All
                 </button>
                 <button
                   onClick={() => console.log("Start focus mode")}
-                  className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-[11px] sm:text-xs font-bold border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors active:scale-95"
+                  className="px-3 py-1.5 text-xs font-semibold border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors active:scale-95"
                 >
                   Start Focus
                 </button>
               </div>
             </div>
 
+            {/* Progress */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1.5">
+                <span>Progress</span>
+                <span>{completedTodayCount} / {totalTodayCount} completed</span>
+              </div>
+              <div className="h-1.5 w-full rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                <div
+                  className="h-full bg-zinc-900 dark:bg-zinc-100 transition-all duration-500 ease-out"
+                  style={{ width: `${totalTodayCount > 0 ? (completedTodayCount / totalTodayCount) * 100 : 0}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Task groups */}
             {overdueCount === 0 && dueTodayTasks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center bg-white/50 dark:bg-zinc-900/50 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
-                <span className="text-3xl mb-3">🎉</span>
-                <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">You&apos;re all caught up</p>
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">No urgent tasks for today.</p>
+              <div className="flex flex-col items-center justify-center py-6 text-center">
+                <span className="text-2xl mb-2">🎉</span>
+                <p className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">You&apos;re all caught up</p>
+                <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">No urgent tasks for today.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {/* Overdue Block */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 px-1">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
                     <h3 className="text-xs font-bold uppercase tracking-wider text-red-500/80">Overdue</h3>
-                    <span className="text-xs font-medium text-zinc-400">({overdueCount})</span>
+                    <span className="text-xs text-zinc-400">({overdueCount})</span>
                   </div>
                   <div className="space-y-2">
                     {overdueTasks.slice(0, 3).map((task) => (
                       <Link
                         key={task.id}
                         href={`/dashboard/board?boardId=${listBoardMap.get(task.list_id)}&taskId=${task.id}`}
-                        className="group flex items-center justify-between rounded-xl border border-red-100 bg-white p-3.5 shadow-sm transition-all hover:border-red-200 hover:shadow-md dark:border-red-900/20 dark:bg-zinc-900"
+                        className="group flex items-center justify-between rounded-lg border border-red-100 bg-white p-3 shadow-sm transition-all hover:border-red-200 hover:shadow-md dark:border-red-900/20 dark:bg-zinc-900"
                       >
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-semibold text-zinc-800 dark:text-zinc-200 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
@@ -682,26 +684,24 @@ export default function DashboardPage() {
                       </Link>
                     )}
                     {overdueCount === 0 && (
-                      <div className="py-8 text-center bg-zinc-50/50 dark:bg-zinc-800/20 rounded-xl border border-zinc-100 dark:border-zinc-800/50">
-                        <p className="text-xs font-medium text-zinc-400 italic">No overdue tasks</p>
-                      </div>
+                      <p className="py-3 text-center text-xs text-zinc-400 dark:text-zinc-500 italic">No overdue tasks</p>
                     )}
                   </div>
                 </div>
 
                 {/* Due Today Block */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 px-1">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-orange-500" />
                     <h3 className="text-xs font-bold uppercase tracking-wider text-orange-500/80">Due Today</h3>
-                    <span className="text-xs font-medium text-zinc-400">({dueTodayTasks.length})</span>
+                    <span className="text-xs text-zinc-400">({dueTodayTasks.length})</span>
                   </div>
                   <div className="space-y-2">
                     {dueTodayTasks.slice(0, 3).map((task) => (
                       <Link
                         key={task.id}
                         href={`/dashboard/board?boardId=${listBoardMap.get(task.list_id)}&taskId=${task.id}`}
-                        className="group flex items-center justify-between rounded-xl border border-orange-100 bg-white p-3.5 shadow-sm transition-all hover:border-orange-200 hover:shadow-md dark:border-orange-900/20 dark:bg-zinc-900"
+                        className="group flex items-center justify-between rounded-lg border border-orange-100 bg-white p-3 shadow-sm transition-all hover:border-orange-200 hover:shadow-md dark:border-orange-900/20 dark:bg-zinc-900"
                       >
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-semibold text-zinc-800 dark:text-zinc-200 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
@@ -722,9 +722,7 @@ export default function DashboardPage() {
                       </Link>
                     )}
                     {dueTodayTasks.length === 0 && (
-                      <div className="py-8 text-center bg-zinc-50/50 dark:bg-zinc-800/20 rounded-xl border border-zinc-100 dark:border-zinc-800/50">
-                        <p className="text-xs font-medium text-zinc-400 italic">Nothing due today</p>
-                      </div>
+                      <p className="py-3 text-center text-xs text-zinc-400 dark:text-zinc-500 italic">Nothing due today</p>
                     )}
                   </div>
                 </div>
