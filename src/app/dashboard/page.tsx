@@ -595,426 +595,381 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* ── 4. Two-Column Grid ──────────────────────────────── */}
-      <section className="grid gap-5 lg:grid-cols-2 items-start">
-        {/* 1. Focus Today */}
-        <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          {/* Header: title + buttons */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-            <div className="space-y-1">
+      {/* ── 4. Two-Column Dashboard ────────────────────────── */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {/* ── LEFT COLUMN ──────────────────────────────────── */}
+        <div className="flex flex-col gap-6">
+
+          {/* L1. Focus Today */}
+          <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">🔥</span>
+                  <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Focus Today</h2>
+                </div>
+                <p className="text-xs text-zinc-400 dark:text-zinc-500 pl-7">
+                  {dueTodayTasks.length} due today &bull; {overdueCount} overdue
+                </p>
+              </div>
               <div className="flex items-center gap-2">
-                <span className="text-lg">🔥</span>
-                <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Focus Today</h2>
-              </div>
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 pl-7">
-                {dueTodayTasks.length} due today &bull; {overdueCount} overdue
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => console.log("Complete all today")}
-                className="px-3 py-1.5 text-xs font-semibold bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-lg hover:opacity-90 transition-opacity active:scale-95"
-              >
-                Complete All
-              </button>
-              <button
-                onClick={() => console.log("Start focus mode")}
-                className="px-3 py-1.5 text-xs font-semibold border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors active:scale-95"
-              >
-                Start Focus
-              </button>
-            </div>
-          </div>
-
-          {/* Progress */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1.5">
-              <span>Progress</span>
-              <span>{completedTodayCount} / {totalTodayCount} completed</span>
-            </div>
-            <div className="h-1.5 w-full rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
-              <div
-                className="h-full bg-zinc-900 dark:bg-zinc-100 transition-all duration-500 ease-out"
-                style={{ width: `${totalTodayCount > 0 ? (completedTodayCount / totalTodayCount) * 100 : 0}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Task groups */}
-          {overdueCount === 0 && dueTodayTasks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-6 text-center">
-              <span className="text-2xl mb-2">🎉</span>
-              <p className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">You&apos;re all caught up</p>
-              <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">No urgent tasks for today.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Overdue Block */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-red-500/80">Overdue</h3>
-                  <span className="text-xs text-zinc-400">({overdueCount})</span>
-                </div>
-                <div className="space-y-2">
-                  {overdueTasks.slice(0, 3).map((task) => (
-                    <Link
-                      key={task.id}
-                      href={`/dashboard/board?boardId=${listBoardMap.get(task.list_id)}&taskId=${task.id}`}
-                      className="group flex items-center justify-between rounded-lg border border-red-100 bg-white p-3 shadow-sm transition-all hover:border-red-200 hover:shadow-md dark:border-red-900/20 dark:bg-zinc-900"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-zinc-800 dark:text-zinc-200 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
-                          {task.title}
-                        </p>
-                        <p className="text-[10px] text-zinc-400 mt-1 font-medium">
-                          {listTitleMap.get(task.list_id) || "Task"} &middot; {new Date(task.due_date!).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                        </p>
-                      </div>
-                      <svg className="h-4 w-4 text-zinc-300 group-hover:text-red-400 transition-colors transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                      </svg>
-                    </Link>
-                  ))}
-                  {overdueCount > 3 && (
-                    <Link href="/dashboard/tasks" className="block text-center text-[11px] font-bold text-red-500/60 hover:text-red-500 transition-colors py-1">
-                      View all {overdueCount} overdue &rarr;
-                    </Link>
-                  )}
-                  {overdueCount === 0 && (
-                    <p className="py-3 text-center text-xs text-zinc-400 dark:text-zinc-500 italic">No overdue tasks</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Due Today Block */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-orange-500" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-orange-500/80">Due Today</h3>
-                  <span className="text-xs text-zinc-400">({dueTodayTasks.length})</span>
-                </div>
-                <div className="space-y-2">
-                  {dueTodayTasks.slice(0, 3).map((task) => (
-                    <Link
-                      key={task.id}
-                      href={`/dashboard/board?boardId=${listBoardMap.get(task.list_id)}&taskId=${task.id}`}
-                      className="group flex items-center justify-between rounded-lg border border-orange-100 bg-white p-3 shadow-sm transition-all hover:border-orange-200 hover:shadow-md dark:border-orange-900/20 dark:bg-zinc-900"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-zinc-800 dark:text-zinc-200 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
-                          {task.title}
-                        </p>
-                        <p className="text-[10px] text-zinc-400 mt-1 font-medium">
-                          {listTitleMap.get(task.list_id) || "Task"} &middot; Today
-                        </p>
-                      </div>
-                      <svg className="h-4 w-4 text-zinc-300 group-hover:text-orange-400 transition-colors transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                      </svg>
-                    </Link>
-                  ))}
-                  {dueTodayTasks.length > 3 && (
-                    <Link href="/dashboard/tasks" className="block text-center text-[11px] font-bold text-orange-500/60 hover:text-orange-500 transition-colors py-1">
-                      View all {dueTodayTasks.length} today &rarr;
-                    </Link>
-                  )}
-                  {dueTodayTasks.length === 0 && (
-                    <p className="py-3 text-center text-xs text-zinc-400 dark:text-zinc-500 italic">Nothing due today</p>
-                  )}
-                </div>
+                <button
+                  onClick={() => console.log("Complete all today")}
+                  className="px-3 py-1.5 text-xs font-semibold bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-lg hover:opacity-90 transition-opacity active:scale-95"
+                >
+                  Complete All
+                </button>
+                <button
+                  onClick={() => console.log("Start focus mode")}
+                  className="px-3 py-1.5 text-xs font-semibold border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors active:scale-95"
+                >
+                  Start Focus
+                </button>
               </div>
             </div>
-          )}
-        </section>
 
-        {/* 2. Smart Quick Actions — right column on desktop */}
-        <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
-            Smart Quick Actions
-          </h2>
-          <div className="grid grid-cols-2 gap-2">
-            <Link
-              href="/dashboard/board"
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-zinc-900 px-3 py-2 text-xs font-bold text-white shadow-sm shadow-zinc-900/10 transition-all hover:bg-zinc-800 active:scale-95 dark:bg-zinc-100 dark:text-zinc-900 dark:shadow-none dark:hover:bg-zinc-200"
-            >
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              New Task
-            </Link>
+            <div className="mb-6">
+              <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1.5">
+                <span>Progress</span>
+                <span>{completedTodayCount} / {totalTodayCount} completed</span>
+              </div>
+              <div className="h-1.5 w-full rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                <div
+                  className="h-full bg-zinc-900 dark:bg-zinc-100 transition-all duration-500 ease-out"
+                  style={{ width: `${totalTodayCount > 0 ? (completedTodayCount / totalTodayCount) * 100 : 0}%` }}
+                />
+              </div>
+            </div>
 
-            {overdueCount > 0 && (
-              <Link
-                href="/dashboard/board"
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50/50 px-3 py-2 text-xs font-semibold text-red-700 transition-all hover:bg-red-50 active:scale-95 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/20"
-              >
-                <span className="text-sm">⚠️</span>
-                Fix Overdue
-              </Link>
-            )}
-
-            {dueTodayCount > 0 && (
-              <Link
-                href="/dashboard/tasks"
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-orange-200 bg-orange-50/50 px-3 py-2 text-xs font-semibold text-orange-700 transition-all hover:bg-orange-50 active:scale-95 dark:border-orange-900/30 dark:bg-orange-900/10 dark:text-orange-400 dark:hover:bg-orange-900/20"
-              >
-                <span className="text-sm">📅</span>
-                Plan Today
-              </Link>
-            )}
-
-            {members.length < 2 ? (
-              <Link
-                href="/dashboard/team"
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition-all hover:bg-zinc-50 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700/50"
-              >
-                <span className="text-sm">👥</span>
-                Invite Team
-              </Link>
+            {overdueCount === 0 && dueTodayTasks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-6 text-center">
+                <span className="text-2xl mb-2">🎉</span>
+                <p className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">You&apos;re all caught up</p>
+                <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">No urgent tasks for today.</p>
+              </div>
             ) : (
-              <Link
-                href="/dashboard/board"
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition-all hover:bg-zinc-50 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700/50"
-              >
-                <span className="text-sm">📂</span>
-                Open Board
-              </Link>
-            )}
-          </div>
-        </div>
-
-        {/* 3. Priority Tasks — left column on desktop */}
-        <div className="rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
-          <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-3.5 dark:border-zinc-800">
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-              Priority Tasks
-            </h2>
-            <span className="text-xs text-zinc-400 dark:text-zinc-400">
-              Top {priorityTasks.length}
-            </span>
-          </div>
-          {priorityTasks.length > 0 ? (
-            <ul className="divide-y divide-zinc-100 dark:divide-zinc-800 max-h-72 overflow-y-auto">
-              {priorityTasks.map((task) => {
-                const listTitle = listTitleMap.get(task.list_id) ?? "";
-                const taskStatus = listTitle === "Done" ? "Completed" : (listTitle || "To Do");
-                const dotColor = listColorMap.get(listTitle) ?? "bg-zinc-300";
-
-                const today = getLocalDate(new Date());
-                const dueDate = task.due_date ? getLocalDate(new Date(task.due_date + "T00:00:00")) : null;
-                const isOverdue = dueDate && dueDate < today;
-                const isToday = dueDate && dueDate.getTime() === today.getTime();
-
-                return (
-                  <li key={task.id}>
-                    <Link
-                      href={`/dashboard/board?boardId=${listBoardMap.get(task.list_id)}&taskId=${task.id}`}
-                      className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-                    >
-                      <span className={`h-2 w-2 shrink-0 rounded-full ${dotColor}`} />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="truncate text-sm font-medium text-zinc-800 dark:text-zinc-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-red-500/80">Overdue</h3>
+                    <span className="text-xs text-zinc-400">({overdueCount})</span>
+                  </div>
+                  <div className="space-y-2">
+                    {overdueTasks.slice(0, 3).map((task) => (
+                      <Link
+                        key={task.id}
+                        href={`/dashboard/board?boardId=${listBoardMap.get(task.list_id)}&taskId=${task.id}`}
+                        className="group flex items-center justify-between rounded-lg border border-red-100 bg-white p-3 shadow-sm transition-all hover:border-red-200 hover:shadow-md dark:border-red-900/20 dark:bg-zinc-900"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-zinc-800 dark:text-zinc-200 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
                             {task.title}
                           </p>
-                          {isOverdue && (
-                            <span className="shrink-0 text-[10px] font-bold text-red-500 uppercase tracking-tight">Overdue</span>
-                          )}
-                          {isToday && (
-                            <span className="shrink-0 text-[10px] font-bold text-orange-500 uppercase tracking-tight">Today</span>
-                          )}
+                          <p className="text-[10px] text-zinc-400 mt-1 font-medium">
+                            {listTitleMap.get(task.list_id) || "Task"} &middot; {new Date(task.due_date!).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                          </p>
                         </div>
-                        <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-400">
-                          {taskStatus}
-                        </p>
-                      </div>
-                      {task.priority && task.priority !== "none" && (
-                        <span
-                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${priorityBadge(task.priority)}`}
-                        >
-                          {task.priority}
-                        </span>
-                      )}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Nothing urgent right now.</p>
-              <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-400">
-                High-priority work will appear here.
-              </p>
-            </div>
-          )}
-          <div className="border-t border-zinc-100 px-5 py-3 dark:border-zinc-800">
-            <Link
-              href="/dashboard/tasks"
-              className="text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
-            >
-              View all tasks &rarr;
-            </Link>
-          </div>
-        </div>
-
-        {/* 4. Progress Overview — right column on desktop (Completion + Task Status) */}
-        <div className="rounded-xl border border-zinc-200 bg-white px-5 py-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-              Progress Overview
-            </h2>
-            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-              {completedTasks} of {totalTasks} ({completionPct}%)
-            </span>
-          </div>
-          <div className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800">
-            <div
-              className="h-2 rounded-full bg-emerald-500 transition-all"
-              style={{ width: `${completionPct}%` }}
-            />
-          </div>
-          {progressItems.length > 0 ? (
-            <div className="mt-4 pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-2.5">
-              {progressItems.map((item) => {
-                const pct = item.total > 0 ? Math.round((item.count / item.total) * 100) : 0;
-                return (
-                  <div key={item.label}>
-                    <div className="flex items-center justify-between text-sm mb-0.5">
-                      <span className="flex items-center gap-2 font-medium text-zinc-700 dark:text-zinc-300">
-                        <span className={`h-2 w-2 shrink-0 rounded-full ${item.color}`} />
-                        {item.label}
-                      </span>
-                      <span className="text-xs text-zinc-400">
-                        {item.count} of {item.total}
-                      </span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800">
-                      <div
-                        className={`h-1.5 rounded-full ${item.color} transition-all`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
+                        <svg className="h-4 w-4 text-zinc-300 group-hover:text-red-400 transition-colors transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                        </svg>
+                      </Link>
+                    ))}
+                    {overdueCount > 3 && (
+                      <Link href="/dashboard/tasks" className="block text-center text-[11px] font-bold text-red-500/60 hover:text-red-500 transition-colors py-1">
+                        View all {overdueCount} overdue &rarr;
+                      </Link>
+                    )}
+                    {overdueCount === 0 && (
+                      <p className="py-3 text-center text-xs text-zinc-400 dark:text-zinc-500 italic">No overdue tasks</p>
+                    )}
                   </div>
-                );
-              })}
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-orange-500" />
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-orange-500/80">Due Today</h3>
+                    <span className="text-xs text-zinc-400">({dueTodayTasks.length})</span>
+                  </div>
+                  <div className="space-y-2">
+                    {dueTodayTasks.slice(0, 3).map((task) => (
+                      <Link
+                        key={task.id}
+                        href={`/dashboard/board?boardId=${listBoardMap.get(task.list_id)}&taskId=${task.id}`}
+                        className="group flex items-center justify-between rounded-lg border border-orange-100 bg-white p-3 shadow-sm transition-all hover:border-orange-200 hover:shadow-md dark:border-orange-900/20 dark:bg-zinc-900"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-zinc-800 dark:text-zinc-200 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
+                            {task.title}
+                          </p>
+                          <p className="text-[10px] text-zinc-400 mt-1 font-medium">
+                            {listTitleMap.get(task.list_id) || "Task"} &middot; Today
+                          </p>
+                        </div>
+                        <svg className="h-4 w-4 text-zinc-300 group-hover:text-orange-400 transition-colors transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                        </svg>
+                      </Link>
+                    ))}
+                    {dueTodayTasks.length > 3 && (
+                      <Link href="/dashboard/tasks" className="block text-center text-[11px] font-bold text-orange-500/60 hover:text-orange-500 transition-colors py-1">
+                        View all {dueTodayTasks.length} today &rarr;
+                      </Link>
+                    )}
+                    {dueTodayTasks.length === 0 && (
+                      <p className="py-3 text-center text-xs text-zinc-400 dark:text-zinc-500 italic">Nothing due today</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* L2. Priority Tasks */}
+          <div className="rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
+            <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-3.5 dark:border-zinc-800">
+              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Priority Tasks</h2>
+              <span className="text-xs text-zinc-400">Top {priorityTasks.length}</span>
             </div>
-          ) : (
-            <p className="mt-3 pt-3 text-sm text-zinc-400 border-t border-zinc-100 dark:border-zinc-800">
-              Select a board to see task status
-            </p>
-          )}
+            {priorityTasks.length > 0 ? (
+              <ul className="divide-y divide-zinc-100 dark:divide-zinc-800 max-h-72 overflow-y-auto">
+                {priorityTasks.map((task) => {
+                  const listTitle = listTitleMap.get(task.list_id) ?? "";
+                  const taskStatus = listTitle === "Done" ? "Completed" : (listTitle || "To Do");
+                  const dotColor = listColorMap.get(listTitle) ?? "bg-zinc-300";
+                  const today = getLocalDate(new Date());
+                  const dueDate = task.due_date ? getLocalDate(new Date(task.due_date + "T00:00:00")) : null;
+                  const isOverdue = dueDate && dueDate < today;
+                  const isToday = dueDate && dueDate.getTime() === today.getTime();
+                  return (
+                    <li key={task.id}>
+                      <Link
+                        href={`/dashboard/board?boardId=${listBoardMap.get(task.list_id)}&taskId=${task.id}`}
+                        className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                      >
+                        <span className={`h-2 w-2 shrink-0 rounded-full ${dotColor}`} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="truncate text-sm font-medium text-zinc-800 dark:text-zinc-200">{task.title}</p>
+                            {isOverdue && <span className="shrink-0 text-[10px] font-bold text-red-500 uppercase tracking-tight">Overdue</span>}
+                            {isToday && <span className="shrink-0 text-[10px] font-bold text-orange-500 uppercase tracking-tight">Today</span>}
+                          </div>
+                          <p className="mt-0.5 text-xs text-zinc-400">{taskStatus}</p>
+                        </div>
+                        {task.priority && task.priority !== "none" && (
+                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${priorityBadge(task.priority)}`}>
+                            {task.priority}
+                          </span>
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Nothing urgent right now.</p>
+                <p className="mt-1 text-xs text-zinc-400">High-priority work will appear here.</p>
+              </div>
+            )}
+            <div className="border-t border-zinc-100 px-5 py-3 dark:border-zinc-800">
+              <Link href="/dashboard/tasks" className="text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200">
+                View all tasks &rarr;
+              </Link>
+            </div>
+          </div>
+
+          {/* L3. Activity Timeline */}
+          <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">Activity Timeline</h2>
+            {groupedActivities.length > 0 ? (
+              <div className="space-y-5 max-h-[400px] lg:max-h-[500px] overflow-y-auto">
+                {groupedActivities.map((group) => (
+                  <div key={group.title} className="space-y-3">
+                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 border-b border-zinc-50 dark:border-zinc-800 pb-1">
+                      {group.title}
+                    </h3>
+                    <ul className="space-y-3">
+                      {group.items.map((a) => {
+                        const link = getActivityLink(a);
+                        const Content = (
+                          <div className="flex items-start gap-2.5 rounded-lg p-2 -m-2 transition-all hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                            <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold transition-transform group-hover:scale-110 ${actionIcon[a.action] ?? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
+                              {(a.actor_display_name || a.actor_email || "?").slice(0, 1).toUpperCase()}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[13px] leading-snug text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-colors">
+                                {formatActivityLine(a)}
+                              </p>
+                              <p className="mt-0.5 text-[11px] text-zinc-400 dark:text-zinc-500">
+                                {timeAgo(a.created_at)}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                        return (
+                          <li key={a.id} className="group active:scale-[0.99] transition-transform">
+                            {link ? (
+                              <Link href={link} className="block cursor-pointer">{Content}</Link>
+                            ) : (
+                              Content
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-6 text-center">
+                <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">No recent activity yet.</p>
+                <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-400">Team updates and task changes will appear here.</p>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* 5. Team Workload — right column only on desktop */}
-        <div className="lg:col-start-2 lg:row-start-3 rounded-xl border border-zinc-200 bg-white px-5 py-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
-            Team Workload
-          </h2>
-          {assigneeSummary.length > 0 ? (
-            <>
-              <div className="space-y-2.5">
-                {assigneeSummary.slice(0, 4).map((item) => {
-                  const pct = totalTasks > 0 ? Math.round((item.count / totalTasks) * 100) : 0;
-                  const isUnassigned = item.id === "__unassigned__";
+        {/* ── RIGHT COLUMN ─────────────────────────────────── */}
+        <div className="flex flex-col gap-6">
+
+          {/* R1. Smart Quick Actions */}
+          <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">Smart Quick Actions</h2>
+            <div className="grid grid-cols-2 gap-2">
+              <Link
+                href="/dashboard/board"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-zinc-900 px-3 py-2 text-xs font-bold text-white shadow-sm shadow-zinc-900/10 transition-all hover:bg-zinc-800 active:scale-95 dark:bg-zinc-100 dark:text-zinc-900 dark:shadow-none dark:hover:bg-zinc-200"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                New Task
+              </Link>
+              {overdueCount > 0 && (
+                <Link
+                  href="/dashboard/board"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50/50 px-3 py-2 text-xs font-semibold text-red-700 transition-all hover:bg-red-50 active:scale-95 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/20"
+                >
+                  <span className="text-sm">⚠️</span>
+                  Fix Overdue
+                </Link>
+              )}
+              {dueTodayCount > 0 && (
+                <Link
+                  href="/dashboard/tasks"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-orange-200 bg-orange-50/50 px-3 py-2 text-xs font-semibold text-orange-700 transition-all hover:bg-orange-50 active:scale-95 dark:border-orange-900/30 dark:bg-orange-900/10 dark:text-orange-400 dark:hover:bg-orange-900/20"
+                >
+                  <span className="text-sm">📅</span>
+                  Plan Today
+                </Link>
+              )}
+              {members.length < 2 ? (
+                <Link
+                  href="/dashboard/team"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition-all hover:bg-zinc-50 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700/50"
+                >
+                  <span className="text-sm">👥</span>
+                  Invite Team
+                </Link>
+              ) : (
+                <Link
+                  href="/dashboard/board"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition-all hover:bg-zinc-50 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700/50"
+                >
+                  <span className="text-sm">📂</span>
+                  Open Board
+                </Link>
+              )}
+            </div>
+          </div>
+
+          {/* R2. Progress Overview */}
+          <div className="rounded-xl border border-zinc-200 bg-white px-5 py-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Progress Overview</h2>
+              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                {completedTasks} of {totalTasks} ({completionPct}%)
+              </span>
+            </div>
+            <div className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800">
+              <div className="h-2 rounded-full bg-emerald-500 transition-all" style={{ width: `${completionPct}%` }} />
+            </div>
+            {progressItems.length > 0 ? (
+              <div className="mt-4 pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-2.5">
+                {progressItems.map((item) => {
+                  const pct = item.total > 0 ? Math.round((item.count / item.total) * 100) : 0;
                   return (
-                    <div key={item.id}>
+                    <div key={item.label}>
                       <div className="flex items-center justify-between text-sm mb-0.5">
-                        <span className="flex items-center gap-2 min-w-0">
-                          {isUnassigned ? (
-                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[10px] font-semibold text-zinc-400 dark:bg-zinc-800 dark:text-zinc-400">?</span>
-                          ) : (
-                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[10px] font-semibold text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">
-                              {item.name.slice(0, 1).toUpperCase()}
-                            </span>
-                          )}
-                          <span className={`font-medium truncate ${isUnassigned ? "text-zinc-400 dark:text-zinc-400" : "text-zinc-700 dark:text-zinc-300"}`}>
-                            {item.name}
-                          </span>
+                        <span className="flex items-center gap-2 font-medium text-zinc-700 dark:text-zinc-300">
+                          <span className={`h-2 w-2 shrink-0 rounded-full ${item.color}`} />
+                          {item.label}
                         </span>
-                        <span className="text-xs text-zinc-400 shrink-0 ml-2">
-                          {item.count}
-                        </span>
+                        <span className="text-xs text-zinc-400">{item.count} of {item.total}</span>
                       </div>
                       <div className="h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800">
-                        <div
-                          className={`h-1.5 rounded-full transition-all ${isUnassigned ? "bg-zinc-300 dark:bg-zinc-600" : "bg-blue-400 dark:bg-blue-500"}`}
-                          style={{ width: `${pct}%` }}
-                        />
+                        <div className={`h-1.5 rounded-full ${item.color} transition-all`} style={{ width: `${pct}%` }} />
                       </div>
                     </div>
                   );
                 })}
               </div>
-              {assigneeSummary.length > 4 && (
-                <p className="mt-2.5 text-xs text-zinc-400 dark:text-zinc-500">
-                  +{assigneeSummary.length - 4} more members
-                </p>
-              )}
-            </>
-          ) : (
-            <p className="text-sm text-zinc-400">
-              No assigned tasks yet.
-            </p>
-          )}
-        </div>
-
-        {/* 6. Activity Timeline — left column on desktop */}
-        <div className="lg:col-start-1 lg:row-start-3 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
-            Activity Timeline
-          </h2>
-          {groupedActivities.length > 0 ? (
-            <div className="space-y-5 max-h-[400px] lg:max-h-[500px] overflow-y-auto">
-              {groupedActivities.map((group) => (
-                <div key={group.title} className="space-y-3">
-                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 border-b border-zinc-50 dark:border-zinc-800 pb-1">
-                    {group.title}
-                  </h3>
-                  <ul className="space-y-3">
-                    {group.items.map((a) => {
-                      const link = getActivityLink(a);
-                      const Content = (
-                        <div className="flex items-start gap-2.5 rounded-lg p-2 -m-2 transition-all hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
-                          <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold transition-transform group-hover:scale-110 ${actionIcon[a.action] ?? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
-                            {(a.actor_display_name || a.actor_email || "?").slice(0, 1).toUpperCase()}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[13px] leading-snug text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-colors">
-                              {formatActivityLine(a)}
-                            </p>
-                            <p className="mt-0.5 text-[11px] text-zinc-400 dark:text-zinc-500">
-                              {timeAgo(a.created_at)}
-                            </p>
-                          </div>
-                        </div>
-                      );
-
-                      return (
-                        <li key={a.id} className="group active:scale-[0.99] transition-transform">
-                          {link ? (
-                            <Link href={link} className="block cursor-pointer">
-                              {Content}
-                            </Link>
-                          ) : (
-                            Content
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-6 text-center">
-              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">No recent activity yet.</p>
-              <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-400">
-                Team updates and task changes will appear here.
+            ) : (
+              <p className="mt-3 pt-3 text-sm text-zinc-400 border-t border-zinc-100 dark:border-zinc-800">
+                Select a board to see task status
               </p>
-            </div>
-          )}
+            )}
+          </div>
+
+          {/* R3. Team Workload */}
+          <div className="rounded-xl border border-zinc-200 bg-white px-5 py-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">Team Workload</h2>
+            {assigneeSummary.length > 0 ? (
+              <>
+                <div className="space-y-2.5">
+                  {assigneeSummary.slice(0, 4).map((item) => {
+                    const pct = totalTasks > 0 ? Math.round((item.count / totalTasks) * 100) : 0;
+                    const isUnassigned = item.id === "__unassigned__";
+                    return (
+                      <div key={item.id}>
+                        <div className="flex items-center justify-between text-sm mb-0.5">
+                          <span className="flex items-center gap-2 min-w-0">
+                            {isUnassigned ? (
+                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[10px] font-semibold text-zinc-400 dark:bg-zinc-800 dark:text-zinc-400">?</span>
+                            ) : (
+                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[10px] font-semibold text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">
+                                {item.name.slice(0, 1).toUpperCase()}
+                              </span>
+                            )}
+                            <span className={`font-medium truncate ${isUnassigned ? "text-zinc-400 dark:text-zinc-400" : "text-zinc-700 dark:text-zinc-300"}`}>
+                              {item.name}
+                            </span>
+                          </span>
+                          <span className="text-xs text-zinc-400 shrink-0 ml-2">{item.count}</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800">
+                          <div
+                            className={`h-1.5 rounded-full transition-all ${isUnassigned ? "bg-zinc-300 dark:bg-zinc-600" : "bg-blue-400 dark:bg-blue-500"}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {assigneeSummary.length > 4 && (
+                  <p className="mt-2.5 text-xs text-zinc-400 dark:text-zinc-500">
+                    +{assigneeSummary.length - 4} more members
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-zinc-400">No assigned tasks yet.</p>
+            )}
+          </div>
         </div>
       </section>
     </div>
