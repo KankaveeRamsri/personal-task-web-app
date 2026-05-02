@@ -176,9 +176,20 @@ export function Sidebar({ userEmail, onSignOut }: SidebarProps) {
   const { count: unreadCount, refresh: refreshUnread } = useUnreadCount();
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+
+  const toggle = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("sidebar-collapsed", String(next));
+      return next;
+    });
+  };
 
   useEffect(() => {
     setMounted(true);
+    const saved = localStorage.getItem("sidebar-collapsed");
+    if (saved === "true") setCollapsed(true);
   }, []);
 
   useEffect(() => {
@@ -198,26 +209,60 @@ export function Sidebar({ userEmail, onSignOut }: SidebarProps) {
   };
 
   return (
-    <aside className="flex flex-col w-60 border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
-      {/* Logo */}
-      <div className="flex items-center gap-2.5 h-14 px-5 border-b border-zinc-100 dark:border-zinc-800/80">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-900 dark:bg-zinc-100">
-          <svg className="h-3.5 w-3.5 text-white dark:text-zinc-900" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15a2.25 2.25 0 0 1 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
-          </svg>
+    <aside
+      className={`flex flex-col border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 transition-[width] duration-200 ease-in-out shrink-0 ${
+        collapsed ? "w-20" : "w-60"
+      }`}
+    >
+      {/* Logo + Toggle */}
+      {collapsed ? (
+        <div className="flex flex-col items-center justify-center gap-1 h-20 border-b border-zinc-100 dark:border-zinc-800/80">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-900 dark:bg-zinc-100">
+            <svg className="h-3.5 w-3.5 text-white dark:text-zinc-900" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15a2.25 2.25 0 0 1 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
+            </svg>
+          </div>
+          <button
+            onClick={toggle}
+            className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300 transition-all"
+            title="Expand sidebar"
+          >
+            <svg className="h-4 w-4 rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+            </svg>
+          </button>
         </div>
-        <span className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-          Task Board
-        </span>
-      </div>
+      ) : (
+        <div className="flex items-center h-14 px-5 gap-2.5 border-b border-zinc-100 dark:border-zinc-800/80">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-zinc-900 dark:bg-zinc-100">
+            <svg className="h-3.5 w-3.5 text-white dark:text-zinc-900" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15a2.25 2.25 0 0 1 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
+            </svg>
+          </div>
+          <span className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+            Task Board
+          </span>
+          <button
+            onClick={toggle}
+            className="ml-auto flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300 transition-all"
+            title="Collapse sidebar"
+          >
+            <svg className="h-4 w-4 transition-transform duration-200" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* Main navigation */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+      <div className={`flex-1 overflow-y-auto py-4 space-y-6 ${collapsed ? "px-2" : "px-3"}`}>
         {navSections.map((section) => (
           <div key={section.title} className="space-y-1">
-            <h3 className="px-2.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-2">
-              {section.title}
-            </h3>
+            {!collapsed && (
+              <h3 className="px-2.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-2">
+                {section.title}
+              </h3>
+            )}
             <nav className="space-y-0.5">
               {section.items.map((item) => {
                 const active = isActive(item.href);
@@ -225,17 +270,23 @@ export function Sidebar({ userEmail, onSignOut }: SidebarProps) {
                   <Link
                     key={item.label}
                     href={item.href}
-                    className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors ${
-                      active
-                        ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100"
-                        : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-200"
+                    title={collapsed ? item.label : undefined}
+                    className={`relative flex items-center rounded-lg text-sm font-medium transition-colors ${
+                      collapsed
+                        ? `justify-center px-0 py-2.5 ${active ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-200"}`
+                        : `gap-2.5 px-2.5 py-2 ${active ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-200"}`
                     }`}
                   >
                     {item.icon}
-                    {item.label}
-                    {item.label === "Notifications" && unreadCount > 0 && (
+                    {!collapsed && item.label}
+                    {!collapsed && item.label === "Notifications" && unreadCount > 0 && (
                       <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-semibold text-white">
                         {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    )}
+                    {collapsed && item.label === "Notifications" && unreadCount > 0 && (
+                      <span className="absolute right-0 top-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-semibold text-white">
+                        {unreadCount > 9 ? "9+" : unreadCount}
                       </span>
                     )}
                   </Link>
@@ -247,41 +298,65 @@ export function Sidebar({ userEmail, onSignOut }: SidebarProps) {
 
         {/* AI Section */}
         <div className="space-y-1">
-          <h3 className="px-2.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-2">
-            AI
-          </h3>
+          {!collapsed && (
+            <h3 className="px-2.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-2">
+              AI
+            </h3>
+          )}
           <nav className="space-y-0.5">
             <button
               onClick={() => setIsAiModalOpen(true)}
-              className="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-indigo-500 hover:bg-indigo-50/50 hover:text-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-900/20 dark:hover:text-indigo-300 transition-colors"
+              title={collapsed ? "AI Assistant" : undefined}
+              className={`w-full flex items-center rounded-lg text-sm font-medium text-indigo-500 hover:bg-indigo-50/50 hover:text-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-900/20 dark:hover:text-indigo-300 transition-colors ${
+                collapsed ? "justify-center px-0 py-2.5" : "gap-2.5 px-2.5 py-2"
+              }`}
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
               </svg>
-              AI Assistant
-              <span className="ml-auto inline-flex items-center rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600 ring-1 ring-inset ring-indigo-500/10 dark:bg-indigo-400/10 dark:text-indigo-400 dark:ring-indigo-400/20">
-                SOON
-              </span>
+              {!collapsed && "AI Assistant"}
+              {!collapsed && (
+                <span className="ml-auto inline-flex items-center rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600 ring-1 ring-inset ring-indigo-500/10 dark:bg-indigo-400/10 dark:text-indigo-400 dark:ring-indigo-400/20">
+                  SOON
+                </span>
+              )}
             </button>
           </nav>
         </div>
       </div>
 
       {/* User section */}
-      <div className="border-t border-zinc-100 dark:border-zinc-800/80 px-4 py-3">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs text-zinc-400 dark:text-zinc-500 truncate">
-            {userEmail}
-          </span>
-          <button
-            onClick={onSignOut}
-            className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300"
-          >
-            Sign Out
-          </button>
-        </div>
+      <div className={`border-t border-zinc-100 dark:border-zinc-800/80 py-3 ${collapsed ? "px-2" : "px-4"}`}>
+        {collapsed ? (
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300" title={userEmail}>
+              {userEmail.charAt(0).toUpperCase()}
+            </div>
+            <button
+              onClick={onSignOut}
+              title="Sign Out"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+              </svg>
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs text-zinc-400 dark:text-zinc-500 truncate">
+              {userEmail}
+            </span>
+            <button
+              onClick={onSignOut}
+              className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300"
+            >
+              Sign Out
+            </button>
+          </div>
+        )}
       </div>
-      
+
       {mounted && isAiModalOpen && <AiModal onClose={() => setIsAiModalOpen(false)} />}
     </aside>
   );
