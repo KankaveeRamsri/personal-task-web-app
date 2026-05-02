@@ -959,65 +959,63 @@ export default function DashboardPage() {
             </p>
           )}
         </div>
-      </section>
 
-      {/* ── 5. Activity Timeline (Bottom) ─────────────────────── */}
-      <section className="rounded-2xl border border-zinc-200 bg-white p-4 sm:p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
-        <div className="flex items-center justify-between mb-4 px-1">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+        {/* 7. Activity Timeline — left column on desktop */}
+        <div className="lg:col-start-1 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
+          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
             Activity Timeline
           </h2>
-        </div>
-        {groupedActivities.length > 0 ? (
-          <div className="space-y-6 max-h-[400px] lg:max-h-[500px] overflow-y-auto pr-1">
-            {groupedActivities.map((group) => (
-              <div key={group.title} className="space-y-3">
-                <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 border-b border-zinc-50 dark:border-zinc-800 pb-1">
-                  {group.title}
-                </h3>
-                <ul className="space-y-4">
-                  {group.items.map((a) => {
-                    const link = getActivityLink(a);
-                    const Content = (
-                      <div className="flex items-start gap-3 rounded-xl p-2 -m-2 transition-all hover:bg-zinc-50 dark:hover:bg-zinc-800/50 group-hover:px-3">
-                        <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold transition-transform group-hover:scale-110 ${actionIcon[a.action] ?? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
-                          {(a.actor_display_name || a.actor_email || "?").slice(0, 1).toUpperCase()}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[13px] leading-snug text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-colors">
-                            {formatActivityLine(a)}
-                          </p>
-                          <p className="mt-1 text-[11px] text-zinc-400 dark:text-zinc-500">
-                            {timeAgo(a.created_at)}
-                          </p>
+          {groupedActivities.length > 0 ? (
+            <div className="space-y-5 max-h-[400px] lg:max-h-[500px] overflow-y-auto">
+              {groupedActivities.map((group) => (
+                <div key={group.title} className="space-y-3">
+                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 border-b border-zinc-50 dark:border-zinc-800 pb-1">
+                    {group.title}
+                  </h3>
+                  <ul className="space-y-3">
+                    {group.items.map((a) => {
+                      const link = getActivityLink(a);
+                      const Content = (
+                        <div className="flex items-start gap-2.5 rounded-lg p-2 -m-2 transition-all hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                          <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold transition-transform group-hover:scale-110 ${actionIcon[a.action] ?? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
+                            {(a.actor_display_name || a.actor_email || "?").slice(0, 1).toUpperCase()}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[13px] leading-snug text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-colors">
+                              {formatActivityLine(a)}
+                            </p>
+                            <p className="mt-0.5 text-[11px] text-zinc-400 dark:text-zinc-500">
+                              {timeAgo(a.created_at)}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    );
+                      );
 
-                    return (
-                      <li key={a.id} className="group active:scale-[0.99] transition-transform">
-                        {link ? (
-                          <Link href={link} className="block cursor-pointer">
-                            {Content}
-                          </Link>
-                        ) : (
-                          Content
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">No recent activity yet.</p>
-            <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-400">
-              Team updates and task changes will appear here.
-            </p>
-          </div>
-        )}
+                      return (
+                        <li key={a.id} className="group active:scale-[0.99] transition-transform">
+                          {link ? (
+                            <Link href={link} className="block cursor-pointer">
+                              {Content}
+                            </Link>
+                          ) : (
+                            Content
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-6 text-center">
+              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">No recent activity yet.</p>
+              <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-400">
+                Team updates and task changes will appear here.
+              </p>
+            </div>
+          )}
+        </div>
       </section>
     </div>
   );
