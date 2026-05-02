@@ -287,9 +287,10 @@ export default function DashboardPage() {
         value: String(totalTasks),
         change: "Across all boards",
         accent: "text-zinc-600 dark:text-zinc-400",
+        iconBg: "bg-zinc-100 dark:bg-zinc-800",
         icon: (
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15a2.25 2.25 0 0 1 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
           </svg>
         ),
         badge: overdueCount > 0 ? `⚠️ ${overdueCount} overdue` : null,
@@ -299,9 +300,10 @@ export default function DashboardPage() {
         value: String(inProgressTasks),
         change: inProgressTasks === 0 ? "No active tasks" : inProgressTasks > 5 ? "High workload" : "Tasks in progress",
         accent: "text-amber-600 dark:text-amber-400",
+        iconBg: "bg-amber-50 dark:bg-amber-900/30",
         icon: (
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.992 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
           </svg>
         ),
       },
@@ -310,6 +312,7 @@ export default function DashboardPage() {
         value: String(completedTasks),
         change: `${completedTasks} of ${totalTasks} done`,
         accent: "text-emerald-600 dark:text-emerald-400",
+        iconBg: "bg-emerald-50 dark:bg-emerald-900/30",
         icon: (
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
@@ -516,41 +519,37 @@ export default function DashboardPage() {
         {statCards.map((card) => (
           <div
             key={card.label}
-            className="group flex flex-col rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+            className="group flex flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
           >
             <div className="flex items-center justify-between">
-              <span className={`flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800 transition-colors group-hover:bg-zinc-200 dark:group-hover:bg-zinc-700 ${card.accent}`}>
-                {card.icon}
-              </span>
+              <div className="flex items-center gap-2.5">
+                <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${card.iconBg} ${card.accent}`}>
+                  {card.icon}
+                </span>
+                <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                  {card.label}
+                </span>
+              </div>
               {card.badge && (
-                <span className="rounded-full bg-red-50 px-2.5 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-500 dark:bg-red-900/30 dark:text-red-400">
                   {card.badge}
                 </span>
               )}
             </div>
-            <div className="mt-4 flex items-baseline gap-2">
-              <p className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-                {card.value}
-              </p>
-            </div>
-            <div className="mt-1 flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                  {card.label}
-                </span>
-                <span className="text-xs text-zinc-400 dark:text-zinc-500">
-                  {card.change}
-                </span>
+            <p className="mt-3 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+              {card.value}
+            </p>
+            <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
+              {card.change}
+            </p>
+            {card.progressPct !== undefined && (
+              <div className="mt-3 h-1.5 w-full rounded-full bg-zinc-100 dark:bg-zinc-800">
+                <div
+                  className="h-1.5 rounded-full bg-emerald-500 transition-all duration-700"
+                  style={{ width: `${card.progressPct}%` }}
+                />
               </div>
-              {card.progressPct !== undefined && (
-                <div className="h-1.5 w-full rounded-full bg-zinc-100 dark:bg-zinc-800">
-                  <div
-                    className="h-1.5 rounded-full bg-emerald-500 transition-all duration-700"
-                    style={{ width: `${card.progressPct}%` }}
-                  />
-                </div>
-              )}
-            </div>
+            )}
           </div>
         ))}
       </section>
