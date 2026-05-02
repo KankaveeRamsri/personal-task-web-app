@@ -554,14 +554,44 @@ export default function DashboardPage() {
         ))}
       </section>
 
-      {/* ── 3. Chart Placeholder ─────────────────────────────── */}
-      <section className="rounded-2xl border-2 border-dashed border-zinc-200/60 bg-zinc-50/30 p-5 sm:p-6 dark:border-zinc-800/60 dark:bg-zinc-900/20">
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <svg className="h-8 w-8 text-zinc-300 dark:text-zinc-600 mb-3" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125z" />
-          </svg>
-          <p className="text-sm font-semibold text-zinc-400 dark:text-zinc-500">Charts & Analytics</p>
-          <p className="mt-1 text-xs text-zinc-300 dark:text-zinc-600">Coming soon</p>
+      {/* ── 3. Charts & Analytics ─────────────────────────────── */}
+      <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+          <div>
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Charts & Analytics</h2>
+            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">Overview of task activity</p>
+          </div>
+          <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-zinc-800 dark:bg-zinc-200" />Completed</span>
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-amber-400" />In Progress</span>
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-zinc-300 dark:bg-zinc-600" />To Do</span>
+          </div>
+        </div>
+
+        {/* Task Trend — fake bar chart */}
+        <div className="flex items-end gap-2 sm:gap-3 h-44">
+          {[
+            { label: "Mon", bars: [{ h: 55, color: "bg-zinc-300 dark:bg-zinc-600" }, { h: 30, color: "bg-amber-400" }, { h: 45, color: "bg-zinc-800 dark:bg-zinc-200" }] },
+            { label: "Tue", bars: [{ h: 40, color: "bg-zinc-300 dark:bg-zinc-600" }, { h: 50, color: "bg-amber-400" }, { h: 60, color: "bg-zinc-800 dark:bg-zinc-200" }] },
+            { label: "Wed", bars: [{ h: 70, color: "bg-zinc-300 dark:bg-zinc-600" }, { h: 25, color: "bg-amber-400" }, { h: 80, color: "bg-zinc-800 dark:bg-zinc-200" }] },
+            { label: "Thu", bars: [{ h: 30, color: "bg-zinc-300 dark:bg-zinc-600" }, { h: 60, color: "bg-amber-400" }, { h: 50, color: "bg-zinc-800 dark:bg-zinc-200" }] },
+            { label: "Fri", bars: [{ h: 50, color: "bg-zinc-300 dark:bg-zinc-600" }, { h: 35, color: "bg-amber-400" }, { h: 70, color: "bg-zinc-800 dark:bg-zinc-200" }] },
+            { label: "Sat", bars: [{ h: 20, color: "bg-zinc-300 dark:bg-zinc-600" }, { h: 10, color: "bg-amber-400" }, { h: 25, color: "bg-zinc-800 dark:bg-zinc-200" }] },
+            { label: "Sun", bars: [{ h: 15, color: "bg-zinc-300 dark:bg-zinc-600" }, { h: 5, color: "bg-amber-400" }, { h: 20, color: "bg-zinc-800 dark:bg-zinc-200" }] },
+          ].map((day) => (
+            <div key={day.label} className="flex flex-1 flex-col items-center gap-1.5">
+              <div className="flex items-end gap-0.5 w-full h-36">
+                {day.bars.map((bar, i) => (
+                  <div
+                    key={i}
+                    className={`flex-1 rounded-t-sm ${bar.color} transition-all`}
+                    style={{ height: `${bar.h}%` }}
+                  />
+                ))}
+              </div>
+              <span className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500">{day.label}</span>
+            </div>
+          ))}
         </div>
       </section>
 
