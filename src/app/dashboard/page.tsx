@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { useBoardData } from "@/hooks/useBoardData";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
 import { useRecentActivities } from "@/hooks/useRecentActivities";
 import type { Activity } from "@/hooks/useRecentActivities";
+import type { Task } from "@/types/database";
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -155,6 +157,7 @@ const actionIcon: Record<string, string> = {
 // ── Dashboard Page ───────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("");
 
@@ -182,9 +185,10 @@ export default function DashboardPage() {
     lists,
     tasks,
     loading,
+    updateTask,
   } = useBoardData();
 
-  const { members } = useWorkspaceMembers(selectedWorkspaceId);
+  const { members, currentRole } = useWorkspaceMembers(selectedWorkspaceId);
   const { activities } = useRecentActivities(selectedWorkspaceId, selectedBoardId);
 
   const displayName = userName || userEmail.split("@")[0] || "there";
@@ -268,6 +272,65 @@ export default function DashboardPage() {
 
   const dueTodayCount = dueTodayTasks.length;
   const overdueCount = overdueTasks.length;
+
+  // ── Focus Today action helpers ────────────────────────────────
+  // Combined list: overdue first, then due today (same order as Focus Today UI)
+  const focusTasks = useMemo(
+    () => [...overdueTasks, ...dueTodayTasks],
+    [overdueTasks, dueTodayTasks]
+  );
+
+  // Find the Completed (or Done) list for the current board
+  const completedListId = useMemo(() => {
+    const cl = lists.find((l) => l.title === "Completed") || lists.find((l) => l.title === "Done");
+    return cl?.id ?? null;
+  }, [lists]);
+
+  const canEditTasks = !currentRole || ["owner", "admin", "member"].includes(currentRole);
+  const canComplete = canEditTasks && focusTasks.length > 0 && !!completedListId;
+
+  const [completingAll, setCompletingAll] = useState(false);
+
+  const handleCompleteAll = useCallback(async () => {
+    if (!canComplete || completingAll || !completedListId) return;
+    setCompletingAll(true);
+
+    // Snapshot for rollback
+    const snapshot = focusTasks.map((t) => ({ id: t.id, list_id: t.list_id, is_completed: t.is_completed }));
+
+    let failed = false;
+    for (const task of focusTasks) {
+      const result = await updateTask(task.id, {
+        list_id: completedListId,
+        is_completed: true,
+      } as Partial<Task>);
+      if (!result) {
+        failed = true;
+        break;
+      }
+    }
+
+    if (failed) {
+      // Rollback: restore original list_id and is_completed for tasks that were already updated
+      for (const snap of snapshot) {
+        await updateTask(snap.id, {
+          list_id: snap.list_id,
+          is_completed: snap.is_completed,
+        } as Partial<Task>).catch(() => {});
+      }
+    }
+
+    setCompletingAll(false);
+  }, [canComplete, completingAll, completedListId, focusTasks, updateTask]);
+
+  const handleStartFocus = useCallback(() => {
+    if (focusTasks.length === 0) return;
+    const task = focusTasks[0]; // first overdue, then first due today
+    const boardId = listBoardMap.get(task.list_id);
+    if (boardId) {
+      router.push(`/dashboard/board?boardId=${boardId}&taskId=${task.id}`);
+    }
+  }, [focusTasks, listBoardMap, router]);
 
   const todayTasks = useMemo(() => {
     const today = getLocalDate(new Date());
@@ -699,14 +762,16 @@ export default function DashboardPage() {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => console.log("Complete all today")}
-                  className="px-3 py-1.5 text-xs font-semibold bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-lg hover:opacity-90 transition-opacity active:scale-95"
+                  onClick={handleCompleteAll}
+                  disabled={!canComplete || completingAll}
+                  className="px-3 py-1.5 text-xs font-semibold bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-lg hover:opacity-90 transition-opacity active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  Complete All
+                  {completingAll ? "Completing..." : "Complete All"}
                 </button>
                 <button
-                  onClick={() => console.log("Start focus mode")}
-                  className="px-3 py-1.5 text-xs font-semibold border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors active:scale-95"
+                  onClick={handleStartFocus}
+                  disabled={focusTasks.length === 0}
+                  className="px-3 py-1.5 text-xs font-semibold border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Start Focus
                 </button>
