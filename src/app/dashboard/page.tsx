@@ -859,14 +859,14 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* 4. Completion — right column on desktop */}
+        {/* 4. Progress Overview — right column on desktop (Completion + Task Status) */}
         <div className="rounded-xl border border-zinc-200 bg-white px-5 py-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-              Completion
+              Progress Overview
             </h2>
             <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-              {completedTasks} of {totalTasks} tasks ({completionPct}%)
+              {completedTasks} of {totalTasks} ({completionPct}%)
             </span>
           </div>
           <div className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800">
@@ -875,31 +875,24 @@ export default function DashboardPage() {
               style={{ width: `${completionPct}%` }}
             />
           </div>
-        </div>
-
-        {/* 5. Task Status — right column only on desktop */}
-        <div className="lg:col-start-2 lg:row-start-3 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
-            Task Status
-          </h2>
           {progressItems.length > 0 ? (
-            <div className={progressItems.length > 5 ? "space-y-3 max-h-[360px] overflow-y-auto" : "space-y-3"}>
+            <div className="mt-4 pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-2.5">
               {progressItems.map((item) => {
                 const pct = item.total > 0 ? Math.round((item.count / item.total) * 100) : 0;
                 return (
                   <div key={item.label}>
-                    <div className="flex items-center justify-between text-sm mb-1">
+                    <div className="flex items-center justify-between text-sm mb-0.5">
                       <span className="flex items-center gap-2 font-medium text-zinc-700 dark:text-zinc-300">
                         <span className={`h-2 w-2 shrink-0 rounded-full ${item.color}`} />
                         {item.label}
                       </span>
-                      <span className="text-xs text-zinc-400 dark:text-zinc-400">
+                      <span className="text-xs text-zinc-400">
                         {item.count} of {item.total}
                       </span>
                     </div>
-                    <div className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800">
+                    <div className="h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800">
                       <div
-                        className={`h-2 rounded-full ${item.color} transition-all`}
+                        className={`h-1.5 rounded-full ${item.color} transition-all`}
                         style={{ width: `${pct}%` }}
                       />
                     </div>
@@ -908,59 +901,66 @@ export default function DashboardPage() {
               })}
             </div>
           ) : (
-            <p className="text-sm text-zinc-400 dark:text-zinc-400">
+            <p className="mt-3 pt-3 text-sm text-zinc-400 border-t border-zinc-100 dark:border-zinc-800">
               Select a board to see task status
             </p>
           )}
         </div>
 
-        {/* 6. Team Workload — right column only on desktop */}
-        <div className="lg:col-start-2 lg:row-start-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        {/* 5. Team Workload — right column only on desktop */}
+        <div className="lg:col-start-2 lg:row-start-3 rounded-xl border border-zinc-200 bg-white px-5 py-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
             Team Workload
           </h2>
           {assigneeSummary.length > 0 ? (
-            <div className="space-y-3">
-              {assigneeSummary.map((item) => {
-                const pct = totalTasks > 0 ? Math.round((item.count / totalTasks) * 100) : 0;
-                const isUnassigned = item.id === "__unassigned__";
-                return (
-                  <div key={item.id}>
-                    <div className="flex items-center justify-between text-sm mb-1">
-                      <span className="flex items-center gap-2 min-w-0">
-                        {isUnassigned ? (
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[10px] font-semibold text-zinc-400 dark:bg-zinc-800 dark:text-zinc-400">?</span>
-                        ) : (
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[10px] font-semibold text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">
-                            {item.name.slice(0, 1).toUpperCase()}
+            <>
+              <div className="space-y-2.5">
+                {assigneeSummary.slice(0, 4).map((item) => {
+                  const pct = totalTasks > 0 ? Math.round((item.count / totalTasks) * 100) : 0;
+                  const isUnassigned = item.id === "__unassigned__";
+                  return (
+                    <div key={item.id}>
+                      <div className="flex items-center justify-between text-sm mb-0.5">
+                        <span className="flex items-center gap-2 min-w-0">
+                          {isUnassigned ? (
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[10px] font-semibold text-zinc-400 dark:bg-zinc-800 dark:text-zinc-400">?</span>
+                          ) : (
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[10px] font-semibold text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">
+                              {item.name.slice(0, 1).toUpperCase()}
+                            </span>
+                          )}
+                          <span className={`font-medium truncate ${isUnassigned ? "text-zinc-400 dark:text-zinc-400" : "text-zinc-700 dark:text-zinc-300"}`}>
+                            {item.name}
                           </span>
-                        )}
-                        <span className={`font-medium truncate ${isUnassigned ? "text-zinc-400 dark:text-zinc-400" : "text-zinc-700 dark:text-zinc-300"}`}>
-                          {item.name}
                         </span>
-                      </span>
-                      <span className="text-xs text-zinc-400 dark:text-zinc-400 shrink-0 ml-2">
-                        {item.count} task{item.count !== 1 ? "s" : ""}
-                      </span>
+                        <span className="text-xs text-zinc-400 shrink-0 ml-2">
+                          {item.count}
+                        </span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800">
+                        <div
+                          className={`h-1.5 rounded-full transition-all ${isUnassigned ? "bg-zinc-300 dark:bg-zinc-600" : "bg-blue-400 dark:bg-blue-500"}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800">
-                      <div
-                        className={`h-2 rounded-full transition-all ${isUnassigned ? "bg-zinc-300 dark:bg-zinc-600" : "bg-blue-400 dark:bg-blue-500"}`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+              {assigneeSummary.length > 4 && (
+                <p className="mt-2.5 text-xs text-zinc-400 dark:text-zinc-500">
+                  +{assigneeSummary.length - 4} more members
+                </p>
+              )}
+            </>
           ) : (
-            <p className="text-sm text-zinc-400 dark:text-zinc-400">
+            <p className="text-sm text-zinc-400">
               No assigned tasks yet.
             </p>
           )}
         </div>
 
-        {/* 7. Activity Timeline — left column on desktop */}
+        {/* 6. Activity Timeline — left column on desktop */}
         <div className="lg:col-start-1 lg:row-start-3 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
             Activity Timeline
