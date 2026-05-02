@@ -519,7 +519,7 @@ export default function DashboardPage() {
         {statCards.map((card) => (
           <div
             key={card.label}
-            className="group flex flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
+            className="group flex flex-col rounded-2xl border border-zinc-200/70 bg-white p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -555,11 +555,11 @@ export default function DashboardPage() {
       </section>
 
       {/* ── 3. Charts & Analytics ─────────────────────────────── */}
-      <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="rounded-2xl border border-zinc-200/70 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
           <div>
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Charts & Analytics</h2>
-            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">Overview of task activity</p>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Charts & Analytics</h2>
+            <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-0.5">Overview of task activity</p>
           </div>
           <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
             <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-zinc-800 dark:bg-zinc-200" />Completed</span>
@@ -602,14 +602,14 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-6">
 
           {/* L1. Focus Today */}
-          <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <section className="rounded-2xl border border-amber-200/60 bg-amber-50/20 p-6 shadow-sm dark:border-amber-900/30 dark:bg-amber-950/10">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="text-lg">🔥</span>
-                  <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Focus Today</h2>
+                  <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Focus Today</h2>
                 </div>
-                <p className="text-xs text-zinc-400 dark:text-zinc-500 pl-7">
+                <p className="text-sm text-zinc-400 dark:text-zinc-500 pl-7">
                   {dueTodayTasks.length} due today &bull; {overdueCount} overdue
                 </p>
               </div>
@@ -728,9 +728,9 @@ export default function DashboardPage() {
           </section>
 
           {/* L2. Priority Tasks */}
-          <div className="rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
-            <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-3.5 dark:border-zinc-800">
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Priority Tasks</h2>
+          <div className="rounded-2xl border border-zinc-200/70 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
+            <div className="flex items-center justify-between border-b border-zinc-100 px-6 py-4 dark:border-zinc-800">
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Priority Tasks</h2>
               <span className="text-xs text-zinc-400">Top {priorityTasks.length}</span>
             </div>
             {priorityTasks.length > 0 ? (
@@ -774,16 +774,16 @@ export default function DashboardPage() {
                 <p className="mt-1 text-xs text-zinc-400">High-priority work will appear here.</p>
               </div>
             )}
-            <div className="border-t border-zinc-100 px-5 py-3 dark:border-zinc-800">
-              <Link href="/dashboard/tasks" className="text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200">
+            <div className="border-t border-zinc-100 px-6 py-3 dark:border-zinc-800">
+              <Link href="/dashboard/tasks" className="text-sm text-zinc-500 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200">
                 View all tasks &rarr;
               </Link>
             </div>
           </div>
 
           {/* L3. Activity Timeline */}
-          <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">Activity Timeline</h2>
+          <div className="rounded-2xl border border-zinc-200/70 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Activity Timeline</h2>
             {groupedActivities.length > 0 ? (
               <div className="space-y-5 max-h-[400px] lg:max-h-[500px] overflow-y-auto">
                 {groupedActivities.map((group) => (
@@ -836,8 +836,8 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-6">
 
           {/* R1. Smart Quick Actions */}
-          <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">Smart Quick Actions</h2>
+          <div className="rounded-2xl border border-zinc-200/70 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Smart Quick Actions</h2>
             <div className="grid grid-cols-2 gap-2">
               <Link
                 href="/dashboard/board"
@@ -887,9 +887,9 @@ export default function DashboardPage() {
           </div>
 
           {/* R2. Progress Overview */}
-          <div className="rounded-xl border border-zinc-200 bg-white px-5 py-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Progress Overview</h2>
+          <div className="rounded-2xl border border-zinc-200/70 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Progress Overview</h2>
               <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
                 {completedTasks} of {totalTasks} ({completionPct}%)
               </span>
@@ -898,7 +898,7 @@ export default function DashboardPage() {
               <div className="h-2 rounded-full bg-emerald-500 transition-all" style={{ width: `${completionPct}%` }} />
             </div>
             {progressItems.length > 0 ? (
-              <div className="mt-4 pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-2.5">
+              <div className="mt-4 space-y-3">
                 {progressItems.map((item) => {
                   const pct = item.total > 0 ? Math.round((item.count / item.total) * 100) : 0;
                   return (
@@ -925,8 +925,8 @@ export default function DashboardPage() {
           </div>
 
           {/* R3. Team Workload */}
-          <div className="rounded-xl border border-zinc-200 bg-white px-5 py-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">Team Workload</h2>
+          <div className="rounded-2xl border border-zinc-200/70 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Team Workload</h2>
             {assigneeSummary.length > 0 ? (
               <>
                 <div className="space-y-2.5">
