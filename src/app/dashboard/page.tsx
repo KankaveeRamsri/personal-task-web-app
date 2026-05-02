@@ -878,7 +878,7 @@ export default function DashboardPage() {
         </div>
 
         {/* 5. Task Status — right column only on desktop */}
-        <div className="lg:col-start-2 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="lg:col-start-2 lg:row-start-3 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
             Task Status
           </h2>
@@ -915,7 +915,7 @@ export default function DashboardPage() {
         </div>
 
         {/* 6. Team Workload — right column only on desktop */}
-        <div className="lg:col-start-2 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="lg:col-start-2 lg:row-start-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
             Team Workload
           </h2>
@@ -961,7 +961,7 @@ export default function DashboardPage() {
         </div>
 
         {/* 7. Activity Timeline — left column on desktop */}
-        <div className="lg:col-start-1 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
+        <div className="lg:col-start-1 lg:row-start-3 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
             Activity Timeline
           </h2>
