@@ -66,6 +66,23 @@ function getLocalDate(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
+/** Monday-based start of week (local time, no locale dependency) */
+function getStartOfWeek(d: Date): Date {
+  const local = getLocalDate(d);
+  const day = local.getDay(); // 0=Sun
+  const diff = day === 0 ? 6 : day - 1; // Mon=0
+  local.setDate(local.getDate() - diff);
+  return local;
+}
+
+/** Deterministic date key "YYYY-MM-DD" (no locale formatting) */
+function toDateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
+}
+
 function isCompletedTask(task: { is_completed: boolean; list_id: string }, listTitleMap: Map<string, string>): boolean {
   if (task.is_completed) return true;
   const title = listTitleMap.get(task.list_id) ?? "";
@@ -360,6 +377,13 @@ export default function DashboardPage() {
       .slice(0, 5);
   }, [tasks, listTitleMap]);
 
+  // ── Status colors matching Progress Overview ────────────────
+  const STATUS_COLORS = {
+    todo:       { bar: "bg-zinc-400",    dot: "bg-zinc-400" },
+    inProgress: { bar: "bg-amber-500",   dot: "bg-amber-500" },
+    completed:  { bar: "bg-emerald-500", dot: "bg-emerald-500" },
+  } as const;
+
   // Progress bars per list
   const progressItems = useMemo(() => {
     return lists.map((l) => ({
@@ -369,6 +393,53 @@ export default function DashboardPage() {
       color: listColorMap.get(l.title) ?? "bg-zinc-400",
     }));
   }, [lists, tasksByListTitle, totalTasks, listColorMap]);
+
+  // ── Weekly chart data (tasks created this week by current status) ──
+  const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+
+  const weeklyChartData = useMemo(() => {
+    const now = new Date();
+    const weekStart = getStartOfWeek(now);
+
+    // Build keys for Mon–Sun
+    const dayKeys: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart);
+      d.setDate(d.getDate() + i);
+      dayKeys.push(toDateKey(d));
+    }
+
+    // Classify each task's status
+    type StatusKey = "todo" | "inProgress" | "completed";
+    function classifyStatus(task: { is_completed: boolean; list_id: string }): StatusKey {
+      const title = listTitleMap.get(task.list_id) ?? "";
+      if (task.is_completed || title === "Completed" || title === "Done") return "completed";
+      if (title === "In Progress") return "inProgress";
+      return "todo";
+    }
+
+    // Init counts
+    const counts: Record<string, { todo: number; inProgress: number; completed: number }> = {};
+    dayKeys.forEach((k) => { counts[k] = { todo: 0, inProgress: 0, completed: 0 }; });
+
+    // Populate
+    tasks.forEach((t) => {
+      const key = toDateKey(new Date(t.created_at));
+      if (counts[key]) {
+        counts[key][classifyStatus(t)]++;
+      }
+    });
+
+    // Build chart data
+    let maxCount = 0;
+    const days = WEEKDAY_LABELS.map((label, i) => {
+      const c = counts[dayKeys[i]];
+      maxCount = Math.max(maxCount, c.todo, c.inProgress, c.completed);
+      return { label, todo: c.todo, inProgress: c.inProgress, completed: c.completed };
+    });
+
+    return { days, maxCount };
+  }, [tasks, listTitleMap]);
 
   const groupedActivities = useMemo(() => {
     const today = getLocalDate(new Date());
@@ -559,40 +630,53 @@ export default function DashboardPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
           <div>
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Charts & Analytics</h2>
-            <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-0.5">Overview of task activity</p>
+            <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-0.5">Tasks created this week by current status</p>
           </div>
           <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-zinc-800 dark:bg-zinc-200" />Completed</span>
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-amber-400" />In Progress</span>
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-zinc-300 dark:bg-zinc-600" />To Do</span>
+            <span className="flex items-center gap-1.5"><span className={`h-2 w-2 rounded-full ${STATUS_COLORS.completed.dot}`} />Completed</span>
+            <span className="flex items-center gap-1.5"><span className={`h-2 w-2 rounded-full ${STATUS_COLORS.inProgress.dot}`} />In Progress</span>
+            <span className="flex items-center gap-1.5"><span className={`h-2 w-2 rounded-full ${STATUS_COLORS.todo.dot}`} />To Do</span>
           </div>
         </div>
 
-        {/* Task Trend — fake bar chart */}
-        <div className="flex items-end gap-2 sm:gap-3 h-44">
-          {[
-            { label: "Mon", bars: [{ h: 55, color: "bg-zinc-300 dark:bg-zinc-600" }, { h: 30, color: "bg-amber-400" }, { h: 45, color: "bg-zinc-800 dark:bg-zinc-200" }] },
-            { label: "Tue", bars: [{ h: 40, color: "bg-zinc-300 dark:bg-zinc-600" }, { h: 50, color: "bg-amber-400" }, { h: 60, color: "bg-zinc-800 dark:bg-zinc-200" }] },
-            { label: "Wed", bars: [{ h: 70, color: "bg-zinc-300 dark:bg-zinc-600" }, { h: 25, color: "bg-amber-400" }, { h: 80, color: "bg-zinc-800 dark:bg-zinc-200" }] },
-            { label: "Thu", bars: [{ h: 30, color: "bg-zinc-300 dark:bg-zinc-600" }, { h: 60, color: "bg-amber-400" }, { h: 50, color: "bg-zinc-800 dark:bg-zinc-200" }] },
-            { label: "Fri", bars: [{ h: 50, color: "bg-zinc-300 dark:bg-zinc-600" }, { h: 35, color: "bg-amber-400" }, { h: 70, color: "bg-zinc-800 dark:bg-zinc-200" }] },
-            { label: "Sat", bars: [{ h: 20, color: "bg-zinc-300 dark:bg-zinc-600" }, { h: 10, color: "bg-amber-400" }, { h: 25, color: "bg-zinc-800 dark:bg-zinc-200" }] },
-            { label: "Sun", bars: [{ h: 15, color: "bg-zinc-300 dark:bg-zinc-600" }, { h: 5, color: "bg-amber-400" }, { h: 20, color: "bg-zinc-800 dark:bg-zinc-200" }] },
-          ].map((day) => (
-            <div key={day.label} className="flex flex-1 flex-col items-center gap-1.5">
-              <div className="flex items-end gap-0.5 w-full h-36">
-                {day.bars.map((bar, i) => (
-                  <div
-                    key={i}
-                    className={`flex-1 rounded-t-sm ${bar.color} transition-all`}
-                    style={{ height: `${bar.h}%` }}
-                  />
-                ))}
-              </div>
-              <span className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500">{day.label}</span>
-            </div>
-          ))}
-        </div>
+        {/* Task Trend — real data bar chart */}
+        {weeklyChartData.maxCount === 0 ? (
+          <div className="flex flex-col items-center justify-center h-44 text-center">
+            <span className="text-2xl mb-2">📊</span>
+            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">No task activity this week.</p>
+            <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">Tasks created this week will appear here.</p>
+          </div>
+        ) : (
+          <div className="flex items-end gap-2 sm:gap-3 h-44">
+            {weeklyChartData.days.map((day) => {
+              const bars = [
+                { count: day.todo, color: STATUS_COLORS.todo.bar },
+                { count: day.inProgress, color: STATUS_COLORS.inProgress.bar },
+                { count: day.completed, color: STATUS_COLORS.completed.bar },
+              ];
+              return (
+                <div key={day.label} className="flex flex-1 flex-col items-center gap-1.5">
+                  <div className="flex items-end gap-0.5 w-full h-36">
+                    {bars.map((bar, i) => {
+                      const pct = bar.count > 0
+                        ? Math.max(8, (bar.count / weeklyChartData.maxCount) * 100)
+                        : 0;
+                      return (
+                        <div
+                          key={i}
+                          className={`flex-1 rounded-t-sm ${bar.color} transition-all`}
+                          style={{ height: `${pct}%` }}
+                          title={`${bar.count}`}
+                        />
+                      );
+                    })}
+                  </div>
+                  <span className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500">{day.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* ── 4. Two-Column Dashboard ────────────────────────── */}
