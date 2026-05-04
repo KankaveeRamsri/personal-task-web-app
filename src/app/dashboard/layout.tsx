@@ -30,7 +30,7 @@ export default function DashboardLayout({
   return (
     <div className="flex h-screen">
       <Sidebar userEmail={userEmail} onSignOut={handleSignOut} />
-      <main className="flex-1 overflow-y-auto bg-background p-6 lg:p-8">
+      <main className="flex flex-1 flex-col overflow-y-auto bg-background p-6 lg:p-8">
         {children}
       </main>
     </div>

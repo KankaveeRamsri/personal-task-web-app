@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
-import { AssistantPanel } from "@/components/ai-assistant/assistant-panel";
 
 interface SidebarProps {
   userEmail: string;
@@ -100,8 +99,6 @@ const navSections = [
 export function Sidebar({ userEmail, onSignOut }: SidebarProps) {
   const pathname = usePathname();
   const { count: unreadCount, refresh: refreshUnread } = useUnreadCount();
-  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
   const toggle = () => {
@@ -113,7 +110,6 @@ export function Sidebar({ userEmail, onSignOut }: SidebarProps) {
   };
 
   useEffect(() => {
-    setMounted(true);
     const saved = localStorage.getItem("sidebar-collapsed");
     if (saved === "true") setCollapsed(true);
   }, []);
@@ -235,22 +231,19 @@ export function Sidebar({ userEmail, onSignOut }: SidebarProps) {
           )}
           <nav className="space-y-0.5">
             <div className="group relative">
-              <button
-                onClick={() => setIsAiModalOpen(true)}
-                className={`w-full flex items-center rounded-lg text-sm font-medium text-indigo-500 hover:bg-indigo-50/50 hover:text-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-900/20 dark:hover:text-indigo-300 transition-colors ${
-                  collapsed ? "justify-center px-0 py-2.5" : "gap-2.5 px-2.5 py-2"
-                }`}
+              <Link
+                href="/dashboard/ai-assistant"
+                className={`flex items-center rounded-lg text-sm font-medium transition-colors ${
+                  pathname === "/dashboard/ai-assistant"
+                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300"
+                    : "text-indigo-500 hover:bg-indigo-50/50 hover:text-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-900/20 dark:hover:text-indigo-300"
+                } ${collapsed ? "justify-center px-0 py-2.5" : "gap-2.5 px-2.5 py-2"}`}
               >
                 <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
                 </svg>
                 {!collapsed && "AI Assistant"}
-                {!collapsed && (
-                  <span className="ml-auto inline-flex items-center rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600 ring-1 ring-inset ring-indigo-500/10 dark:bg-indigo-400/10 dark:text-indigo-400 dark:ring-indigo-400/20">
-                    SOON
-                  </span>
-                )}
-              </button>
+              </Link>
               {collapsed && (
                 <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-md bg-zinc-900 px-2.5 py-1 text-[11px] font-medium text-white opacity-0 shadow-md ring-1 ring-white/10 transition-opacity duration-150 group-hover:opacity-100 dark:bg-zinc-800 dark:text-zinc-200 dark:ring-white/5">
                   AI Assistant
@@ -292,10 +285,6 @@ export function Sidebar({ userEmail, onSignOut }: SidebarProps) {
           </div>
         )}
       </div>
-
-      {mounted && isAiModalOpen && (
-        <AssistantPanel onClose={() => setIsAiModalOpen(false)} userEmail={userEmail} />
-      )}
     </aside>
   );
 }
