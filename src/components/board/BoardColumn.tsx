@@ -137,6 +137,7 @@ export default function BoardColumn({
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showDisableDoneDialog, setShowDisableDoneDialog] = useState(false);
   const [listBusy, setListBusy] = useState(false);
   const listMenuRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
@@ -210,7 +211,9 @@ export default function BoardColumn({
       className={`w-[300px] flex-shrink-0 rounded-xl flex flex-col max-h-[calc(100vh-220px)] overflow-hidden transition-all duration-200 relative ${
         showTaskHighlight
           ? "bg-blue-50/50 ring-2 ring-inset ring-blue-200 shadow-sm dark:bg-blue-950/25 dark:ring-blue-800"
-          : "bg-zinc-100/50 dark:bg-zinc-800/30"
+          : list.is_done
+            ? "bg-emerald-50/30 dark:bg-emerald-950/10 ring-1 ring-inset ring-emerald-200/40 dark:ring-emerald-800/20"
+            : "bg-zinc-100/50 dark:bg-zinc-800/30"
       }${isDragging ? " opacity-30" : ""}`}
     >
       {/* Color bar */}
@@ -286,6 +289,14 @@ export default function BoardColumn({
               <h3 className="text-[13px] font-semibold tracking-tight text-zinc-700 dark:text-zinc-300 truncate">
                 {list.title === "Done" ? "Completed" : list.title}
               </h3>
+              {list.is_done && (
+                <span
+                  title="Tasks in this list won't be marked as overdue and will count as completed"
+                  className="shrink-0 inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 cursor-default"
+                >
+                  Done
+                </span>
+              )}
               {canEditTasks && !isDefaultList && (
                 <div className="relative" ref={listMenuRef}>
                   <button
@@ -308,13 +319,22 @@ export default function BoardColumn({
                         Rename
                       </button>
                       <div className="border-t border-zinc-100 dark:border-zinc-700/50 my-1" />
-                      <label className="flex items-center gap-2 px-3 py-1.5 cursor-pointer">
+                      <label
+                        className="flex items-center gap-2 px-3 py-1.5 cursor-pointer group/label"
+                        title="Tasks in this list won't be marked as overdue and will count as completed"
+                      >
                         <input
                           type="checkbox"
                           checked={list.is_done}
                           onChange={(e) => {
-                            setListMenuOpen(false);
-                            onUpdateListIsDone(list.id, e.target.checked);
+                            const checked = e.target.checked;
+                            if (!checked && isDefaultList && list.is_done) {
+                              setListMenuOpen(false);
+                              setShowDisableDoneDialog(true);
+                            } else {
+                              setListMenuOpen(false);
+                              onUpdateListIsDone(list.id, checked);
+                            }
                           }}
                           className="h-3.5 w-3.5 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500 dark:border-zinc-600 dark:bg-zinc-800"
                         />
@@ -433,6 +453,42 @@ export default function BoardColumn({
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Disable done confirmation for default lists */}
+      {showDisableDoneDialog && (
+        <div className="absolute inset-0 z-30 flex items-start justify-center pt-12 bg-black/10 rounded-xl">
+          <div className="mx-3 w-full max-w-[260px] rounded-xl border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-700 dark:bg-zinc-800">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-50 dark:bg-amber-950">
+                <svg className="h-4 w-4 text-amber-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                </svg>
+              </div>
+              <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">Disable completed list?</h3>
+            </div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+              This is a default completed list. Tasks inside may start appearing as overdue.
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowDisableDoneDialog(false)}
+                className="flex-1 rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  setShowDisableDoneDialog(false);
+                  await onUpdateListIsDone(list.id, false);
+                }}
+                className="flex-1 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-amber-700"
+              >
+                Disable
+              </button>
+            </div>
           </div>
         </div>
       )}
