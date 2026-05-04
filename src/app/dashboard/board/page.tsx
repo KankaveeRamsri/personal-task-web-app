@@ -44,6 +44,7 @@ function DashboardBoard() {
     createList,
     renameList,
     updateListColor,
+    updateListIsDone,
     reorderLists,
     reorderPending,
     deleteList,
@@ -140,6 +141,7 @@ function DashboardBoard() {
   // Add list
   const [showAddList, setShowAddList] = useState(false);
   const [newListTitle, setNewListTitle] = useState("");
+  const [newListIsDone, setNewListIsDone] = useState(false);
   const [addingList, setAddingList] = useState(false);
 
   // Member management
@@ -429,6 +431,12 @@ function DashboardBoard() {
       if (ok) {
         const targetList = lists.find((l) => l.id === targetListId);
         const fromList = lists.find((l) => l.id === activeTaskData.list_id);
+        // Sync is_completed with done list status
+        if (targetList?.is_done && !activeTaskData.is_completed) {
+          await updateTask(activeId, { is_completed: true } as Partial<Task>);
+        } else if (!targetList?.is_done && fromList?.is_done && activeTaskData.is_completed) {
+          await updateTask(activeId, { is_completed: false } as Partial<Task>);
+        }
         const displayTitle =
           targetList?.title === "Done" ? "Completed" : targetList?.title ?? "column";
         if (selectedWorkspaceId && selectedBoardId) {
@@ -474,10 +482,17 @@ function DashboardBoard() {
     let failed = false;
 
     for (let i = 0; i < selectedIds.length; i++) {
-      const result = await updateTask(selectedIds[i], {
+      const task = tasks.find((t) => t.id === selectedIds[i]);
+      const fromList = task ? lists.find((l) => l.id === task.list_id) : undefined;
+      const updates: Partial<Task> = {
         list_id: targetList.id,
         position: maxPosition + (i + 1) * 1000,
-      } as Partial<Task>);
+      };
+      if (task) {
+        if (targetList.is_done && !task.is_completed) updates.is_completed = true;
+        else if (!targetList.is_done && fromList?.is_done && task.is_completed) updates.is_completed = false;
+      }
+      const result = await updateTask(selectedIds[i], updates);
       if (!result) {
         failed = true;
         break;
@@ -584,9 +599,10 @@ function DashboardBoard() {
     e.preventDefault();
     if (!newListTitle.trim() || !selectedBoardId) return;
     setAddingList(true);
-    const list = await createList(selectedBoardId, newListTitle.trim());
+    const list = await createList(selectedBoardId, newListTitle.trim(), { is_done: newListIsDone });
     if (list) {
       setNewListTitle("");
+      setNewListIsDone(false);
       setShowAddList(false);
       showSuccess("List added");
     }
@@ -621,6 +637,12 @@ function DashboardBoard() {
     if (ok) showSuccess("Color updated");
     return ok;
   }, [updateListColor, showSuccess]);
+
+  const handleUpdateListIsDone = useCallback(async (listId: string, isDone: boolean): Promise<boolean> => {
+    const ok = await updateListIsDone(listId, isDone);
+    if (ok) showSuccess(isDone ? "Marked as completed list" : "Unmarked as completed list");
+    return ok;
+  }, [updateListIsDone, showSuccess]);
 
   const handleAddTask = async (e: React.FormEvent, listId: string) => {
     e.preventDefault();
@@ -773,7 +795,12 @@ function DashboardBoard() {
     const task = tasks.find((t) => t.id === taskId);
     const fromList = task ? lists.find((l) => l.id === task.list_id) : undefined;
     setUpdatingId(taskId);
-    await updateTask(taskId, { list_id: targetList.id } as Partial<Task>);
+    const updates: Partial<Task> = { list_id: targetList.id };
+    if (task) {
+      if (targetList.is_done && !task.is_completed) updates.is_completed = true;
+      else if (!targetList.is_done && fromList?.is_done && task.is_completed) updates.is_completed = false;
+    }
+    await updateTask(taskId, updates);
     if (task && selectedWorkspaceId && selectedBoardId) {
       logActivity({
         workspaceId: selectedWorkspaceId,
@@ -1048,6 +1075,7 @@ function DashboardBoard() {
               isDefaultList={DEFAULT_LIST_TITLES.has(list.title)}
               onRenameList={handleRenameList}
               onUpdateListColor={handleUpdateListColor}
+              onUpdateListIsDone={handleUpdateListIsDone}
               onDeleteList={handleDeleteList}
               draggingListId={activeListId}
             />
@@ -1083,12 +1111,22 @@ function DashboardBoard() {
                       onClick={() => {
                         setShowAddList(false);
                         setNewListTitle("");
+                        setNewListIsDone(false);
                       }}
                       className="text-xs text-zinc-400 transition-colors hover:text-zinc-600 active:text-zinc-700 dark:zinc-500 dark:hover:text-zinc-300 dark:active:text-zinc-200"
                     >
                       Cancel
                     </button>
                   </div>
+                  <label className="mt-2 flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={newListIsDone}
+                      onChange={(e) => setNewListIsDone(e.target.checked)}
+                      className="h-3.5 w-3.5 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500 dark:border-zinc-600 dark:bg-zinc-800"
+                    />
+                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Mark as completed list</span>
+                  </label>
                 </form>
               </div>
             ) : (

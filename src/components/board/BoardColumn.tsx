@@ -66,6 +66,7 @@ export interface BoardColumnProps {
   isDefaultList: boolean;
   onRenameList: (listId: string, newTitle: string) => Promise<boolean>;
   onUpdateListColor: (listId: string, color: string) => Promise<boolean>;
+  onUpdateListIsDone: (listId: string, isDone: boolean) => Promise<boolean>;
   onDeleteList: (listId: string) => Promise<boolean>;
   draggingListId: string | null;
 }
@@ -106,6 +107,7 @@ export default function BoardColumn({
   isDefaultList,
   onRenameList,
   onUpdateListColor,
+  onUpdateListIsDone,
   onDeleteList,
   draggingListId,
 }: BoardColumnProps) {
@@ -305,6 +307,19 @@ export default function BoardColumn({
                         </svg>
                         Rename
                       </button>
+                      <div className="border-t border-zinc-100 dark:border-zinc-700/50 my-1" />
+                      <label className="flex items-center gap-2 px-3 py-1.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={list.is_done}
+                          onChange={(e) => {
+                            setListMenuOpen(false);
+                            onUpdateListIsDone(list.id, e.target.checked);
+                          }}
+                          className="h-3.5 w-3.5 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500 dark:border-zinc-600 dark:bg-zinc-800"
+                        />
+                        <span className="text-xs text-zinc-700 dark:text-zinc-300">Completed list</span>
+                      </label>
                       <div className="border-t border-zinc-100 dark:border-zinc-700/50 my-1" />
                       <div className="px-3 py-1.5">
                         <p className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500 mb-1.5">Color</p>

@@ -463,7 +463,7 @@ export function useBoardData() {
   );
 
   const createList = useCallback(
-    async (boardId: string, title: string) => {
+    async (boardId: string, title: string, options?: { is_done?: boolean }) => {
       const supabase = createClient();
       const {
         data: { user },
@@ -482,7 +482,7 @@ export function useBoardData() {
 
       const { data, error } = await supabase
         .from("lists")
-        .insert({ board_id: boardId, title, position: nextPos })
+        .insert({ board_id: boardId, title, position: nextPos, is_done: options?.is_done ?? false })
         .select()
         .single();
 
@@ -520,6 +520,24 @@ export function useBoardData() {
     const { data, error } = await supabase
       .from("lists")
       .update({ color })
+      .eq("id", listId)
+      .select()
+      .single();
+
+    if (error) {
+      setErrorMsg(error.message);
+      return false;
+    }
+    const updated = data as List;
+    setLists((prev) => prev.map((l) => (l.id === listId ? updated : l)));
+    return true;
+  }, []);
+
+  const updateListIsDone = useCallback(async (listId: string, isDone: boolean) => {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("lists")
+      .update({ is_done: isDone })
       .eq("id", listId)
       .select()
       .single();
@@ -628,6 +646,7 @@ export function useBoardData() {
     createList,
     renameList,
     updateListColor,
+    updateListIsDone,
     reorderLists,
     deleteList,
     updateTask,
