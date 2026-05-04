@@ -2,23 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
-import { useBoardData } from "@/hooks/useBoardData";
-import {
-  formatFocusResponse,
-  formatOverdueResponse,
-  formatProgressResponse,
-  formatBoardSummary,
-} from "@/lib/ai-assistant/insights";
+import { AssistantPanel } from "@/components/ai-assistant/assistant-panel";
 
 interface SidebarProps {
   userEmail: string;
   onSignOut: () => void;
 }
-
-import { useState } from "react";
-import { createPortal } from "react-dom";
 
 const navSections = [
   {
@@ -105,177 +96,6 @@ const navSections = [
     ],
   },
 ];
-
-interface ChatMessage {
-  role: "user" | "assistant";
-  content: string;
-}
-
-const SUGGESTED_PROMPTS = [
-  "วันนี้ควรโฟกัสงานไหน?",
-  "สรุปบอร์ดนี้ให้หน่อย",
-  "มีงานไหนเสี่ยง overdue ไหม?",
-  "สรุป progress ตอนนี้",
-];
-
-function getInsightResponse(
-  prompt: string,
-  tasks: import("@/types/database").Task[],
-  lists: import("@/types/database").List[],
-): string {
-  if (prompt.includes("โฟกัส")) return formatFocusResponse(tasks, lists);
-  if (prompt.includes("สรุปบอร์ด") || prompt.includes("สรุป board")) return formatBoardSummary(tasks, lists);
-  if (prompt.includes("overdue") || prompt.includes("เสี่ยง")) return formatOverdueResponse(tasks, lists);
-  if (prompt.includes("progress") || prompt.includes("ความคืบหน้า")) return formatProgressResponse(tasks, lists);
-  return formatBoardSummary(tasks, lists);
-}
-
-function AiModal({ onClose }: { onClose: () => void }) {
-  const { tasks, lists, boards, selectedBoardId } = useBoardData();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const chatEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const handlePromptClick = (prompt: string) => {
-    const response = getInsightResponse(prompt, tasks, lists);
-    setMessages((prev) => [
-      ...prev,
-      { role: "user", content: prompt },
-      { role: "assistant", content: response },
-    ]);
-  };
-
-  const boardTitle = boards.find((b) => b.id === selectedBoardId)?.title;
-  const hasBoard = !!selectedBoardId;
-
-  const showSuggestions = messages.length === 0;
-
-  return createPortal(
-    <>
-      <div
-        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div
-        className="fixed left-1/2 top-1/2 z-50 flex w-full max-w-md -translate-x-1/2 -translate-y-1/2 flex-col rounded-2xl bg-white shadow-xl dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800"
-        style={{ animation: "panel-in 0.2s ease-out", height: "min(520px, 85vh)" }}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100 dark:border-zinc-800/80">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-900/30">
-              <svg className="h-4.5 w-4.5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-              </svg>
-            </div>
-            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">AI Assistant</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300 transition-colors"
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Chat area */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-          {/* Welcome message */}
-          <div className="flex gap-2.5">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/30 mt-0.5">
-              <svg className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-              </svg>
-            </div>
-            <div className="rounded-xl bg-zinc-50 dark:bg-zinc-800/60 px-3.5 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">
-              {hasBoard ? (
-                <>สวัสดีครับ! 👋 ผมคือ AI Assistant ของคุณ<br />
-                กำลังวิเคราะห์บอร์ด <span className="font-medium text-indigo-600 dark:text-indigo-400">"{boardTitle}"</span><br />
-                เลือกคำถามด้านล่างหรือถามอะไรก็ได้เกี่ยวกับงานได้เลยครับ</>
-              ) : (
-                <>สวัสดีครับ! 👋 ผมคือ AI Assistant ของคุณ<br />
-                กรุณาเลือกบอร์ดก่อน จึงจะวิเคราะห์งานให้ได้ครับ</>
-              )}
-            </div>
-          </div>
-
-          {/* Chat messages */}
-          {messages.map((msg, i) => (
-            <div key={i} className={`flex gap-2.5 ${msg.role === "user" ? "justify-end" : ""}`}>
-              {msg.role === "assistant" && (
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/30 mt-0.5">
-                  <svg className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-                  </svg>
-                </div>
-              )}
-              <div
-                className={`max-w-[80%] rounded-xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-line ${
-                  msg.role === "user"
-                    ? "bg-indigo-600 text-white dark:bg-indigo-500"
-                    : "bg-zinc-50 text-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-300"
-                }`}
-              >
-                {msg.content}
-              </div>
-            </div>
-          ))}
-          <div ref={chatEndRef} />
-
-          {/* Suggested prompts */}
-          {showSuggestions && (
-            <div className="space-y-2 pt-2">
-              {SUGGESTED_PROMPTS.map((prompt) => (
-                <button
-                  key={prompt}
-                  onClick={() => handlePromptClick(prompt)}
-                  disabled={!hasBoard}
-                  className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-zinc-800/40 px-3.5 py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-300 transition-all hover:border-indigo-300 hover:bg-indigo-50/50 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-900/20 hover:text-indigo-700 dark:hover:text-indigo-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-zinc-200 disabled:hover:bg-white dark:disabled:hover:border-zinc-700/60 dark:disabled:hover:bg-zinc-800/40 dark:disabled:hover:text-zinc-300"
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Input area */}
-        <div className="border-t border-zinc-100 dark:border-zinc-800/80 px-5 py-3">
-          <div className="flex items-center gap-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 px-3.5 py-2.5">
-            <input
-              type="text"
-              disabled
-              placeholder="พิมพ์คำถาม... (เร็วๆ นี้)"
-              className="flex-1 bg-transparent text-sm text-zinc-400 dark:text-zinc-500 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 outline-none cursor-not-allowed"
-            />
-            <button
-              disabled
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-zinc-200 dark:bg-zinc-700 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-    </>,
-    document.body
-  );
-}
 
 export function Sidebar({ userEmail, onSignOut }: SidebarProps) {
   const pathname = usePathname();
@@ -473,7 +293,9 @@ export function Sidebar({ userEmail, onSignOut }: SidebarProps) {
         )}
       </div>
 
-      {mounted && isAiModalOpen && <AiModal onClose={() => setIsAiModalOpen(false)} />}
+      {mounted && isAiModalOpen && (
+        <AssistantPanel onClose={() => setIsAiModalOpen(false)} userEmail={userEmail} />
+      )}
     </aside>
   );
 }
