@@ -2,8 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
+import { useBoardData } from "@/hooks/useBoardData";
+import {
+  formatFocusResponse,
+  formatOverdueResponse,
+  formatProgressResponse,
+  formatBoardSummary,
+} from "@/lib/ai-assistant/insights";
 
 interface SidebarProps {
   userEmail: string;
@@ -111,11 +118,22 @@ const SUGGESTED_PROMPTS = [
   "สรุป progress ตอนนี้",
 ];
 
-const MOCK_RESPONSE =
-  "ตอนนี้ Step 1 ยังเป็น UI mock ก่อน เดี๋ยว Step 2 จะเชื่อมกับข้อมูล task/list จริงเพื่อวิเคราะห์งานให้ครับ";
+function getInsightResponse(
+  prompt: string,
+  tasks: import("@/types/database").Task[],
+  lists: import("@/types/database").List[],
+): string {
+  if (prompt.includes("โฟกัส")) return formatFocusResponse(tasks, lists);
+  if (prompt.includes("สรุปบอร์ด") || prompt.includes("สรุป board")) return formatBoardSummary(tasks, lists);
+  if (prompt.includes("overdue") || prompt.includes("เสี่ยง")) return formatOverdueResponse(tasks, lists);
+  if (prompt.includes("progress") || prompt.includes("ความคืบหน้า")) return formatProgressResponse(tasks, lists);
+  return formatBoardSummary(tasks, lists);
+}
 
 function AiModal({ onClose }: { onClose: () => void }) {
+  const { tasks, lists, boards, selectedBoardId } = useBoardData();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -125,12 +143,21 @@ function AiModal({ onClose }: { onClose: () => void }) {
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   const handlePromptClick = (prompt: string) => {
-    setMessages((prev) => [...prev, { role: "user", content: prompt }]);
-    setTimeout(() => {
-      setMessages((prev) => [...prev, { role: "assistant", content: MOCK_RESPONSE }]);
-    }, 400);
+    const response = getInsightResponse(prompt, tasks, lists);
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", content: prompt },
+      { role: "assistant", content: response },
+    ]);
   };
+
+  const boardTitle = boards.find((b) => b.id === selectedBoardId)?.title;
+  const hasBoard = !!selectedBoardId;
 
   const showSuggestions = messages.length === 0;
 
@@ -174,8 +201,14 @@ function AiModal({ onClose }: { onClose: () => void }) {
               </svg>
             </div>
             <div className="rounded-xl bg-zinc-50 dark:bg-zinc-800/60 px-3.5 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">
-              สวัสดีครับ! 👋 ผมคือ AI Assistant ของคุณ<br />
-              ลองเลือกคำถามด้านล่าง หรือถามอะไรก็ได้เกี่ยวกับงานในบอร์ดได้เลยครับ
+              {hasBoard ? (
+                <>สวัสดีครับ! 👋 ผมคือ AI Assistant ของคุณ<br />
+                กำลังวิเคราะห์บอร์ด <span className="font-medium text-indigo-600 dark:text-indigo-400">"{boardTitle}"</span><br />
+                เลือกคำถามด้านล่างหรือถามอะไรก็ได้เกี่ยวกับงานได้เลยครับ</>
+              ) : (
+                <>สวัสดีครับ! 👋 ผมคือ AI Assistant ของคุณ<br />
+                กรุณาเลือกบอร์ดก่อน จึงจะวิเคราะห์งานให้ได้ครับ</>
+              )}
             </div>
           </div>
 
@@ -190,7 +223,7 @@ function AiModal({ onClose }: { onClose: () => void }) {
                 </div>
               )}
               <div
-                className={`max-w-[80%] rounded-xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                className={`max-w-[80%] rounded-xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-line ${
                   msg.role === "user"
                     ? "bg-indigo-600 text-white dark:bg-indigo-500"
                     : "bg-zinc-50 text-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-300"
@@ -200,6 +233,7 @@ function AiModal({ onClose }: { onClose: () => void }) {
               </div>
             </div>
           ))}
+          <div ref={chatEndRef} />
 
           {/* Suggested prompts */}
           {showSuggestions && (
@@ -208,7 +242,8 @@ function AiModal({ onClose }: { onClose: () => void }) {
                 <button
                   key={prompt}
                   onClick={() => handlePromptClick(prompt)}
-                  className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-zinc-800/40 px-3.5 py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-300 transition-all hover:border-indigo-300 hover:bg-indigo-50/50 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-900/20 hover:text-indigo-700 dark:hover:text-indigo-300"
+                  disabled={!hasBoard}
+                  className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-zinc-800/40 px-3.5 py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-300 transition-all hover:border-indigo-300 hover:bg-indigo-50/50 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-900/20 hover:text-indigo-700 dark:hover:text-indigo-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-zinc-200 disabled:hover:bg-white dark:disabled:hover:border-zinc-700/60 dark:disabled:hover:bg-zinc-800/40 dark:disabled:hover:text-zinc-300"
                 >
                   {prompt}
                 </button>
