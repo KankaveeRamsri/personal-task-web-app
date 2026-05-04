@@ -53,24 +53,21 @@ function getDueDateInfo(dateStr: string): { label: string; diffDays: number } {
   };
 }
 
-/** Returns true when a list title represents a completed/done state. */
-function isCompletedListTitle(title: string): boolean {
-  const t = title.toLowerCase().trim();
-  return t === "done" || t === "completed";
+/** Returns true when a list is marked as done via the is_done column. */
+function isDoneList(list: { is_done: boolean }): boolean {
+  return list.is_done === true;
 }
 
 function DueDateChip({
   dateStr,
   isCompleted = false,
-  listTitle = "",
+  isListDone = false,
 }: {
   dateStr: string;
   isCompleted?: boolean;
-  listTitle?: string;
+  isListDone?: boolean;
 }) {
-  // A task is considered "done" if the is_completed flag is set OR
-  // if it sits in a list whose title indicates completion.
-  const done = isCompleted || isCompletedListTitle(listTitle);
+  const done = isCompleted || isListDone;
 
   const { diffDays } = getDueDateInfo(dateStr);
   const isOverdue = diffDays < 0 && !done;
@@ -152,6 +149,17 @@ export default function TasksPage() {
   const listMap = useMemo(() => {
     const map = new Map<string, string>();
     for (const l of lists) map.set(l.id, l.title);
+    return map;
+  }, [lists]);
+
+  const doneListIds = useMemo(
+    () => new Set(lists.filter((l) => isDoneList(l)).map((l) => l.id)),
+    [lists]
+  );
+
+  const listDoneMap = useMemo(() => {
+    const map = new Map<string, boolean>();
+    for (const l of lists) map.set(l.id, l.is_done);
     return map;
   }, [lists]);
 
@@ -237,14 +245,6 @@ export default function TasksPage() {
   const quickViewCounts = useMemo(() => {
     const now = new Date();
     const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const completedListIds = new Set(
-      lists
-        .filter((l) => {
-          const name = l.title.toLowerCase().trim();
-          return name === "done" || name === "completed";
-        })
-        .map((l) => l.id)
-    );
 
     return {
       all: tasks.length,
@@ -257,29 +257,21 @@ export default function TasksPage() {
       }).length,
       overdue: tasks.filter((t) => {
         if (!t.due_date || t.is_completed) return false;
-        if (completedListIds.has(t.list_id)) return false;
+        if (doneListIds.has(t.list_id)) return false;
         const d = new Date(t.due_date + "T00:00:00");
         const dl = new Date(d.getFullYear(), d.getMonth(), d.getDate());
         return Math.round((dl.getTime() - todayLocal.getTime()) / 86400000) < 0;
       }).length,
       unassigned: tasks.filter((t) => t.assignee_id === null).length,
-      completed: tasks.filter((t) => t.is_completed || completedListIds.has(t.list_id)).length,
+      completed: tasks.filter((t) => t.is_completed || doneListIds.has(t.list_id)).length,
     };
-  }, [tasks, lists, currentUserId]);
+  }, [tasks, doneListIds, currentUserId]);
 
   const matchesQuickView = useCallback(
     (task: Task): boolean => {
       if (activeQuickView === "all") return true;
       const now = new Date();
       const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const completedListIds = new Set(
-        lists
-          .filter((l) => {
-            const name = l.title.toLowerCase().trim();
-            return name === "done" || name === "completed";
-          })
-          .map((l) => l.id)
-      );
 
       switch (activeQuickView) {
         case "my_tasks":
@@ -291,7 +283,7 @@ export default function TasksPage() {
           return Math.round((dl.getTime() - todayLocal.getTime()) / 86400000) === 0;
         }
         case "overdue": {
-          if (!task.due_date || task.is_completed || completedListIds.has(task.list_id)) return false;
+          if (!task.due_date || task.is_completed || doneListIds.has(task.list_id)) return false;
           const d = new Date(task.due_date + "T00:00:00");
           const dl = new Date(d.getFullYear(), d.getMonth(), d.getDate());
           return Math.round((dl.getTime() - todayLocal.getTime()) / 86400000) < 0;
@@ -299,12 +291,12 @@ export default function TasksPage() {
         case "unassigned":
           return task.assignee_id === null;
         case "completed":
-          return task.is_completed || completedListIds.has(task.list_id);
+          return task.is_completed || doneListIds.has(task.list_id);
         default:
           return true;
       }
     },
-    [activeQuickView, currentUserId, lists]
+    [activeQuickView, currentUserId, doneListIds]
   );
 
   const filteredTasks = useMemo(() => {
@@ -339,14 +331,8 @@ export default function TasksPage() {
           const targetLocal = new Date(target.getFullYear(), target.getMonth(), target.getDate());
           const diffDays = Math.round((targetLocal.getTime() - todayLocal.getTime()) / (1000 * 60 * 60 * 24));
           if (filterDueDate === "overdue") {
-            // Exclude if not actually past-due, or if the task is completed
-            const completedListIds = new Set(
-              lists
-                .filter((l) => isCompletedListTitle(l.title))
-                .map((l) => l.id)
-            );
             if (diffDays >= 0) return false;
-            if (task.is_completed || completedListIds.has(task.list_id)) return false;
+            if (task.is_completed || doneListIds.has(task.list_id)) return false;
           }
           if (filterDueDate === "today" && diffDays !== 0) return false;
           if (filterDueDate === "upcoming" && diffDays <= 0) return false;
@@ -776,6 +762,7 @@ export default function TasksPage() {
                   task={task}
                   listTitle={listMap.get(task.list_id) ?? "—"}
                   listColor={listColorMap.get(task.list_id) ?? "#a1a1aa"}
+                  isListDone={listDoneMap.get(task.list_id) ?? false}
                   assignee={
                     task.assignee_id
                       ? memberMap.get(task.assignee_id) ?? null
@@ -799,6 +786,7 @@ export default function TasksPage() {
           task={selectedTask}
           listTitle={listMap.get(selectedTask.list_id) ?? "—"}
           listColor={listColorMap.get(selectedTask.list_id) ?? "#a1a1aa"}
+          isListDone={listDoneMap.get(selectedTask.list_id) ?? false}
           boardTitle={selectedBoardTitle}
           assignee={
             selectedTask.assignee_id
@@ -832,6 +820,7 @@ function TaskRow({
   task,
   listTitle,
   listColor,
+  isListDone,
   assignee,
   isSelected,
   onClick,
@@ -842,6 +831,7 @@ function TaskRow({
   task: Task;
   listTitle: string;
   listColor: string;
+  isListDone: boolean;
   assignee: MemberWithProfile | null;
   isSelected: boolean;
   onClick: () => void;
@@ -956,7 +946,7 @@ function TaskRow({
           <DueDateChip
             dateStr={task.due_date}
             isCompleted={task.is_completed}
-            listTitle={listTitle}
+            isListDone={isListDone}
           />
         ) : (
           <span className="text-xs text-zinc-400 dark:text-zinc-500">
@@ -974,6 +964,7 @@ function TaskDetailDrawer({
   task,
   listTitle,
   listColor,
+  isListDone,
   boardTitle,
   assignee,
   onClose,
@@ -981,6 +972,7 @@ function TaskDetailDrawer({
   task: Task;
   listTitle: string;
   listColor: string;
+  isListDone: boolean;
   boardTitle: string;
   assignee: MemberWithProfile | null;
   onClose: () => void;
@@ -1097,7 +1089,7 @@ function TaskDetailDrawer({
                 <DueDateChip
                   dateStr={task.due_date}
                   isCompleted={task.is_completed}
-                  listTitle={listTitle}
+                  isListDone={isListDone}
                 />
               ) : (
                 <p className="text-xs text-zinc-400 dark:text-zinc-500">

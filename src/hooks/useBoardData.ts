@@ -239,9 +239,10 @@ export function useBoardData() {
       const listNames = ["To Do", "In Progress", "Completed"];
       const createdLists: List[] = [];
       for (let i = 0; i < listNames.length; i++) {
+        const isDone = listNames[i] === "Completed";
         const { data: listData } = await supabase
           .from("lists")
-          .insert({ board_id: board.id, title: listNames[i], position: (i + 1) * 1000 })
+          .insert({ board_id: board.id, title: listNames[i], position: (i + 1) * 1000, is_done: isDone })
           .select()
           .single();
         if (listData) createdLists.push(listData as List);

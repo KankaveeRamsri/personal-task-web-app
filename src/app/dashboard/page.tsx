@@ -85,10 +85,9 @@ function toDateKey(d: Date): string {
   return `${y}-${m}-${dd}`;
 }
 
-function isCompletedTask(task: { is_completed: boolean; list_id: string }, listTitleMap: Map<string, string>): boolean {
+function isCompletedTask(task: { is_completed: boolean; list_id: string }, doneListIds: Set<string>): boolean {
   if (task.is_completed) return true;
-  const title = listTitleMap.get(task.list_id) ?? "";
-  return title === "Completed" || title === "Done";
+  return doneListIds.has(task.list_id);
 }
 
 function formatActivityLine(a: Activity): string {
@@ -231,6 +230,11 @@ export default function DashboardPage() {
 
   // ── Derived counts ──────────────────────────────────────────
 
+  const doneListIds = useMemo(
+    () => new Set(lists.filter((l) => l.is_done).map((l) => l.id)),
+    [lists]
+  );
+
   const tasksByListTitle = useMemo(() => {
     const groups: Record<string, number> = {};
     lists.forEach((l) => {
@@ -244,7 +248,7 @@ export default function DashboardPage() {
   }, [tasks, lists, listTitleMap]);
 
   const totalTasks = tasks.length;
-  const completedTasks = (tasksByListTitle["Completed"] ?? 0) + (tasksByListTitle["Done"] ?? 0);
+  const completedTasks = tasks.filter((t) => isCompletedTask(t, doneListIds)).length;
   const inProgressTasks = tasksByListTitle["In Progress"] ?? 0;
   const completionPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
@@ -252,23 +256,23 @@ export default function DashboardPage() {
     const today = getLocalDate(new Date());
     return tasks
       .filter((t) => {
-        if (isCompletedTask(t, listTitleMap)) return false;
+        if (isCompletedTask(t, doneListIds)) return false;
         if (!t.due_date) return false;
         const target = getLocalDate(new Date(t.due_date + "T00:00:00"));
         return target < today;
       })
       .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime());
-  }, [tasks, listTitleMap]);
+  }, [tasks, doneListIds]);
 
   const dueTodayTasks = useMemo(() => {
     const today = getLocalDate(new Date());
     return tasks.filter((t) => {
-      if (isCompletedTask(t, listTitleMap)) return false;
+      if (isCompletedTask(t, doneListIds)) return false;
       if (!t.due_date) return false;
       const target = getLocalDate(new Date(t.due_date + "T00:00:00"));
       return target.getTime() === today.getTime();
     });
-  }, [tasks, listTitleMap]);
+  }, [tasks, doneListIds]);
 
   const dueTodayCount = dueTodayTasks.length;
   const overdueCount = overdueTasks.length;
@@ -280,9 +284,9 @@ export default function DashboardPage() {
     [overdueTasks, dueTodayTasks]
   );
 
-  // Find the Completed (or Done) list for the current board
+  // Find the first done list for the current board
   const completedListId = useMemo(() => {
-    const cl = lists.find((l) => l.title === "Completed") || lists.find((l) => l.title === "Done");
+    const cl = lists.find((l) => l.is_done);
     return cl?.id ?? null;
   }, [lists]);
 
@@ -341,9 +345,9 @@ export default function DashboardPage() {
     });
   }, [tasks]);
 
-  const completedTodayCount = useMemo(() => 
-    todayTasks.filter(t => isCompletedTask(t, listTitleMap)).length
-  , [todayTasks, listTitleMap]);
+  const completedTodayCount = useMemo(() =>
+    todayTasks.filter(t => isCompletedTask(t, doneListIds)).length
+  , [todayTasks, doneListIds]);
 
   const totalTodayCount = todayTasks.length;
 
@@ -408,7 +412,7 @@ export default function DashboardPage() {
   const priorityTasks = useMemo(() => {
     const today = getLocalDate(new Date());
     return [...tasks]
-      .filter((t) => !isCompletedTask(t, listTitleMap))
+      .filter((t) => !isCompletedTask(t, doneListIds))
       .sort((a, b) => {
         const dateA = a.due_date ? getLocalDate(new Date(a.due_date + "T00:00:00")) : null;
         const dateB = b.due_date ? getLocalDate(new Date(b.due_date + "T00:00:00")) : null;
@@ -475,8 +479,8 @@ export default function DashboardPage() {
     // Classify each task's status
     type StatusKey = "todo" | "inProgress" | "completed";
     function classifyStatus(task: { is_completed: boolean; list_id: string }): StatusKey {
+      if (task.is_completed || doneListIds.has(task.list_id)) return "completed";
       const title = listTitleMap.get(task.list_id) ?? "";
-      if (task.is_completed || title === "Completed" || title === "Done") return "completed";
       if (title === "In Progress") return "inProgress";
       return "todo";
     }
@@ -502,7 +506,7 @@ export default function DashboardPage() {
     });
 
     return { days, maxCount };
-  }, [tasks, listTitleMap]);
+  }, [tasks, listTitleMap, doneListIds]);
 
   const groupedActivities = useMemo(() => {
     const today = getLocalDate(new Date());

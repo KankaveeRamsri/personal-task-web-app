@@ -111,11 +111,6 @@ function getInitials(email: string, displayName: string): string {
   return email.slice(0, 2).toUpperCase();
 }
 
-function isCompletedListTitle(title: string): boolean {
-  const t = title.toLowerCase().trim();
-  return t === "done" || t === "completed";
-}
-
 const LIST_COLOR_DEFAULTS: Record<string, string> = {
   "To Do": "#a1a1aa",
   "In Progress": "#3b82f6",
@@ -148,7 +143,7 @@ function TaskChip({
 }) {
   const listTitle = list?.title ?? "";
   const listColor = list?.color || LIST_COLOR_DEFAULTS[listTitle] || "#a1a1aa";
-  const done = task.is_completed || isCompletedListTitle(listTitle);
+  const done = task.is_completed || list?.is_done === true;
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `cal-task-${task.id}`,
@@ -315,7 +310,7 @@ function AgendaTaskRow({
   const listTitle = list?.title ?? "—";
   const displayTitle = listTitle === "Done" ? "Completed" : listTitle;
   const listColor = list?.color || LIST_COLOR_DEFAULTS[listTitle] || "#a1a1aa";
-  const done = task.is_completed || isCompletedListTitle(listTitle);
+  const done = task.is_completed || list?.is_done === true;
   const priority = task.priority ?? "none";
 
   return (
@@ -392,7 +387,7 @@ function TaskPreviewModal({
   const listTitle = list?.title ?? "—";
   const displayTitle = listTitle === "Done" ? "Completed" : listTitle;
   const listColor = list?.color || LIST_COLOR_DEFAULTS[listTitle] || "#a1a1aa";
-  const done = task.is_completed || isCompletedListTitle(listTitle);
+  const done = task.is_completed || list?.is_done === true;
 
   // Format due date — deterministic (pure string split, no locale)
   let dueDateDisplay = "—";

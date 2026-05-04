@@ -37,6 +37,7 @@ export type List = {
   title: string;
   position: number;
   color: string;
+  is_done: boolean;
   is_archived: boolean;
   created_at: string;
   updated_at: string;

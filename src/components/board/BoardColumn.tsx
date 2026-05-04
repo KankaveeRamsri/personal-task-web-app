@@ -459,6 +459,7 @@ export default function BoardColumn({
                   task={task}
                   members={members}
                   listTitle={list.title}
+                  isListDone={list.is_done}
                   isUpdating={updatingId === task.id}
                   isDeleting={deletingId === task.id}
                   isConfirmDelete={confirmDeleteId === task.id}

@@ -15,6 +15,7 @@ export interface TaskCardProps {
   task: Task;
   members: MemberWithProfile[];
   listTitle: string;
+  isListDone?: boolean;
   isUpdating: boolean;
   isDeleting: boolean;
   isConfirmDelete: boolean;
@@ -205,6 +206,7 @@ export default function TaskCard({
   task,
   members,
   listTitle,
+  isListDone = false,
   isUpdating,
   isDeleting,
   isConfirmDelete,
@@ -296,7 +298,7 @@ export default function TaskCard({
                 const { diffDays } = getDueDateInfo(task.due_date);
                 const isOverdue = diffDays < 0;
                 const isToday = diffDays === 0;
-                const isCompletedColumn = listTitle === "Completed" || listTitle === "Done";
+                const isCompletedColumn = isListDone;
                 const muted = task.is_completed || isCompletedColumn;
 
                 let chipClass: string;
