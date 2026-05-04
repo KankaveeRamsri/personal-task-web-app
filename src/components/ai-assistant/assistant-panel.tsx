@@ -7,6 +7,8 @@ import {
   formatOverdueResponse,
   formatProgressResponse,
   formatBoardSummary,
+  formatRiskAnalysis,
+  formatFullInsightResponse,
   getOverdueTasks,
   getTasksDueToday,
 } from "@/lib/ai-assistant/insights";
@@ -26,12 +28,13 @@ type FilterType = "all" | "mine" | "overdue" | "today";
 const SUGGESTED_PROMPTS = [
   "วันนี้ควรโฟกัสงานไหน?",
   "สรุปบอร์ดนี้ให้หน่อย",
-  "มีงานไหนเสี่ยง overdue ไหม?",
+  "วิเคราะห์ความเสี่ยง",
   "สรุป progress ตอนนี้",
 ];
 
 const FOLLOW_UP_ACTIONS: { label: string; filter: FilterType; prompt: string }[] = [
   { label: "ดูเฉพาะงานของฉัน", filter: "mine", prompt: "สรุปงานของฉัน" },
+  { label: "วิเคราะห์ความเสี่ยง", filter: "all", prompt: "วิเคราะห์ความเสี่ยง" },
   { label: "ดูงาน overdue เพิ่ม", filter: "overdue", prompt: "งาน overdue" },
   { label: "สรุปใหม่", filter: "all", prompt: "สรุปบอร์ดนี้ให้หน่อย" },
 ];
@@ -63,8 +66,10 @@ function generateResponse(
 ): string {
   if (prompt.includes("โฟกัส")) return formatFocusResponse(tasks, lists);
   if (prompt.includes("สรุปบอร์ด") || prompt.includes("สรุป board") || prompt.includes("สรุปใหม่"))
-    return formatBoardSummary(tasks, lists);
-  if (prompt.includes("overdue") || prompt.includes("เสี่ยง"))
+    return formatFullInsightResponse(tasks, lists);
+  if (prompt.includes("ความเสี่ยง") || prompt.includes("เสี่ยง") || prompt.includes("วิเคราะห์"))
+    return formatRiskAnalysis(tasks, lists);
+  if (prompt.includes("overdue"))
     return formatOverdueResponse(tasks, lists);
   if (prompt.includes("progress") || prompt.includes("ความคืบหน้า"))
     return formatProgressResponse(tasks, lists);
@@ -72,7 +77,7 @@ function generateResponse(
     if (tasks.length === 0) return "📋 ไม่มีงานของคุณในบอร์ดนี้ครับ";
     return formatFocusResponse(tasks, lists);
   }
-  return formatBoardSummary(tasks, lists);
+  return formatFullInsightResponse(tasks, lists);
 }
 
 // ── Shared SVGs ──────────────────────────────────────────────────────
