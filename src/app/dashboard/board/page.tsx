@@ -427,16 +427,15 @@ function DashboardBoard() {
       }
 
       // Cross-column move
-      const ok = await moveTask(activeId, targetListId, activeTaskData.list_id);
+      const targetList = lists.find((l) => l.id === targetListId);
+      const fromList = lists.find((l) => l.id === activeTaskData.list_id);
+      // Determine is_completed sync based on target list's is_done
+      let isCompletedSync: boolean | undefined;
+      if (targetList?.is_done && !activeTaskData.is_completed) isCompletedSync = true;
+      else if (!targetList?.is_done && fromList?.is_done && activeTaskData.is_completed) isCompletedSync = false;
+
+      const ok = await moveTask(activeId, targetListId, activeTaskData.list_id, { is_completed: isCompletedSync });
       if (ok) {
-        const targetList = lists.find((l) => l.id === targetListId);
-        const fromList = lists.find((l) => l.id === activeTaskData.list_id);
-        // Sync is_completed with done list status
-        if (targetList?.is_done && !activeTaskData.is_completed) {
-          await updateTask(activeId, { is_completed: true } as Partial<Task>);
-        } else if (!targetList?.is_done && fromList?.is_done && activeTaskData.is_completed) {
-          await updateTask(activeId, { is_completed: false } as Partial<Task>);
-        }
         const displayTitle =
           targetList?.title === "Done" ? "Completed" : targetList?.title ?? "column";
         if (selectedWorkspaceId && selectedBoardId) {

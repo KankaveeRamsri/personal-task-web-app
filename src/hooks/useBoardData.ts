@@ -323,22 +323,38 @@ export function useBoardData() {
   }, []);
 
   const moveTask = useCallback(
-    async (taskId: string, targetListId: string, originalListId: string) => {
+    async (taskId: string, targetListId: string, originalListId: string, options?: { is_completed?: boolean }) => {
+      const supabase = createClient();
+
+      // Build server update payload
+      const serverUpdates: Record<string, unknown> = { list_id: targetListId };
+      if (options?.is_completed !== undefined) serverUpdates.is_completed = options.is_completed;
+
+      // Optimistic update
       setTasks((prev) =>
-        prev.map((t) => (t.id === taskId ? { ...t, list_id: targetListId } : t))
+        prev.map((t) => {
+          if (t.id !== taskId) return t;
+          const updated = { ...t, list_id: targetListId };
+          if (options?.is_completed !== undefined) updated.is_completed = options.is_completed;
+          return updated;
+        })
       );
 
-      const supabase = createClient();
       const { data, error } = await supabase
         .from("tasks")
-        .update({ list_id: targetListId })
+        .update(serverUpdates)
         .eq("id", taskId)
         .select()
         .single();
 
       if (error) {
         setTasks((prev) =>
-          prev.map((t) => (t.id === taskId ? { ...t, list_id: originalListId } : t))
+          prev.map((t) => {
+            if (t.id !== taskId) return t;
+            const rolledBack = { ...t, list_id: originalListId };
+            if (options?.is_completed !== undefined) rolledBack.is_completed = !options.is_completed;
+            return rolledBack;
+          })
         );
         setErrorMsg(error.message);
         return false;
