@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { List, Task, TaskPriority } from "@/types/database";
@@ -134,20 +135,26 @@ export default function BoardColumn({
 
   // List action menu state
   const [listMenuOpen, setListMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showDisableDoneDialog, setShowDisableDoneDialog] = useState(false);
   const [listBusy, setListBusy] = useState(false);
-  const listMenuRef = useRef<HTMLDivElement>(null);
+  const listMenuTriggerRef = useRef<HTMLButtonElement>(null);
+  const listMenuPanelRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
+
+  const closeListMenu = useCallback(() => setListMenuOpen(false), []);
 
   useEffect(() => {
     if (!listMenuOpen) return;
     const handler = (e: MouseEvent) => {
-      if (listMenuRef.current && !listMenuRef.current.contains(e.target as Node)) {
-        setListMenuOpen(false);
-      }
+      if (
+        listMenuTriggerRef.current?.contains(e.target as Node) ||
+        listMenuPanelRef.current?.contains(e.target as Node)
+      ) return;
+      setListMenuOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -298,81 +305,25 @@ export default function BoardColumn({
                 </span>
               )}
               {canEditTasks && !isDefaultList && (
-                <div className="relative" ref={listMenuRef}>
-                  <button
-                    onClick={() => setListMenuOpen((v) => !v)}
-                    className="shrink-0 rounded p-0.5 text-zinc-400 hover:bg-zinc-200/60 hover:text-zinc-600 dark:hover:bg-zinc-700/60 dark:hover:text-zinc-300"
-                  >
-                    <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M10 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4ZM10 12a2 2 0 1 1 0-4 2 2 0 0 1 0 4ZM10 18a2 2 0 1 1 0-4 2 2 0 0 1 0 4Z" />
-                    </svg>
-                  </button>
-                  {listMenuOpen && (
-                    <div className="absolute left-0 top-full z-20 mt-1 w-44 rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
-                      <button
-                        onClick={handleStartRename}
-                        className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-zinc-700 transition-colors hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-700/50"
-                      >
-                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-                        </svg>
-                        Rename
-                      </button>
-                      <div className="border-t border-zinc-100 dark:border-zinc-700/50 my-1" />
-                      <label
-                        className="flex items-center gap-2 px-3 py-1.5 cursor-pointer group/label"
-                        title="Tasks in this list won't be marked as overdue and will count as completed"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={list.is_done}
-                          onChange={(e) => {
-                            const checked = e.target.checked;
-                            if (!checked && isDefaultList && list.is_done) {
-                              setListMenuOpen(false);
-                              setShowDisableDoneDialog(true);
-                            } else {
-                              setListMenuOpen(false);
-                              onUpdateListIsDone(list.id, checked);
-                            }
-                          }}
-                          className="h-3.5 w-3.5 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500 dark:border-zinc-600 dark:bg-zinc-800"
-                        />
-                        <span className="text-xs text-zinc-700 dark:text-zinc-300">Completed list</span>
-                      </label>
-                      <div className="border-t border-zinc-100 dark:border-zinc-700/50 my-1" />
-                      <div className="px-3 py-1.5">
-                        <p className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500 mb-1.5">Color</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {COLOR_PRESETS.map((preset) => (
-                            <button
-                              key={preset.hex}
-                              onClick={() => handleColorSelect(preset.hex)}
-                              title={preset.name}
-                              disabled={listBusy}
-                              className={`h-5 w-5 rounded-full border-2 transition-transform hover:scale-110 disabled:opacity-50 ${
-                                list.color === preset.hex
-                                  ? "border-zinc-900 dark:border-zinc-100"
-                                  : "border-transparent hover:border-zinc-300 dark:hover:border-zinc-600"
-                              }`}
-                              style={{ backgroundColor: preset.hex }}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      <div className="border-t border-zinc-100 dark:border-zinc-700/50 my-1" />
-                      <button
-                        onClick={() => { setListMenuOpen(false); setShowDeleteDialog(true); }}
-                        className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
-                      >
-                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                        </svg>
-                        Delete
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <button
+                  ref={listMenuTriggerRef}
+                  onClick={() => {
+                    if (listMenuOpen) {
+                      setListMenuOpen(false);
+                    } else {
+                      const rect = listMenuTriggerRef.current?.getBoundingClientRect();
+                      if (rect) {
+                        setMenuPos({ top: rect.bottom + 4, left: rect.left });
+                      }
+                      setListMenuOpen(true);
+                    }
+                  }}
+                  className="shrink-0 rounded p-0.5 text-zinc-400 hover:bg-zinc-200/60 hover:text-zinc-600 dark:hover:bg-zinc-700/60 dark:hover:text-zinc-300"
+                >
+                  <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4ZM10 12a2 2 0 1 1 0-4 2 2 0 0 1 0 4ZM10 18a2 2 0 1 1 0-4 2 2 0 0 1 0 4Z" />
+                  </svg>
+                </button>
               )}
             </div>
           )}
@@ -650,6 +601,87 @@ export default function BoardColumn({
             + Add task
           </button>
         )
+      )}
+
+      {/* Portal dropdown menu — escapes parent overflow / transform stacking context */}
+      {listMenuOpen && menuPos && createPortal(
+        <>
+          <div
+            className="fixed inset-0 z-[9998]"
+            onClick={closeListMenu}
+          />
+          <div
+            ref={listMenuPanelRef}
+            className="fixed z-[9999] w-44 rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800"
+            style={{
+              top: menuPos.top,
+              left: Math.min(menuPos.left, (typeof window !== "undefined" ? window.innerWidth : 1200) - 192 - 8),
+            }}
+          >
+            <button
+              onClick={handleStartRename}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-zinc-700 transition-colors hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-700/50"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+              </svg>
+              Rename
+            </button>
+            <div className="border-t border-zinc-100 dark:border-zinc-700/50 my-1" />
+            <label
+              className="flex items-center gap-2 px-3 py-1.5 cursor-pointer"
+              title="Tasks in this list won't be marked as overdue and will count as completed"
+            >
+              <input
+                type="checkbox"
+                checked={list.is_done}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  if (!checked && isDefaultList && list.is_done) {
+                    setListMenuOpen(false);
+                    setShowDisableDoneDialog(true);
+                  } else {
+                    setListMenuOpen(false);
+                    onUpdateListIsDone(list.id, checked);
+                  }
+                }}
+                className="h-3.5 w-3.5 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500 dark:border-zinc-600 dark:bg-zinc-800"
+              />
+              <span className="text-xs text-zinc-700 dark:text-zinc-300">Completed list</span>
+            </label>
+            <div className="border-t border-zinc-100 dark:border-zinc-700/50 my-1" />
+            <div className="px-3 py-1.5">
+              <p className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500 mb-1.5">Color</p>
+              <div className="flex flex-wrap gap-1.5">
+                {COLOR_PRESETS.map((preset) => (
+                  <button
+                    key={preset.hex}
+                    onClick={() => handleColorSelect(preset.hex)}
+                    title={preset.name}
+                    disabled={listBusy}
+                    className={`h-5 w-5 rounded-full border-2 transition-transform hover:scale-110 disabled:opacity-50 ${
+                      list.color === preset.hex
+                        ? "border-zinc-900 dark:border-zinc-100"
+                        : "border-transparent hover:border-zinc-300 dark:hover:border-zinc-600"
+                    }`}
+                    style={{ backgroundColor: preset.hex }}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="border-t border-zinc-100 dark:border-zinc-700/50 my-1" />
+            <button
+              onClick={() => { setListMenuOpen(false); setShowDeleteDialog(true); }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+              </svg>
+              Delete
+            </button>
+          </div>
+        </>,
+        document.body
       )}
     </div>
   );
