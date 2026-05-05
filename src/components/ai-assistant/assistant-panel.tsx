@@ -13,6 +13,8 @@ import {
 } from "@/lib/ai-assistant/insights";
 import { buildAIContext } from "@/lib/ai-assistant/context-builder";
 import { detectAssistantIntent, type AssistantIntent } from "@/lib/ai-assistant/intent";
+import { detectActionIntent } from "@/lib/ai-assistant/action-planner";
+import type { AssistantActionPlan } from "@/lib/ai-assistant/action-planner";
 import type { Task, List } from "@/types/database";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -21,6 +23,8 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   isFallback?: boolean;
+  actionPlan?: AssistantActionPlan;
+  requiresConfirmation?: boolean;
 }
 
 type FilterType = "all" | "mine" | "overdue" | "today";
@@ -89,7 +93,7 @@ async function callLLM(
   tasks: Task[],
   lists: List[],
   boardName: string,
-): Promise<{ reply: string; isFallback: boolean }> {
+): Promise<{ reply: string; isFallback: boolean; actionPlan?: AssistantActionPlan; requiresConfirmation?: boolean }> {
   const aiContext = buildAIContext(tasks, lists);
 
   const res = await fetch("/api/ai/chat", {
@@ -113,7 +117,77 @@ async function callLLM(
     };
   }
 
-  return { reply: data.reply ?? "", isFallback: false };
+  return {
+    reply: data.reply ?? "",
+    isFallback: false,
+    actionPlan: data.actionPlan ?? undefined,
+    requiresConfirmation: data.requiresConfirmation ?? false,
+  };
+}
+
+// ── Action Preview Card ──────────────────────────────────────────────
+
+const ACTION_TYPE_LABELS: Record<string, { label: string; icon: string; color: string }> = {
+  create_task: { label: "สร้าง Task", icon: "➕", color: "text-emerald-600 dark:text-emerald-400" },
+  update_task: { label: "แก้ไข Task", icon: "✏️", color: "text-amber-600 dark:text-amber-400" },
+  move_task: { label: "ย้าย Task", icon: "🔄", color: "text-blue-600 dark:text-blue-400" },
+};
+
+function ActionPreviewCard({ plan }: { plan: AssistantActionPlan }) {
+  const meta = ACTION_TYPE_LABELS[plan.type] ?? {
+    label: "ดำเนินการ",
+    icon: "📋",
+    color: "text-zinc-600 dark:text-zinc-400",
+  };
+
+  const payloadLines: string[] = [];
+  if (plan.payload.title) payloadLines.push(`📝 Task: ${plan.payload.title}`);
+  if (plan.payload.taskTitle) payloadLines.push(`📝 Task: ${plan.payload.taskTitle}`);
+  if (plan.payload.listName) payloadLines.push(`📋 List: ${plan.payload.listName}`);
+  if (plan.payload.dueDateText) payloadLines.push(`📅 Due: ${plan.payload.dueDateText}`);
+  if (plan.payload.priority && plan.payload.priority !== "none")
+    payloadLines.push(`🔴 Priority: ${plan.payload.priority}`);
+  if (plan.payload.assigneeName) payloadLines.push(`👤 Assign: ${plan.payload.assigneeName}`);
+
+  return (
+    <div className="mt-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 overflow-hidden">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-zinc-100 dark:border-zinc-700/60">
+        <span>{meta.icon}</span>
+        <span className={`text-xs font-semibold ${meta.color}`}>{meta.label}</span>
+        <span className="ml-auto text-[10px] text-zinc-400 dark:text-zinc-500">
+          Confidence: {Math.round(plan.confidence * 100)}%
+        </span>
+      </div>
+
+      <div className="px-3 py-2 text-xs text-zinc-700 dark:text-zinc-300 space-y-1">
+        {payloadLines.map((line) => (
+          <div key={line}>{line}</div>
+        ))}
+      </div>
+
+      {plan.warnings.length > 0 && (
+        <div className="px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 border-t border-amber-100 dark:border-amber-800/30">
+          {plan.warnings.map((w, i) => (
+            <div key={i} className="text-[11px] text-amber-700 dark:text-amber-400">
+              ⚠️ {w}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="px-3 py-2 border-t border-zinc-100 dark:border-zinc-700/60 flex items-center justify-between">
+        <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
+          Preview เท่านั้น — ยังไม่ได้แก้ไขข้อมูลจริง
+        </span>
+        <button
+          disabled
+          className="rounded-md bg-zinc-100 dark:bg-zinc-700 px-2 py-0.5 text-[10px] font-medium text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+        >
+          Confirm จะเปิดใช้ใน Step 2
+        </button>
+      </div>
+    </div>
+  );
 }
 
 // ── Shared SVGs ──────────────────────────────────────────────────────
@@ -154,9 +228,54 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
       setMessages((prev) => [...prev, { role: "user", content: prompt }]);
       setIsLoading(true);
 
+      // Action intent check FIRST — route to LLM for action planning
+      const actionType = detectActionIntent(prompt);
+      if (actionType !== "unknown") {
+        const boardName = boards.find((b) => b.id === selectedBoardId)?.title ?? "";
+        callLLM(prompt, tasks, lists, boardName)
+          .then(({ reply, isFallback, actionPlan, requiresConfirmation }) => {
+            if (isFallback) {
+              const filtered = applyFilter(tasks, lists, filter, userEmail);
+              const ruleReply = generateResponseByIntent("general", filtered, lists);
+              setMessages((prev) => [
+                ...prev,
+                {
+                  role: "assistant",
+                  content: ruleReply + "\n\n_(ใช้โหมดวิเคราะห์ภายในแทนชั่วคราว)_",
+                  isFallback: true,
+                },
+              ]);
+            } else {
+              setMessages((prev) => [
+                ...prev,
+                {
+                  role: "assistant",
+                  content: reply,
+                  actionPlan,
+                  requiresConfirmation,
+                },
+              ]);
+            }
+          })
+          .catch(() => {
+            const filtered = applyFilter(tasks, lists, filter, userEmail);
+            const fallback = generateResponseByIntent("general", filtered, lists);
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "assistant",
+                content: fallback + "\n\n_(ใช้โหมดวิเคราะห์ภายในแทนชั่วคราว)_",
+                isFallback: true,
+              },
+            ]);
+          })
+          .finally(() => setIsLoading(false));
+        return;
+      }
+
+      // Rule-based path: known assistant intents (faster, free)
       const intent = detectAssistantIntent(prompt);
 
-      // Rule-based path: known intents (faster, free)
       if (intent !== "general") {
         const delay = 300 + Math.random() * 500;
         setTimeout(() => {
@@ -171,7 +290,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
       // LLM path: general / unclassified messages
       const boardName = boards.find((b) => b.id === selectedBoardId)?.title ?? "";
       callLLM(prompt, tasks, lists, boardName)
-        .then(({ reply, isFallback }) => {
+        .then(({ reply, isFallback, actionPlan, requiresConfirmation }) => {
           if (isFallback) {
             const filtered = applyFilter(tasks, lists, filter, userEmail);
             const ruleReply = generateResponseByIntent(intent, filtered, lists);
@@ -184,7 +303,15 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
               },
             ]);
           } else {
-            setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "assistant",
+                content: reply,
+                actionPlan,
+                requiresConfirmation,
+              },
+            ]);
           }
         })
         .catch(() => {
@@ -266,13 +393,14 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
               </div>
             )}
             <div
-              className={`max-w-[80%] rounded-xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-line ${
+              className={`max-w-[85%] rounded-xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-line ${
                 msg.role === "user"
                   ? "bg-indigo-600 text-white dark:bg-indigo-500"
                   : "bg-zinc-50 text-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-300"
               }`}
             >
               {msg.content}
+              {msg.actionPlan && <ActionPreviewCard plan={msg.actionPlan} />}
             </div>
           </div>
         ))}

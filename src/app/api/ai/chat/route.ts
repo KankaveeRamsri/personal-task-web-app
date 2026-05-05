@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { detectAssistantIntent, type AssistantIntent } from "@/lib/ai-assistant/intent";
+import {
+  detectActionIntent,
+  type AssistantActionPlan,
+  type AssistantActionType,
+} from "@/lib/ai-assistant/action-planner";
 
 // ── Constants ──────────────────────────────────────────────────────────
 
@@ -31,7 +36,54 @@ function fallbackReply(errorType: ErrorType, status: number) {
   );
 }
 
-// ── Prompt ─────────────────────────────────────────────────────────────
+// ── Gemini helper ──────────────────────────────────────────────────────
+
+async function callGemini(
+  apiKey: string,
+  contents: Array<{ role: string; parts: Array<{ text: string }> }>,
+  maxTokens: number = MAX_OUTPUT_TOKENS,
+): Promise<string> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
+
+  try {
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+    const res = await fetch(geminiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents,
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: maxTokens,
+        },
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      console.error(`[AI Chat] Gemini API error: ${res.status}`);
+      throw new Error("api_error");
+    }
+
+    const data = await res.json();
+    const rawReply = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+
+    if (!rawReply) {
+      throw new Error("api_error");
+    }
+
+    return rawReply.trim();
+  } catch (err) {
+    clearTimeout(timeoutId);
+    throw err;
+  }
+}
+
+// ── Chat prompts ───────────────────────────────────────────────────────
 
 const SYSTEM_PROMPT = `คุณคือ AI ผู้ช่วยจัดการงาน (Task Management Assistant)
 
@@ -78,6 +130,77 @@ const INTENT_INSTRUCTIONS: Record<AssistantIntent, string> = {
   general: `ตอบคำถามโดยใช้ข้อมูลที่ให้มาเท่านั้น ตอบให้ตรงประเด็น`,
 };
 
+// ── Action planning prompt ─────────────────────────────────────────────
+
+const ACTION_SYSTEM_PROMPT = `You are an action plan extractor for a task management app.
+Extract the user's intent into a structured JSON action plan.
+
+Rules:
+- Return ONLY valid JSON, no other text
+- Do NOT execute any action
+- Use null for fields that are unclear from the message
+- If task/list name is ambiguous, add a warning string
+- confidence is 0.0 to 1.0
+- requiresConfirmation is always true
+- summary must be in Thai
+
+JSON format:
+{
+  "type": "${"create_task" as AssistantActionType}" | "${"update_task" as AssistantActionType}" | "${"move_task" as AssistantActionType}",
+  "confidence": 0.85,
+  "summary": "Thai summary of the planned action",
+  "requiresConfirmation": true,
+  "payload": {
+    "title": "task title for create",
+    "taskTitle": "existing task name for update/move",
+    "listName": "target list name for move",
+    "dueDateText": "due date text as mentioned",
+    "priority": "none" | "low" | "medium" | "high",
+    "assigneeName": "person name if mentioned"
+  },
+  "warnings": ["any ambiguity warnings"]
+}`;
+
+function buildActionPrompt(message: string, actionType: AssistantActionType): string {
+  return `Action type to extract: ${actionType}
+
+User message: ${message}
+
+Return the JSON action plan:`;
+}
+
+// ── JSON parse helper ──────────────────────────────────────────────────
+
+function parseActionPlan(raw: string, actionType: AssistantActionType): AssistantActionPlan | null {
+  try {
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    return {
+      type: parsed.type ?? actionType,
+      confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0.5,
+      summary: typeof parsed.summary === "string" ? parsed.summary : "ไม่สามารถวิเคราะห์ action ได้",
+      requiresConfirmation: true,
+      payload: {
+        title: parsed.payload?.title ?? undefined,
+        taskTitle: parsed.payload?.taskTitle ?? undefined,
+        listName: parsed.payload?.listName ?? undefined,
+        dueDateText: parsed.payload?.dueDateText ?? undefined,
+        priority: parsed.payload?.priority ?? undefined,
+        assigneeName: parsed.payload?.assigneeName ?? undefined,
+        fields: parsed.payload?.fields ?? undefined,
+      },
+      warnings: Array.isArray(parsed.warnings)
+        ? parsed.warnings.filter((w: unknown) => typeof w === "string")
+        : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
 // ── Route ──────────────────────────────────────────────────────────────
 
 export async function POST(request: Request) {
@@ -119,7 +242,50 @@ export async function POST(request: Request) {
     return fallbackReply("invalid_request", 400);
   }
 
-  // 5) Build prompt
+  // 5) Check for action intent
+  const actionType = detectActionIntent(trimmed);
+  console.log("[AI Chat] ACTION_INTENT:", actionType, "| message:", trimmed);
+
+  if (actionType !== "unknown") {
+    try {
+      const contents = [
+        { role: "user", parts: [{ text: ACTION_SYSTEM_PROMPT }] },
+        {
+          role: "model",
+          parts: [{ text: "เข้าใจครับ ผมจะส่ง action plan เป็น JSON เท่านั้น" }],
+        },
+        { role: "user", parts: [{ text: buildActionPrompt(trimmed, actionType) }] },
+      ];
+
+      const rawReply = await callGemini(apiKey, contents, 400);
+      const actionPlan = parseActionPlan(rawReply, actionType);
+
+      if (actionPlan) {
+        return NextResponse.json({
+          reply: actionPlan.summary,
+          actionPlan,
+          requiresConfirmation: true,
+          intent: "general",
+        });
+      }
+
+      // Fallback: text preview if JSON parse fails
+      return NextResponse.json({
+        reply: rawReply,
+        intent: "general",
+      });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        return fallbackReply("timeout", 504);
+      }
+      if (err instanceof Error && err.message === "api_error") {
+        return fallbackReply("api_error", 502);
+      }
+      return fallbackReply("api_error", 500);
+    }
+  }
+
+  // 6) Normal chat flow
   const intent = detectAssistantIntent(trimmed);
   const intentInstruction = INTENT_INSTRUCTIONS[intent];
 
@@ -145,51 +311,16 @@ export async function POST(request: Request) {
     { role: "user" as const, parts: [{ text: userContent }] },
   ];
 
-  // 6) Call Gemini with timeout
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
-
   try {
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-
-    const res = await fetch(geminiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents,
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: MAX_OUTPUT_TOKENS,
-        },
-      }),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!res.ok) {
-      const errStatus = res.status;
-      console.error(`[AI Chat] Gemini API error: ${errStatus}`);
-      return fallbackReply("api_error", 502);
-    }
-
-    const data = await res.json();
-    const rawReply = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-
-    if (!rawReply) {
-      return fallbackReply("api_error", 502);
-    }
-
-    return NextResponse.json({ reply: rawReply.trim(), intent });
+    const rawReply = await callGemini(apiKey, contents);
+    return NextResponse.json({ reply: rawReply, intent });
   } catch (err) {
-    clearTimeout(timeoutId);
-
     if (err instanceof DOMException && err.name === "AbortError") {
-      console.error("[AI Chat] Request timed out");
       return fallbackReply("timeout", 504);
     }
-
-    console.error("[AI Chat] Unexpected error");
+    if (err instanceof Error && err.message === "api_error") {
+      return fallbackReply("api_error", 502);
+    }
     return fallbackReply("api_error", 500);
   }
 }
