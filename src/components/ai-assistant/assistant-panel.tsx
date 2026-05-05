@@ -15,9 +15,11 @@ import { buildAIContext } from "@/lib/ai-assistant/context-builder";
 import { detectAssistantIntent, type AssistantIntent } from "@/lib/ai-assistant/intent";
 import { detectActionIntent } from "@/lib/ai-assistant/action-planner";
 import type { AssistantActionPlan } from "@/lib/ai-assistant/action-planner";
-import type { Task, List } from "@/types/database";
+import type { Task, List, TaskPriority } from "@/types/database";
 
 // ── Types ────────────────────────────────────────────────────────────
+
+type ActionStatus = "pending" | "executing" | "success" | "failed" | "cancelled";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -25,6 +27,7 @@ interface ChatMessage {
   isFallback?: boolean;
   actionPlan?: AssistantActionPlan;
   requiresConfirmation?: boolean;
+  actionStatus?: ActionStatus;
 }
 
 type FilterType = "all" | "mine" | "overdue" | "today";
@@ -32,6 +35,8 @@ type FilterType = "all" | "mine" | "overdue" | "today";
 // ── Constants ────────────────────────────────────────────────────────
 
 const MAX_INPUT_LENGTH = 500;
+const MAX_TITLE_LENGTH = 120;
+const VALID_PRIORITIES: TaskPriority[] = ["none", "low", "medium", "high"];
 
 const SUGGESTED_PROMPTS = [
   "วันนี้ควรโฟกัสงานไหน?",
@@ -133,12 +138,31 @@ const ACTION_TYPE_LABELS: Record<string, { label: string; icon: string; color: s
   move_task: { label: "ย้าย Task", icon: "🔄", color: "text-blue-600 dark:text-blue-400" },
 };
 
-function ActionPreviewCard({ plan }: { plan: AssistantActionPlan }) {
+const STATUS_LABELS: Record<ActionStatus, { label: string; color: string }> = {
+  pending: { label: "", color: "" },
+  executing: { label: "กำลังสร้าง...", color: "text-indigo-600 dark:text-indigo-400" },
+  success: { label: "สร้างสำเร็จ ✓", color: "text-emerald-600 dark:text-emerald-400" },
+  failed: { label: "สร้างไม่สำเร็จ ✗", color: "text-red-600 dark:text-red-400" },
+  cancelled: { label: "ยกเลิกแล้ว", color: "text-zinc-500 dark:text-zinc-400" },
+};
+
+function ActionPreviewCard({
+  plan,
+  status,
+  onConfirm,
+  onCancel,
+}: {
+  plan: AssistantActionPlan;
+  status: ActionStatus;
+  onConfirm?: () => void;
+  onCancel?: () => void;
+}) {
   const meta = ACTION_TYPE_LABELS[plan.type] ?? {
     label: "ดำเนินการ",
     icon: "📋",
     color: "text-zinc-600 dark:text-zinc-400",
   };
+  const statusMeta = STATUS_LABELS[status];
 
   const payloadLines: string[] = [];
   if (plan.payload.title) payloadLines.push(`📝 Task: ${plan.payload.title}`);
@@ -149,14 +173,24 @@ function ActionPreviewCard({ plan }: { plan: AssistantActionPlan }) {
     payloadLines.push(`🔴 Priority: ${plan.payload.priority}`);
   if (plan.payload.assigneeName) payloadLines.push(`👤 Assign: ${plan.payload.assigneeName}`);
 
+  const isResolved = status !== "pending";
+  const canConfirm = plan.type === "create_task" && !isResolved;
+
   return (
     <div className="mt-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 overflow-hidden">
       <div className="flex items-center gap-2 px-3 py-2 border-b border-zinc-100 dark:border-zinc-700/60">
         <span>{meta.icon}</span>
         <span className={`text-xs font-semibold ${meta.color}`}>{meta.label}</span>
-        <span className="ml-auto text-[10px] text-zinc-400 dark:text-zinc-500">
-          Confidence: {Math.round(plan.confidence * 100)}%
-        </span>
+        {statusMeta.label && (
+          <span className={`ml-auto text-[10px] font-medium ${statusMeta.color}`}>
+            {statusMeta.label}
+          </span>
+        )}
+        {!statusMeta.label && (
+          <span className="ml-auto text-[10px] text-zinc-400 dark:text-zinc-500">
+            Confidence: {Math.round(plan.confidence * 100)}%
+          </span>
+        )}
       </div>
 
       <div className="px-3 py-2 text-xs text-zinc-700 dark:text-zinc-300 space-y-1">
@@ -175,16 +209,36 @@ function ActionPreviewCard({ plan }: { plan: AssistantActionPlan }) {
         </div>
       )}
 
-      <div className="px-3 py-2 border-t border-zinc-100 dark:border-zinc-700/60 flex items-center justify-between">
+      <div className="px-3 py-2 border-t border-zinc-100 dark:border-zinc-700/60 flex items-center justify-between gap-2">
         <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
-          Preview เท่านั้น — ยังไม่ได้แก้ไขข้อมูลจริง
+          {isResolved ? "" : "Preview — กด Confirm เพื่อสร้างจริง"}
         </span>
-        <button
-          disabled
-          className="rounded-md bg-zinc-100 dark:bg-zinc-700 px-2 py-0.5 text-[10px] font-medium text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
-        >
-          Confirm จะเปิดใช้ใน Step 2
-        </button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {!isResolved && onCancel && (
+            <button
+              onClick={onCancel}
+              className="rounded-md bg-zinc-100 dark:bg-zinc-700 px-2 py-0.5 text-[10px] font-medium text-zinc-600 dark:text-zinc-400 transition-colors hover:bg-zinc-200 dark:hover:bg-zinc-600"
+            >
+              Cancel
+            </button>
+          )}
+          {canConfirm && onConfirm && (
+            <button
+              onClick={onConfirm}
+              className="rounded-md bg-emerald-600 px-2 py-0.5 text-[10px] font-medium text-white transition-colors hover:bg-emerald-700"
+            >
+              Confirm & Create Task
+            </button>
+          )}
+          {!canConfirm && !isResolved && (
+            <button
+              disabled
+              className="rounded-md bg-zinc-100 dark:bg-zinc-700 px-2 py-0.5 text-[10px] font-medium text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+            >
+              Confirm จะเปิดใช้ใน Step ถัดไป
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -211,7 +265,7 @@ interface AssistantPanelProps {
 }
 
 export function AssistantPanel({ userEmail }: AssistantPanelProps) {
-  const { tasks, lists, boards, selectedBoardId } = useBoardData();
+  const { tasks, lists, boards, selectedBoardId, createTask } = useBoardData();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -352,6 +406,88 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
   const hasBoard = !!selectedBoardId;
   const showInitialPrompts = messages.length === 0 && !isLoading;
 
+  const resolveDefaultList = useCallback((): string | null => {
+    const nonDone = lists.find((l) => !l.is_done);
+    return nonDone?.id ?? null;
+  }, [lists]);
+
+  const updateMessageActionStatus = useCallback(
+    (index: number, status: ActionStatus, extra?: Partial<ChatMessage>) => {
+      setMessages((prev) =>
+        prev.map((msg, i) =>
+          i === index ? { ...msg, actionStatus: status, ...extra } : msg,
+        ),
+      );
+    },
+    [],
+  );
+
+  const handleConfirmCreate = useCallback(
+    async (msgIndex: number, plan: AssistantActionPlan) => {
+      const title = (plan.payload.title ?? "").trim().slice(0, MAX_TITLE_LENGTH);
+      if (!title) {
+        updateMessageActionStatus(msgIndex, "failed");
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "สร้าง task ไม่สำเร็จ — ไม่มีชื่อ task ครับ" },
+        ]);
+        return;
+      }
+
+      const listId = resolveDefaultList();
+      if (!listId) {
+        updateMessageActionStatus(msgIndex, "failed");
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "สร้าง task ไม่สำเร็จ — ไม่พบ list ที่ใส่ได้ในบอร์ดนี้ครับ" },
+        ]);
+        return;
+      }
+
+      const priority = VALID_PRIORITIES.includes(plan.payload.priority as TaskPriority)
+        ? (plan.payload.priority as TaskPriority)
+        : "none";
+
+      updateMessageActionStatus(msgIndex, "executing");
+
+      try {
+        const result = await createTask(listId, title, { priority });
+
+        if (result) {
+          updateMessageActionStatus(msgIndex, "success");
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: `สร้าง task สำเร็จแล้วครับ: ${title}` },
+          ]);
+        } else {
+          updateMessageActionStatus(msgIndex, "failed");
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: "สร้าง task ไม่สำเร็จ อาจเกิดจากสิทธิ์ไม่พอหรือข้อมูลไม่ครบครับ" },
+          ]);
+        }
+      } catch {
+        updateMessageActionStatus(msgIndex, "failed");
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "สร้าง task ไม่สำเร็จ อาจเกิดจากสิทธิ์ไม่พอหรือข้อมูลไม่ครบครับ" },
+        ]);
+      }
+    },
+    [createTask, resolveDefaultList, updateMessageActionStatus],
+  );
+
+  const handleCancelAction = useCallback(
+    (msgIndex: number) => {
+      updateMessageActionStatus(msgIndex, "cancelled");
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "ยกเลิกการสร้าง task แล้วครับ" },
+      ]);
+    },
+    [updateMessageActionStatus],
+  );
+
   return (
     <div className="flex h-full flex-col rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
       {/* Chat area */}
@@ -400,7 +536,22 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
               }`}
             >
               {msg.content}
-              {msg.actionPlan && <ActionPreviewCard plan={msg.actionPlan} />}
+              {msg.actionPlan && (
+                <ActionPreviewCard
+                  plan={msg.actionPlan}
+                  status={msg.actionStatus ?? "pending"}
+                  onConfirm={
+                    msg.actionPlan.type === "create_task" && !msg.actionStatus
+                      ? () => handleConfirmCreate(i, msg.actionPlan!)
+                      : undefined
+                  }
+                  onCancel={
+                    !msg.actionStatus
+                      ? () => handleCancelAction(i)
+                      : undefined
+                  }
+                />
+              )}
             </div>
           </div>
         ))}
