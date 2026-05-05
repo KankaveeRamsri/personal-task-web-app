@@ -20,11 +20,14 @@ import type { Task, List } from "@/types/database";
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  isFallback?: boolean;
 }
 
 type FilterType = "all" | "mine" | "overdue" | "today";
 
 // ── Constants ────────────────────────────────────────────────────────
+
+const MAX_INPUT_LENGTH = 500;
 
 const SUGGESTED_PROMPTS = [
   "วันนี้ควรโฟกัสงานไหน?",
@@ -86,7 +89,7 @@ async function callLLM(
   tasks: Task[],
   lists: List[],
   boardName: string,
-): Promise<string> {
+): Promise<{ reply: string; isFallback: boolean }> {
   const aiContext = buildAIContext(tasks, lists);
 
   const res = await fetch("/api/ai/chat", {
@@ -103,11 +106,14 @@ async function callLLM(
 
   const data = await res.json();
 
-  if (!res.ok || data.fallback || !data.reply) {
-    throw new Error(data.error ?? "LLM call failed");
+  if (!res.ok || data.fallback) {
+    return {
+      reply: data.reply ?? "เกิดข้อผิดพลาด กรุณาลองใหม่",
+      isFallback: true,
+    };
   }
 
-  return data.reply;
+  return { reply: data.reply ?? "", isFallback: false };
 }
 
 // ── Shared SVGs ──────────────────────────────────────────────────────
@@ -165,15 +171,32 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
       // LLM path: general / unclassified messages
       const boardName = boards.find((b) => b.id === selectedBoardId)?.title ?? "";
       callLLM(prompt, tasks, lists, boardName)
-        .then((reply) => {
-          setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+        .then(({ reply, isFallback }) => {
+          if (isFallback) {
+            const filtered = applyFilter(tasks, lists, filter, userEmail);
+            const ruleReply = generateResponseByIntent(intent, filtered, lists);
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "assistant",
+                content: ruleReply + "\n\n_(ใช้โหมดวิเคราะห์ภายในแทนชั่วคราว)_",
+                isFallback: true,
+              },
+            ]);
+          } else {
+            setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+          }
         })
         .catch(() => {
           const filtered = applyFilter(tasks, lists, filter, userEmail);
           const fallback = generateResponseByIntent(intent, filtered, lists);
           setMessages((prev) => [
             ...prev,
-            { role: "assistant", content: fallback + "\n\n_(ใช้ข้อมูลจากระบบ — LLM ไม่พร้อมใช้งาน)_" },
+            {
+              role: "assistant",
+              content: fallback + "\n\n_(ใช้โหมดวิเคราะห์ภายในแทนชั่วคราว)_",
+              isFallback: true,
+            },
           ]);
         })
         .finally(() => setIsLoading(false));
@@ -289,7 +312,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
               <button
                 key={prompt}
                 onClick={() => handlePrompt(prompt)}
-                disabled={!hasBoard}
+                disabled={isLoading || !hasBoard}
                 className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-zinc-800/40 px-3.5 py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-300 transition-all hover:border-indigo-300 hover:bg-indigo-50/50 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-900/20 hover:text-indigo-700 dark:hover:text-indigo-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-zinc-200 disabled:hover:bg-white dark:disabled:hover:border-zinc-700/60 dark:disabled:hover:bg-zinc-800/40 dark:disabled:hover:text-zinc-300"
               >
                 {prompt}
@@ -305,7 +328,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
               <button
                 key={action.label}
                 onClick={() => handlePrompt(action.prompt, action.filter)}
-                disabled={!hasBoard}
+                disabled={isLoading || !hasBoard}
                 className="inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-zinc-800/40 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 transition-all hover:border-indigo-300 hover:bg-indigo-50/50 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-900/20 hover:text-indigo-700 dark:hover:text-indigo-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {action.label}
@@ -325,6 +348,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
             onKeyDown={handleKeyDown}
             disabled={isLoading || !hasBoard}
             placeholder={hasBoard ? "พิมพ์คำถามเกี่ยวกับงาน..." : "เลือกบอร์ดก่อน..."}
+            maxLength={MAX_INPUT_LENGTH}
             className="flex-1 bg-transparent text-sm text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 outline-none disabled:text-zinc-400 dark:disabled:text-zinc-500 disabled:cursor-not-allowed"
           />
           <button
