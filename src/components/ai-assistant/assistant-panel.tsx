@@ -12,6 +12,7 @@ import {
   getTasksDueToday,
 } from "@/lib/ai-assistant/insights";
 import { buildAIContext } from "@/lib/ai-assistant/context-builder";
+import { detectAssistantIntent, type AssistantIntent } from "@/lib/ai-assistant/intent";
 import type { Task, List } from "@/types/database";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -59,35 +60,25 @@ function applyFilter(
   }
 }
 
-const RULE_BASED_KEYWORDS = [
-  "โฟกัส", "สรุปบอร์ด", "สรุป board", "สรุปใหม่",
-  "ความเสี่ยง", "เสี่ยง", "วิเคราะห์", "overdue",
-  "progress", "ความคืบหน้า", "งานของฉัน",
-];
-
-function isRuleBasedPrompt(prompt: string): boolean {
-  return RULE_BASED_KEYWORDS.some((kw) => prompt.includes(kw));
-}
-
-function generateRuleResponse(
-  prompt: string,
+function generateResponseByIntent(
+  intent: AssistantIntent,
   tasks: Task[],
   lists: List[],
 ): string {
-  if (prompt.includes("โฟกัส")) return formatFocusResponse(tasks, lists);
-  if (prompt.includes("สรุปบอร์ด") || prompt.includes("สรุป board") || prompt.includes("สรุปใหม่"))
-    return formatFullInsightResponse(tasks, lists);
-  if (prompt.includes("ความเสี่ยง") || prompt.includes("เสี่ยง") || prompt.includes("วิเคราะห์"))
-    return formatRiskAnalysis(tasks, lists);
-  if (prompt.includes("overdue"))
-    return formatOverdueResponse(tasks, lists);
-  if (prompt.includes("progress") || prompt.includes("ความคืบหน้า"))
-    return formatProgressResponse(tasks, lists);
-  if (prompt.includes("งานของฉัน")) {
-    if (tasks.length === 0) return "📋 ไม่มีงานของคุณในบอร์ดนี้ครับ";
-    return formatFocusResponse(tasks, lists);
+  switch (intent) {
+    case "focus":
+      return formatFocusResponse(tasks, lists);
+    case "summary":
+      return formatFullInsightResponse(tasks, lists);
+    case "risk":
+      return formatRiskAnalysis(tasks, lists);
+    case "progress":
+      return formatProgressResponse(tasks, lists);
+    case "workload":
+      return formatFullInsightResponse(tasks, lists);
+    default:
+      return formatFullInsightResponse(tasks, lists);
   }
-  return formatFullInsightResponse(tasks, lists);
 }
 
 async function callLLM(
@@ -157,19 +148,21 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
       setMessages((prev) => [...prev, { role: "user", content: prompt }]);
       setIsLoading(true);
 
-      // Rule-based path: suggested prompts and known keywords
-      if (isRuleBasedPrompt(prompt)) {
+      const intent = detectAssistantIntent(prompt);
+
+      // Rule-based path: known intents (faster, free)
+      if (intent !== "general") {
         const delay = 300 + Math.random() * 500;
         setTimeout(() => {
           const filtered = applyFilter(tasks, lists, filter, userEmail);
-          const response = generateRuleResponse(prompt, filtered, lists);
+          const response = generateResponseByIntent(intent, filtered, lists);
           setMessages((prev) => [...prev, { role: "assistant", content: response }]);
           setIsLoading(false);
         }, delay);
         return;
       }
 
-      // LLM path: custom messages
+      // LLM path: general / unclassified messages
       const boardName = boards.find((b) => b.id === selectedBoardId)?.title ?? "";
       callLLM(prompt, tasks, lists, boardName)
         .then((reply) => {
@@ -177,7 +170,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
         })
         .catch(() => {
           const filtered = applyFilter(tasks, lists, filter, userEmail);
-          const fallback = generateRuleResponse(prompt, filtered, lists);
+          const fallback = generateResponseByIntent(intent, filtered, lists);
           setMessages((prev) => [
             ...prev,
             { role: "assistant", content: fallback + "\n\n_(ใช้ข้อมูลจากระบบ — LLM ไม่พร้อมใช้งาน)_" },
@@ -270,7 +263,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
             <div className="rounded-xl bg-zinc-50 dark:bg-zinc-800/60 px-3.5 py-2.5 text-sm text-zinc-400 dark:text-zinc-500">
               {(() => {
                 const lastMsg = messages[messages.length - 1];
-                const isCustom = lastMsg?.role === "user" && !isRuleBasedPrompt(lastMsg.content ?? "");
+                const isCustom = lastMsg?.role === "user" && detectAssistantIntent(lastMsg.content ?? "") === "general";
                 return isCustom ? (
                   <span className="inline-flex items-center gap-1">
                     กำลังคิด
