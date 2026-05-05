@@ -140,9 +140,9 @@ const ACTION_TYPE_LABELS: Record<string, { label: string; icon: string; color: s
 
 const STATUS_LABELS: Record<ActionStatus, { label: string; color: string }> = {
   pending: { label: "", color: "" },
-  executing: { label: "กำลังสร้าง...", color: "text-indigo-600 dark:text-indigo-400" },
-  success: { label: "สร้างสำเร็จ ✓", color: "text-emerald-600 dark:text-emerald-400" },
-  failed: { label: "สร้างไม่สำเร็จ ✗", color: "text-red-600 dark:text-red-400" },
+  executing: { label: "กำลังดำเนินการ...", color: "text-indigo-600 dark:text-indigo-400" },
+  success: { label: "ดำเนินการสำเร็จ ✓", color: "text-emerald-600 dark:text-emerald-400" },
+  failed: { label: "ดำเนินการไม่สำเร็จ ✗", color: "text-red-600 dark:text-red-400" },
   cancelled: { label: "ยกเลิกแล้ว", color: "text-zinc-500 dark:text-zinc-400" },
 };
 
@@ -174,7 +174,15 @@ function ActionPreviewCard({
   if (plan.payload.assigneeName) payloadLines.push(`👤 Assign: ${plan.payload.assigneeName}`);
 
   const isResolved = status !== "pending";
-  const canConfirm = plan.type === "create_task" && !isResolved;
+  const isExecutable = plan.type === "create_task" || plan.type === "update_task";
+  const canConfirm = isExecutable && !isResolved;
+
+  const confirmLabel =
+    plan.type === "create_task"
+      ? "Confirm & Create Task"
+      : plan.type === "update_task"
+        ? "Confirm & Update Task"
+        : "Confirm";
 
   return (
     <div className="mt-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 overflow-hidden">
@@ -225,9 +233,13 @@ function ActionPreviewCard({
           {canConfirm && onConfirm && (
             <button
               onClick={onConfirm}
-              className="rounded-md bg-emerald-600 px-2 py-0.5 text-[10px] font-medium text-white transition-colors hover:bg-emerald-700"
+              className={`rounded-md px-2 py-0.5 text-[10px] font-medium text-white transition-colors ${
+                plan.type === "create_task"
+                  ? "bg-emerald-600 hover:bg-emerald-700"
+                  : "bg-amber-600 hover:bg-amber-700"
+              }`}
             >
-              Confirm & Create Task
+              {confirmLabel}
             </button>
           )}
           {!canConfirm && !isResolved && (
@@ -265,7 +277,7 @@ interface AssistantPanelProps {
 }
 
 export function AssistantPanel({ userEmail }: AssistantPanelProps) {
-  const { tasks, lists, boards, selectedBoardId, createTask } = useBoardData();
+  const { tasks, lists, boards, selectedBoardId, createTask, updateTask } = useBoardData();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -482,10 +494,125 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
       updateMessageActionStatus(msgIndex, "cancelled");
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "ยกเลิกการสร้าง task แล้วครับ" },
+        { role: "assistant", content: "ยกเลิกการดำเนินการแล้วครับ" },
       ]);
     },
     [updateMessageActionStatus],
+  );
+
+  const handleConfirmUpdate = useCallback(
+    async (msgIndex: number, plan: AssistantActionPlan) => {
+      const taskTitle = (plan.payload.taskTitle ?? "").trim();
+      if (!taskTitle) {
+        updateMessageActionStatus(msgIndex, "failed");
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "อัปเดต task ไม่สำเร็จ — ไม่ระบุชื่อ task ที่ต้องการแก้ไขครับ" },
+        ]);
+        return;
+      }
+
+      // Search by exact match first, then case-insensitive contains
+      const exactMatch = tasks.filter(
+        (t) => t.title.toLowerCase() === taskTitle.toLowerCase(),
+      );
+      const candidates =
+        exactMatch.length > 0
+          ? exactMatch
+          : tasks.filter((t) =>
+              t.title.toLowerCase().includes(taskTitle.toLowerCase()),
+            );
+
+      if (candidates.length === 0) {
+        updateMessageActionStatus(msgIndex, "failed");
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: `ไม่พบงานชื่อ "${taskTitle}" ในบอร์ดนี้ครับ` },
+        ]);
+        return;
+      }
+
+      if (candidates.length > 1) {
+        updateMessageActionStatus(msgIndex, "failed");
+        const names = candidates
+          .slice(0, 5)
+          .map((t) => t.title)
+          .join(", ");
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: `พบงานชื่อใกล้เคียงหลายรายการ (${names}) กรุณาระบุชื่อให้ชัดเจนขึ้นครับ`,
+          },
+        ]);
+        return;
+      }
+
+      // Build allowed updates only
+      const updates: Partial<Pick<Task, "title" | "priority">> = {};
+      const fields = plan.payload.fields ?? {};
+      const updateNotes: string[] = [];
+
+      if (typeof fields.title === "string" && fields.title.trim()) {
+        const newTitle = fields.title.trim().slice(0, MAX_TITLE_LENGTH);
+        updates.title = newTitle;
+        updateNotes.push(`ชื่อเป็น "${newTitle}"`);
+      }
+
+      const rawPriority = fields.priority ?? plan.payload.priority;
+      if (
+        typeof rawPriority === "string" &&
+        VALID_PRIORITIES.includes(rawPriority as TaskPriority)
+      ) {
+        updates.priority = rawPriority as TaskPriority;
+        updateNotes.push(`priority เป็น ${rawPriority}`);
+      }
+
+      if (Object.keys(updates).length === 0) {
+        updateMessageActionStatus(msgIndex, "failed");
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "ไม่มี field ที่สามารถอัปเดตได้ (ยังไม่รองรับ due date จากข้อความ)" },
+        ]);
+        return;
+      }
+
+      updateMessageActionStatus(msgIndex, "executing");
+
+      try {
+        const result = await updateTask(candidates[0].id, updates);
+
+        if (result) {
+          updateMessageActionStatus(msgIndex, "success");
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: `อัปเดต task "${candidates[0].title}" สำเร็จแล้วครับ — ${updateNotes.join(", ")}`,
+            },
+          ]);
+        } else {
+          updateMessageActionStatus(msgIndex, "failed");
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: "อัปเดต task ไม่สำเร็จ อาจเกิดจากหางานไม่เจอ งานชื่อซ้ำ หรือสิทธิ์ไม่พอครับ",
+            },
+          ]);
+        }
+      } catch {
+        updateMessageActionStatus(msgIndex, "failed");
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "อัปเดต task ไม่สำเร็จ อาจเกิดจากหางานไม่เจอ งานชื่อซ้ำ หรือสิทธิ์ไม่พอครับ",
+          },
+        ]);
+      }
+    },
+    [tasks, updateTask, updateMessageActionStatus],
   );
 
   return (
@@ -541,9 +668,11 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
                   plan={msg.actionPlan}
                   status={msg.actionStatus ?? "pending"}
                   onConfirm={
-                    msg.actionPlan.type === "create_task" && !msg.actionStatus
+                    !msg.actionStatus && msg.actionPlan.type === "create_task"
                       ? () => handleConfirmCreate(i, msg.actionPlan!)
-                      : undefined
+                      : !msg.actionStatus && msg.actionPlan.type === "update_task"
+                        ? () => handleConfirmUpdate(i, msg.actionPlan!)
+                        : undefined
                   }
                   onCancel={
                     !msg.actionStatus
