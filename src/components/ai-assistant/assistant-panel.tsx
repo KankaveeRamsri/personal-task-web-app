@@ -6,12 +6,12 @@ import {
   formatFocusResponse,
   formatOverdueResponse,
   formatProgressResponse,
-  formatBoardSummary,
   formatRiskAnalysis,
   formatFullInsightResponse,
   getOverdueTasks,
   getTasksDueToday,
 } from "@/lib/ai-assistant/insights";
+import { buildAIContext } from "@/lib/ai-assistant/context-builder";
 import type { Task, List } from "@/types/database";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -59,7 +59,17 @@ function applyFilter(
   }
 }
 
-function generateResponse(
+const RULE_BASED_KEYWORDS = [
+  "โฟกัส", "สรุปบอร์ด", "สรุป board", "สรุปใหม่",
+  "ความเสี่ยง", "เสี่ยง", "วิเคราะห์", "overdue",
+  "progress", "ความคืบหน้า", "งานของฉัน",
+];
+
+function isRuleBasedPrompt(prompt: string): boolean {
+  return RULE_BASED_KEYWORDS.some((kw) => prompt.includes(kw));
+}
+
+function generateRuleResponse(
   prompt: string,
   tasks: Task[],
   lists: List[],
@@ -78,6 +88,40 @@ function generateResponse(
     return formatFocusResponse(tasks, lists);
   }
   return formatFullInsightResponse(tasks, lists);
+}
+
+async function callLLM(
+  message: string,
+  tasks: Task[],
+  lists: List[],
+  boardName: string,
+): Promise<string> {
+  const aiContext = buildAIContext(tasks, lists);
+
+  const res = await fetch("/api/ai/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message,
+      context: {
+        boardName,
+        summary: aiContext.summary,
+        insights: {
+          topTasks: aiContext.topTasks,
+          overdueTasks: aiContext.overdueTasks,
+          bottleneckList: aiContext.bottleneckList,
+        },
+      },
+    }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok || data.fallback || !data.reply) {
+    throw new Error(data.error ?? "LLM call failed");
+  }
+
+  return data.reply;
 }
 
 // ── Shared SVGs ──────────────────────────────────────────────────────
@@ -104,6 +148,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
   const { tasks, lists, boards, selectedBoardId } = useBoardData();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [inputValue, setInputValue] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -117,15 +162,52 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
       setMessages((prev) => [...prev, { role: "user", content: prompt }]);
       setIsLoading(true);
 
-      const delay = 300 + Math.random() * 500;
-      setTimeout(() => {
-        const filtered = applyFilter(tasks, lists, filter, userEmail);
-        const response = generateResponse(prompt, filtered, lists);
-        setMessages((prev) => [...prev, { role: "assistant", content: response }]);
-        setIsLoading(false);
-      }, delay);
+      // Rule-based path: suggested prompts and known keywords
+      if (isRuleBasedPrompt(prompt)) {
+        const delay = 300 + Math.random() * 500;
+        setTimeout(() => {
+          const filtered = applyFilter(tasks, lists, filter, userEmail);
+          const response = generateRuleResponse(prompt, filtered, lists);
+          setMessages((prev) => [...prev, { role: "assistant", content: response }]);
+          setIsLoading(false);
+        }, delay);
+        return;
+      }
+
+      // LLM path: custom messages
+      const boardName = boards.find((b) => b.id === selectedBoardId)?.title ?? "";
+      callLLM(prompt, tasks, lists, boardName)
+        .then((reply) => {
+          setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+        })
+        .catch(() => {
+          const filtered = applyFilter(tasks, lists, filter, userEmail);
+          const fallback = generateRuleResponse(prompt, filtered, lists);
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: fallback + "\n\n_(ใช้ข้อมูลจากระบบ — LLM ไม่พร้อมใช้งาน)_" },
+          ]);
+        })
+        .finally(() => setIsLoading(false));
     },
-    [isLoading, tasks, lists, userEmail],
+    [isLoading, tasks, lists, userEmail, boards, selectedBoardId],
+  );
+
+  const handleSubmit = useCallback(() => {
+    const trimmed = inputValue.trim();
+    if (!trimmed || isLoading) return;
+    setInputValue("");
+    handlePrompt(trimmed);
+  }, [inputValue, isLoading, handlePrompt]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleSubmit();
+      }
+    },
+    [handleSubmit],
   );
 
   const boardTitle = boards.find((b) => b.id === selectedBoardId)?.title;
@@ -191,10 +273,21 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
               <SparkleIcon className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
             </div>
             <div className="rounded-xl bg-zinc-50 dark:bg-zinc-800/60 px-3.5 py-2.5 text-sm text-zinc-400 dark:text-zinc-500">
-              <span className="inline-flex items-center gap-1">
-                กำลังวิเคราะห์ข้อมูล
-                <span className="animate-pulse">...</span>
-              </span>
+              {(() => {
+                const lastMsg = messages[messages.length - 1];
+                const isCustom = lastMsg?.role === "user" && !isRuleBasedPrompt(lastMsg.content ?? "");
+                return isCustom ? (
+                  <span className="inline-flex items-center gap-1">
+                    กำลังคิด
+                    <span className="animate-pulse">...</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1">
+                    กำลังวิเคราะห์ข้อมูล
+                    <span className="animate-pulse">...</span>
+                  </span>
+                );
+              })()}
             </div>
           </div>
         )}
@@ -239,13 +332,17 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
         <div className="flex items-center gap-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 px-3.5 py-2.5">
           <input
             type="text"
-            disabled
-            placeholder="พิมพ์คำถาม... (เร็วๆ นี้)"
-            className="flex-1 bg-transparent text-sm text-zinc-400 dark:text-zinc-500 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 outline-none cursor-not-allowed"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={isLoading || !hasBoard}
+            placeholder={hasBoard ? "พิมพ์คำถามเกี่ยวกับงาน..." : "เลือกบอร์ดก่อน..."}
+            className="flex-1 bg-transparent text-sm text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 outline-none disabled:text-zinc-400 dark:disabled:text-zinc-500 disabled:cursor-not-allowed"
           />
           <button
-            disabled
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-zinc-200 dark:bg-zinc-700 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+            onClick={handleSubmit}
+            disabled={isLoading || !hasBoard || !inputValue.trim()}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white transition-colors hover:bg-indigo-700 disabled:bg-zinc-200 dark:disabled:bg-zinc-700 disabled:text-zinc-400 dark:disabled:text-zinc-500 disabled:cursor-not-allowed"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
