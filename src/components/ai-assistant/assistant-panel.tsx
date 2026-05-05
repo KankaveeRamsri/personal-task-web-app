@@ -174,7 +174,7 @@ function ActionPreviewCard({
   if (plan.payload.assigneeName) payloadLines.push(`👤 Assign: ${plan.payload.assigneeName}`);
 
   const isResolved = status !== "pending";
-  const isExecutable = plan.type === "create_task" || plan.type === "update_task";
+  const isExecutable = plan.type === "create_task" || plan.type === "update_task" || plan.type === "move_task";
   const canConfirm = isExecutable && !isResolved;
 
   const confirmLabel =
@@ -182,7 +182,9 @@ function ActionPreviewCard({
       ? "Confirm & Create Task"
       : plan.type === "update_task"
         ? "Confirm & Update Task"
-        : "Confirm";
+        : plan.type === "move_task"
+          ? "Confirm & Move Task"
+          : "Confirm";
 
   return (
     <div className="mt-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 overflow-hidden">
@@ -219,7 +221,7 @@ function ActionPreviewCard({
 
       <div className="px-3 py-2 border-t border-zinc-100 dark:border-zinc-700/60 flex items-center justify-between gap-2">
         <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
-          {isResolved ? "" : "Preview — กด Confirm เพื่อสร้างจริง"}
+          {isResolved ? "" : plan.type === "create_task" ? "Preview — กด Confirm เพื่อสร้างจริง" : "Preview — กด Confirm เพื่อดำเนินการ"}
         </span>
         <div className="flex items-center gap-1.5 shrink-0">
           {!isResolved && onCancel && (
@@ -236,7 +238,9 @@ function ActionPreviewCard({
               className={`rounded-md px-2 py-0.5 text-[10px] font-medium text-white transition-colors ${
                 plan.type === "create_task"
                   ? "bg-emerald-600 hover:bg-emerald-700"
-                  : "bg-amber-600 hover:bg-amber-700"
+                  : plan.type === "update_task"
+                    ? "bg-amber-600 hover:bg-amber-700"
+                    : "bg-blue-600 hover:bg-blue-700"
               }`}
             >
               {confirmLabel}
@@ -277,7 +281,7 @@ interface AssistantPanelProps {
 }
 
 export function AssistantPanel({ userEmail }: AssistantPanelProps) {
-  const { tasks, lists, boards, selectedBoardId, createTask, updateTask } = useBoardData();
+  const { tasks, lists, boards, selectedBoardId, createTask, updateTask, moveTask } = useBoardData();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -615,6 +619,132 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
     [tasks, updateTask, updateMessageActionStatus],
   );
 
+  const handleConfirmMove = useCallback(
+    async (msgIndex: number, plan: AssistantActionPlan) => {
+      const taskTitle = (plan.payload.taskTitle ?? "").trim();
+      const listName = (plan.payload.listName ?? "").trim();
+
+      if (!taskTitle) {
+        updateMessageActionStatus(msgIndex, "failed");
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "ย้าย task ไม่สำเร็จ — ไม่ระบุชื่อ task ที่ต้องการย้ายครับ" },
+        ]);
+        return;
+      }
+
+      if (!listName) {
+        updateMessageActionStatus(msgIndex, "failed");
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "ย้าย task ไม่สำเร็จ — ไม่ระบุชื่อ list ปลายทางครับ" },
+        ]);
+        return;
+      }
+
+      // Search task by title
+      const exactTask = tasks.filter(
+        (t) => t.title.toLowerCase() === taskTitle.toLowerCase(),
+      );
+      const taskCandidates =
+        exactTask.length > 0
+          ? exactTask
+          : tasks.filter((t) =>
+              t.title.toLowerCase().includes(taskTitle.toLowerCase()),
+            );
+
+      if (taskCandidates.length === 0) {
+        updateMessageActionStatus(msgIndex, "failed");
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: `ไม่พบงานชื่อ "${taskTitle}" ในบอร์ดนี้ครับ` },
+        ]);
+        return;
+      }
+
+      if (taskCandidates.length > 1) {
+        updateMessageActionStatus(msgIndex, "failed");
+        const names = taskCandidates.slice(0, 5).map((t) => t.title).join(", ");
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: `พบงานชื่อใกล้เคียงหลายรายการ (${names}) กรุณาระบุชื่อให้ชัดเจนขึ้นครับ` },
+        ]);
+        return;
+      }
+
+      // Search target list by name
+      const exactList = lists.filter(
+        (l) => l.title.toLowerCase() === listName.toLowerCase(),
+      );
+      const listCandidates =
+        exactList.length > 0
+          ? exactList
+          : lists.filter((l) =>
+              l.title.toLowerCase().includes(listName.toLowerCase()),
+            );
+
+      if (listCandidates.length === 0) {
+        updateMessageActionStatus(msgIndex, "failed");
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: `ไม่พบ list ชื่อ "${listName}" ในบอร์ดนี้ครับ` },
+        ]);
+        return;
+      }
+
+      if (listCandidates.length > 1) {
+        updateMessageActionStatus(msgIndex, "failed");
+        const names = listCandidates.slice(0, 5).map((l) => l.title).join(", ");
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: `พบ list ชื่อใกล้เคียงหลายรายการ (${names}) กรุณาระบุชื่อให้ชัดเจนขึ้นครับ` },
+        ]);
+        return;
+      }
+
+      const task = taskCandidates[0];
+      const targetList = listCandidates[0];
+
+      updateMessageActionStatus(msgIndex, "executing");
+
+      try {
+        const ok = await moveTask(task.id, targetList.id, task.list_id, {
+          is_completed: targetList.is_done,
+        });
+
+        if (ok) {
+          updateMessageActionStatus(msgIndex, "success");
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: `ย้าย task สำเร็จแล้วครับ: "${task.title}" → ${targetList.title}`,
+            },
+          ]);
+        } else {
+          updateMessageActionStatus(msgIndex, "failed");
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: "ย้าย task ไม่สำเร็จ อาจเกิดจากหางานไม่เจอ list ไม่เจอ งานชื่อซ้ำ หรือสิทธิ์ไม่พอครับ",
+            },
+          ]);
+        }
+      } catch {
+        updateMessageActionStatus(msgIndex, "failed");
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "ย้าย task ไม่สำเร็จ อาจเกิดจากหางานไม่เจอ list ไม่เจอ งานชื่อซ้ำ หรือสิทธิ์ไม่พอครับ",
+          },
+        ]);
+      }
+    },
+    [tasks, lists, moveTask, updateMessageActionStatus],
+  );
+
   return (
     <div className="flex h-full flex-col rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
       {/* Chat area */}
@@ -672,7 +802,9 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
                       ? () => handleConfirmCreate(i, msg.actionPlan!)
                       : !msg.actionStatus && msg.actionPlan.type === "update_task"
                         ? () => handleConfirmUpdate(i, msg.actionPlan!)
-                        : undefined
+                        : !msg.actionStatus && msg.actionPlan.type === "move_task"
+                          ? () => handleConfirmMove(i, msg.actionPlan!)
+                          : undefined
                   }
                   onCancel={
                     !msg.actionStatus
