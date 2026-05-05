@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { detectAssistantIntent, type AssistantIntent } from "@/lib/ai-assistant/intent";
 import {
   detectActionIntent,
+  buildFallbackActionPlan,
   type AssistantActionPlan,
   type AssistantActionType,
 } from "@/lib/ai-assistant/action-planner";
@@ -275,6 +276,16 @@ export async function POST(request: Request) {
         intent: "general",
       });
     } catch (err) {
+      const fallbackPlan = buildFallbackActionPlan(trimmed, actionType);
+      if (fallbackPlan) {
+        return NextResponse.json({
+          reply: fallbackPlan.summary,
+          actionPlan: fallbackPlan,
+          requiresConfirmation: true,
+          fallback: true
+        });
+      }
+
       if (err instanceof DOMException && err.name === "AbortError") {
         return fallbackReply("timeout", 504);
       }

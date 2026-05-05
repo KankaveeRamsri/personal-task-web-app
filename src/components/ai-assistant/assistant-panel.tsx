@@ -15,6 +15,8 @@ import { buildAIContext } from "@/lib/ai-assistant/context-builder";
 import { detectAssistantIntent, type AssistantIntent } from "@/lib/ai-assistant/intent";
 import { detectActionIntent } from "@/lib/ai-assistant/action-planner";
 import type { AssistantActionPlan } from "@/lib/ai-assistant/action-planner";
+import { logActivity } from "@/lib/activity-log";
+import { parseAssistantDueDate } from "@/lib/ai-assistant/date-parser";
 import type { Task, List, TaskPriority } from "@/types/database";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -119,6 +121,8 @@ async function callLLM(
     return {
       reply: data.reply ?? "เกิดข้อผิดพลาด กรุณาลองใหม่",
       isFallback: true,
+      actionPlan: data.actionPlan,
+      requiresConfirmation: data.requiresConfirmation,
     };
   }
 
@@ -281,7 +285,7 @@ interface AssistantPanelProps {
 }
 
 export function AssistantPanel({ userEmail }: AssistantPanelProps) {
-  const { tasks, lists, boards, selectedBoardId, createTask, updateTask, moveTask } = useBoardData();
+  const { tasks, lists, boards, selectedWorkspaceId, selectedBoardId, createTask, updateTask, moveTask } = useBoardData();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -305,16 +309,28 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
         callLLM(prompt, tasks, lists, boardName)
           .then(({ reply, isFallback, actionPlan, requiresConfirmation }) => {
             if (isFallback) {
-              const filtered = applyFilter(tasks, lists, filter, userEmail);
-              const ruleReply = generateResponseByIntent("general", filtered, lists);
-              setMessages((prev) => [
-                ...prev,
-                {
-                  role: "assistant",
-                  content: ruleReply + "\n\n_(ใช้โหมดวิเคราะห์ภายในแทนชั่วคราว)_",
-                  isFallback: true,
-                },
-              ]);
+              if (actionPlan) {
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    role: "assistant",
+                    content: reply,
+                    actionPlan,
+                    requiresConfirmation,
+                  },
+                ]);
+              } else {
+                const filtered = applyFilter(tasks, lists, filter, userEmail);
+                const ruleReply = generateResponseByIntent("general", filtered, lists);
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    role: "assistant",
+                    content: ruleReply + "\n\n_(ใช้โหมดวิเคราะห์ภายในแทนชั่วคราว)_",
+                    isFallback: true,
+                  },
+                ]);
+              }
             } else {
               setMessages((prev) => [
                 ...prev,
@@ -362,16 +378,28 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
       callLLM(prompt, tasks, lists, boardName)
         .then(({ reply, isFallback, actionPlan, requiresConfirmation }) => {
           if (isFallback) {
-            const filtered = applyFilter(tasks, lists, filter, userEmail);
-            const ruleReply = generateResponseByIntent(intent, filtered, lists);
-            setMessages((prev) => [
-              ...prev,
-              {
-                role: "assistant",
-                content: ruleReply + "\n\n_(ใช้โหมดวิเคราะห์ภายในแทนชั่วคราว)_",
-                isFallback: true,
-              },
-            ]);
+            if (actionPlan) {
+              setMessages((prev) => [
+                ...prev,
+                {
+                  role: "assistant",
+                  content: reply,
+                  actionPlan,
+                  requiresConfirmation,
+                },
+              ]);
+            } else {
+              const filtered = applyFilter(tasks, lists, filter, userEmail);
+              const ruleReply = generateResponseByIntent(intent, filtered, lists);
+              setMessages((prev) => [
+                ...prev,
+                {
+                  role: "assistant",
+                  content: ruleReply + "\n\n_(ใช้โหมดวิเคราะห์ภายในแทนชั่วคราว)_",
+                  isFallback: true,
+                },
+              ]);
+            }
           } else {
             setMessages((prev) => [
               ...prev,
@@ -445,7 +473,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
         updateMessageActionStatus(msgIndex, "failed");
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: "สร้าง task ไม่สำเร็จ — ไม่มีชื่อ task ครับ" },
+          { role: "assistant", content: "ข้อมูล action ไม่ครบ กรุณาลองพิมพ์ใหม่ให้ชัดเจนขึ้น" },
         ]);
         return;
       }
@@ -455,7 +483,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
         updateMessageActionStatus(msgIndex, "failed");
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: "สร้าง task ไม่สำเร็จ — ไม่พบ list ที่ใส่ได้ในบอร์ดนี้ครับ" },
+          { role: "assistant", content: "ไม่พบ list ที่ใส่ได้ในบอร์ดนี้ครับ" },
         ]);
         return;
       }
@@ -464,33 +492,49 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
         ? (plan.payload.priority as TaskPriority)
         : "none";
 
+      const parsedDueDate = parseAssistantDueDate(plan.payload.dueDateText);
+
       updateMessageActionStatus(msgIndex, "executing");
 
       try {
-        const result = await createTask(listId, title, { priority });
+        const result = await createTask(listId, title, { 
+          priority, 
+          due_date: parsedDueDate 
+        });
 
         if (result) {
+          if (selectedWorkspaceId) {
+            await logActivity({
+              workspaceId: selectedWorkspaceId,
+              boardId: selectedBoardId ?? undefined,
+              taskId: result.id,
+              action: "ai_create_task",
+              metadata: { originalMessage: messages[msgIndex - 1]?.content, actionPlan: plan },
+            });
+          }
+
+          const dateMsg = parsedDueDate ? ` กำหนดส่ง ${parsedDueDate}` : "";
           updateMessageActionStatus(msgIndex, "success");
           setMessages((prev) => [
             ...prev,
-            { role: "assistant", content: `สร้าง task สำเร็จแล้วครับ: ${title}` },
+            { role: "assistant", content: `ดำเนินการสำเร็จและบันทึก activity แล้วครับ (สร้าง task "${title}"${dateMsg})` },
           ]);
         } else {
           updateMessageActionStatus(msgIndex, "failed");
           setMessages((prev) => [
             ...prev,
-            { role: "assistant", content: "สร้าง task ไม่สำเร็จ อาจเกิดจากสิทธิ์ไม่พอหรือข้อมูลไม่ครบครับ" },
+            { role: "assistant", content: "คุณไม่มีสิทธิ์ให้ AI ทำ action นี้ในบอร์ดนี้ครับ" },
           ]);
         }
       } catch {
         updateMessageActionStatus(msgIndex, "failed");
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: "สร้าง task ไม่สำเร็จ อาจเกิดจากสิทธิ์ไม่พอหรือข้อมูลไม่ครบครับ" },
+          { role: "assistant", content: "คุณไม่มีสิทธิ์ให้ AI ทำ action นี้ในบอร์ดนี้ครับ" },
         ]);
       }
     },
-    [createTask, resolveDefaultList, updateMessageActionStatus],
+    [createTask, resolveDefaultList, updateMessageActionStatus, selectedWorkspaceId, selectedBoardId, messages],
   );
 
   const handleCancelAction = useCallback(
@@ -511,7 +555,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
         updateMessageActionStatus(msgIndex, "failed");
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: "อัปเดต task ไม่สำเร็จ — ไม่ระบุชื่อ task ที่ต้องการแก้ไขครับ" },
+          { role: "assistant", content: "ข้อมูล action ไม่ครบ กรุณาลองพิมพ์ใหม่ให้ชัดเจนขึ้น" },
         ]);
         return;
       }
@@ -538,29 +582,23 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
 
       if (candidates.length > 1) {
         updateMessageActionStatus(msgIndex, "failed");
-        const names = candidates
-          .slice(0, 5)
-          .map((t) => t.title)
-          .join(", ");
         setMessages((prev) => [
           ...prev,
           {
             role: "assistant",
-            content: `พบงานชื่อใกล้เคียงหลายรายการ (${names}) กรุณาระบุชื่อให้ชัดเจนขึ้นครับ`,
+            content: "พบงานชื่อใกล้เคียงหลายรายการ กรุณาระบุชื่อให้ชัดเจนขึ้น",
           },
         ]);
         return;
       }
 
       // Build allowed updates only
-      const updates: Partial<Pick<Task, "title" | "priority">> = {};
+      const updates: Partial<Task> = {};
       const fields = plan.payload.fields ?? {};
-      const updateNotes: string[] = [];
 
       if (typeof fields.title === "string" && fields.title.trim()) {
         const newTitle = fields.title.trim().slice(0, MAX_TITLE_LENGTH);
         updates.title = newTitle;
-        updateNotes.push(`ชื่อเป็น "${newTitle}"`);
       }
 
       const rawPriority = fields.priority ?? plan.payload.priority;
@@ -569,14 +607,28 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
         VALID_PRIORITIES.includes(rawPriority as TaskPriority)
       ) {
         updates.priority = rawPriority as TaskPriority;
-        updateNotes.push(`priority เป็น ${rawPriority}`);
+      }
+
+      const rawDueDate = fields.dueDateText ?? plan.payload.dueDateText;
+      if (typeof rawDueDate === "string") {
+        const parsedDueDate = parseAssistantDueDate(rawDueDate);
+        if (parsedDueDate) {
+          updates.due_date = parsedDueDate;
+        } else if (rawDueDate.trim()) {
+          updateMessageActionStatus(msgIndex, "failed");
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: `ไม่สามารถตีความวันที่ "${rawDueDate}" ได้ กรุณาระบุวันที่ใหม่ให้ชัดเจนขึ้น` },
+          ]);
+          return;
+        }
       }
 
       if (Object.keys(updates).length === 0) {
         updateMessageActionStatus(msgIndex, "failed");
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: "ไม่มี field ที่สามารถอัปเดตได้ (ยังไม่รองรับ due date จากข้อความ)" },
+          { role: "assistant", content: "ข้อมูล action ไม่ครบ กรุณาลองพิมพ์ใหม่ให้ชัดเจนขึ้น" },
         ]);
         return;
       }
@@ -587,12 +639,23 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
         const result = await updateTask(candidates[0].id, updates);
 
         if (result) {
+          if (selectedWorkspaceId) {
+            await logActivity({
+              workspaceId: selectedWorkspaceId,
+              boardId: selectedBoardId ?? undefined,
+              taskId: result.id,
+              action: "ai_update_task",
+              metadata: { originalMessage: messages[msgIndex - 1]?.content, actionPlan: plan, changedFields: updates },
+            });
+          }
+
+          const dateMsg = updates.due_date ? ` เป็นกำหนดส่ง ${updates.due_date}` : "";
           updateMessageActionStatus(msgIndex, "success");
           setMessages((prev) => [
             ...prev,
             {
               role: "assistant",
-              content: `อัปเดต task "${candidates[0].title}" สำเร็จแล้วครับ — ${updateNotes.join(", ")}`,
+              content: `ดำเนินการสำเร็จและบันทึก activity แล้วครับ (อัปเดตงาน "${candidates[0].title}"${dateMsg})`,
             },
           ]);
         } else {
@@ -601,7 +664,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
             ...prev,
             {
               role: "assistant",
-              content: "อัปเดต task ไม่สำเร็จ อาจเกิดจากหางานไม่เจอ งานชื่อซ้ำ หรือสิทธิ์ไม่พอครับ",
+              content: "คุณไม่มีสิทธิ์ให้ AI ทำ action นี้ในบอร์ดนี้ครับ",
             },
           ]);
         }
@@ -611,12 +674,12 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
           ...prev,
           {
             role: "assistant",
-            content: "อัปเดต task ไม่สำเร็จ อาจเกิดจากหางานไม่เจอ งานชื่อซ้ำ หรือสิทธิ์ไม่พอครับ",
+            content: "คุณไม่มีสิทธิ์ให้ AI ทำ action นี้ในบอร์ดนี้ครับ",
           },
         ]);
       }
     },
-    [tasks, updateTask, updateMessageActionStatus],
+    [tasks, updateTask, updateMessageActionStatus, selectedWorkspaceId, selectedBoardId, messages],
   );
 
   const handleConfirmMove = useCallback(
@@ -624,20 +687,11 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
       const taskTitle = (plan.payload.taskTitle ?? "").trim();
       const listName = (plan.payload.listName ?? "").trim();
 
-      if (!taskTitle) {
+      if (!taskTitle || !listName) {
         updateMessageActionStatus(msgIndex, "failed");
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: "ย้าย task ไม่สำเร็จ — ไม่ระบุชื่อ task ที่ต้องการย้ายครับ" },
-        ]);
-        return;
-      }
-
-      if (!listName) {
-        updateMessageActionStatus(msgIndex, "failed");
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: "ย้าย task ไม่สำเร็จ — ไม่ระบุชื่อ list ปลายทางครับ" },
+          { role: "assistant", content: "ข้อมูล action ไม่ครบ กรุณาลองพิมพ์ใหม่ให้ชัดเจนขึ้น" },
         ]);
         return;
       }
@@ -664,10 +718,9 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
 
       if (taskCandidates.length > 1) {
         updateMessageActionStatus(msgIndex, "failed");
-        const names = taskCandidates.slice(0, 5).map((t) => t.title).join(", ");
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: `พบงานชื่อใกล้เคียงหลายรายการ (${names}) กรุณาระบุชื่อให้ชัดเจนขึ้นครับ` },
+          { role: "assistant", content: "พบงานชื่อใกล้เคียงหลายรายการ กรุณาระบุชื่อให้ชัดเจนขึ้น" },
         ]);
         return;
       }
@@ -694,10 +747,9 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
 
       if (listCandidates.length > 1) {
         updateMessageActionStatus(msgIndex, "failed");
-        const names = listCandidates.slice(0, 5).map((l) => l.title).join(", ");
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: `พบ list ชื่อใกล้เคียงหลายรายการ (${names}) กรุณาระบุชื่อให้ชัดเจนขึ้นครับ` },
+          { role: "assistant", content: "พบ list ชื่อใกล้เคียงหลายรายการ กรุณาระบุชื่อให้ชัดเจนขึ้น" },
         ]);
         return;
       }
@@ -713,12 +765,22 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
         });
 
         if (ok) {
+          if (selectedWorkspaceId) {
+            await logActivity({
+              workspaceId: selectedWorkspaceId,
+              boardId: selectedBoardId ?? undefined,
+              taskId: task.id,
+              action: "ai_move_task",
+              metadata: { originalMessage: messages[msgIndex - 1]?.content, actionPlan: plan, targetList: targetList.title },
+            });
+          }
+
           updateMessageActionStatus(msgIndex, "success");
           setMessages((prev) => [
             ...prev,
             {
               role: "assistant",
-              content: `ย้าย task สำเร็จแล้วครับ: "${task.title}" → ${targetList.title}`,
+              content: `ดำเนินการสำเร็จและบันทึก activity แล้วครับ (ย้ายงาน "${task.title}" ไปที่ "${targetList.title}")`,
             },
           ]);
         } else {
@@ -727,7 +789,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
             ...prev,
             {
               role: "assistant",
-              content: "ย้าย task ไม่สำเร็จ อาจเกิดจากหางานไม่เจอ list ไม่เจอ งานชื่อซ้ำ หรือสิทธิ์ไม่พอครับ",
+              content: "คุณไม่มีสิทธิ์ให้ AI ทำ action นี้ในบอร์ดนี้ครับ",
             },
           ]);
         }
@@ -737,12 +799,12 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
           ...prev,
           {
             role: "assistant",
-            content: "ย้าย task ไม่สำเร็จ อาจเกิดจากหางานไม่เจอ list ไม่เจอ งานชื่อซ้ำ หรือสิทธิ์ไม่พอครับ",
+            content: "คุณไม่มีสิทธิ์ให้ AI ทำ action นี้ในบอร์ดนี้ครับ",
           },
         ]);
       }
     },
-    [tasks, lists, moveTask, updateMessageActionStatus],
+    [tasks, lists, moveTask, updateMessageActionStatus, selectedWorkspaceId, selectedBoardId, messages],
   );
 
   return (
