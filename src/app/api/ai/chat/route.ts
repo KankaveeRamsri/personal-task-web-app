@@ -1,20 +1,25 @@
 import { NextResponse } from "next/server";
 
-const SYSTEM_PROMPT = `คุณคือ AI Assistant ช่วยจัดการงาน (Task Management Assistant)
-คุณต้องตอบเป็นภาษาไทยเท่านั้น
-คุณต้องใช้ข้อมูลที่ให้มาเท่านั้น ห้ามแต่งเรื่อง (no hallucination)
+const SYSTEM_PROMPT = `คุณคือ AI ผู้ช่วยจัดการงาน (Task Management Assistant)
 
-กฎการวิเคราะห์งาน:
-- งานเสร็จแล้ว (DONE) = task.is_completed === true หรือ list.is_done === true
-- งานเลยกำหนด (Overdue) = due_date < วันนี้ และ งานยังไม่เสร็จ (is_done === false)
-- ห้ามใช้ชื่อ list เพื่อตัดสินว่างานเสร็จหรือไม่
-- คุณอ่านข้อมูลได้อย่างเดียว (read-only) ห้ามแนะนำให้แก้ไข/ลบงานโดยตรง
+กฎ:
+- ต้องตอบเป็นภาษาไทย
+- ใช้เฉพาะข้อมูลที่ให้เท่านั้น — ห้ามเดาหรือสร้างข้อมูลเอง
+- ถ้าข้อมูลไม่เพียงพอ ให้บอกว่าไม่มีข้อมูล
+- งานเสร็จ = task.is_completed หรือ list.is_done
+- overdue = due_date < วันนี้ และ list.is_done = false
+- ห้ามใช้ชื่อ list เพื่อตัดสินว่างานเสร็จ
 
-รูปแบบการตอบ:
+รูปแบบการตอบ — ใช้ structure นี้เมื่อเหมาะสม:
+📌 งานที่ควรโฟกัส
+⚠️ ความเสี่ยง
+📊 สถานะ
+💡 คำแนะนำ
+
 - ตอบสั้น กระชับ เป็นประโยชน์
 - ใช้ bullet points เมื่อมีหลายรายการ
-- ใส่ emoji เพื่อให้อ่านง่ายเมื่อเหมาะสม
-- ถ้าข้อมูลไม่พอ ให้แจ้งว่าไม่มีข้อมูลเพียงพอ`;
+- ใส่ emoji เพื่อให้อ่านงาน
+- ถ้าไม่มีงาน ให้บอกว่าไม่มี`;
 
 export async function POST(request: Request) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -37,7 +42,7 @@ export async function POST(request: Request) {
 
   const { message, context } = body as {
     message?: string;
-    context?: { boardName?: string; summary?: unknown; insights?: unknown };
+    context?: Record<string, unknown>;
   };
 
   if (!message?.trim()) {
@@ -47,14 +52,20 @@ export async function POST(request: Request) {
     );
   }
 
-  const contextSection = context
-    ? `\n\nข้อมูลบอร์ด${context.boardName ? ` "${context.boardName}"` : ""}:\n${JSON.stringify(context, null, 2)}`
-    : "";
+  const contextJSON = context ? JSON.stringify(context) : "{}";
+  const userContent = `ข้อมูลบอร์ด:\n${contextJSON}\n\nคำถาม: ${message}`;
 
   const contents = [
     { role: "user" as const, parts: [{ text: SYSTEM_PROMPT }] },
-    { role: "model" as const, parts: [{ text: "เข้าใจครับ ผมพร้อมช่วยวิเคราะห์งานจากข้อมูลที่ให้มา" }] },
-    { role: "user" as const, parts: [{ text: `${contextSection}\n\nคำถาม: ${message}` }] },
+    {
+      role: "model" as const,
+      parts: [
+        {
+          text: "เข้าใจครับ ผมจะตอบเป็นภาษาไทย โดยใช้เฉพาะข้อมูลที่ให้มา ตามรูปแบบที่กำหนด",
+        },
+      ],
+    },
+    { role: "user" as const, parts: [{ text: userContent }] },
   ];
 
   try {
@@ -66,8 +77,8 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         contents,
         generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 800,
+          temperature: 0.2,
+          maxOutputTokens: 600,
         },
       }),
     });
@@ -82,15 +93,17 @@ export async function POST(request: Request) {
     }
 
     const data = await res.json();
-    const reply =
+    const rawReply =
       data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
-    if (!reply) {
+    if (!rawReply) {
       return NextResponse.json(
         { reply: "", fallback: true, error: "Empty LLM response" },
         { status: 500 },
       );
     }
+
+    const reply = rawReply.trim();
 
     return NextResponse.json({ reply });
   } catch (err) {

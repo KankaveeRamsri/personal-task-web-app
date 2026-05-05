@@ -105,12 +105,7 @@ async function callLLM(
       message,
       context: {
         boardName,
-        summary: aiContext.summary,
-        insights: {
-          topTasks: aiContext.topTasks,
-          overdueTasks: aiContext.overdueTasks,
-          bottleneckList: aiContext.bottleneckList,
-        },
+        ...aiContext,
       },
     }),
   });

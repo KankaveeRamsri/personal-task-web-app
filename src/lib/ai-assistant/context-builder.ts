@@ -5,6 +5,8 @@ import {
   getTasksDueToday,
   getFocusTasks,
   getBottleneckList,
+  isNearDue,
+  daysOverdue,
 } from "./insights";
 
 export interface AIContextSummary {
@@ -12,29 +14,17 @@ export interface AIContextSummary {
   completed: number;
   overdue: number;
   dueToday: number;
+  completionRate: number;
 }
 
 export interface AIContext {
   summary: AIContextSummary;
-  topTasks: Pick<Task, "id" | "title" | "priority" | "due_date" | "is_completed">[];
-  overdueTasks: Pick<Task, "id" | "title" | "priority" | "due_date">[];
-  bottleneckList: { title: string; pendingCount: number } | null;
+  focusTasks: { title: string; due_date: string | null; priority: string }[];
+  overdueTasks: { title: string; overdueDays: number }[];
+  nearDueTasks: { title: string; dueInDays: number }[];
+  bottleneck: { listName: string; taskCount: number } | null;
+  workload: { user: string; taskCount: number }[];
 }
-
-const TASK_PICK = (t: Task) => ({
-  id: t.id,
-  title: t.title,
-  priority: t.priority,
-  due_date: t.due_date,
-  is_completed: t.is_completed,
-});
-
-const OVERDUE_PICK = (t: Task) => ({
-  id: t.id,
-  title: t.title,
-  priority: t.priority,
-  due_date: t.due_date,
-});
 
 export function buildAIContext(
   tasks: Task[],
@@ -45,18 +35,53 @@ export function buildAIContext(
   const dueTodayList = getTasksDueToday(tasks, lists);
   const focusList = getFocusTasks(tasks, lists);
   const bottleneck = getBottleneckList(lists, tasks);
+  const total = tasks.length;
+
+  const nearDueList = tasks.filter((t) => isNearDue(t, lists));
+
+  const workloadMap = new Map<string, number>();
+  for (const t of tasks) {
+    if (isTaskDone(t, lists)) continue;
+    const key = t.assignee_id ?? "unassigned";
+    workloadMap.set(key, (workloadMap.get(key) ?? 0) + 1);
+  }
+  const workload = [...workloadMap.entries()]
+    .map(([user, taskCount]) => ({ user, taskCount }))
+    .sort((a, b) => b.taskCount - a.taskCount)
+    .slice(0, 5);
 
   return {
     summary: {
-      totalTasks: tasks.length,
+      totalTasks: total,
       completed: completedCount,
       overdue: overdueList.length,
       dueToday: dueTodayList.length,
+      completionRate: total > 0 ? Math.round((completedCount / total) * 100) : 0,
     },
-    topTasks: focusList.slice(0, 5).map(TASK_PICK),
-    overdueTasks: overdueList.slice(0, 5).map(OVERDUE_PICK),
-    bottleneckList: bottleneck
-      ? { title: bottleneck.title, pendingCount: bottleneck.count }
+    focusTasks: focusList.slice(0, 5).map((t) => ({
+      title: t.title,
+      due_date: t.due_date,
+      priority: t.priority,
+    })),
+    overdueTasks: overdueList.slice(0, 5).map((t) => ({
+      title: t.title,
+      overdueDays: daysOverdue(t.due_date!),
+    })),
+    nearDueTasks: nearDueList.slice(0, 5).map((t) => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const due = new Date(t.due_date!);
+      due.setHours(0, 0, 0, 0);
+      return {
+        title: t.title,
+        dueInDays: Math.floor(
+          (due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+        ),
+      };
+    }),
+    bottleneck: bottleneck
+      ? { listName: bottleneck.title, taskCount: bottleneck.count }
       : null,
+    workload,
   };
 }

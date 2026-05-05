@@ -29,7 +29,7 @@ function isDueToday(task: Task): boolean {
   return due.getTime() === today.getTime();
 }
 
-function isNearDue(task: Task, lists: List[]): boolean {
+export function isNearDue(task: Task, lists: List[]): boolean {
   if (!task.due_date) return false;
   if (isTaskDone(task, lists)) return false;
   const today = new Date();
@@ -54,7 +54,7 @@ const PRIORITY_ORDER: Record<string, number> = {
   none: 0,
 };
 
-function daysOverdue(dueDate: string): number {
+export function daysOverdue(dueDate: string): number {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const due = new Date(dueDate);
