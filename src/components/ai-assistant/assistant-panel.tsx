@@ -100,6 +100,8 @@ async function callLLM(
   tasks: Task[],
   lists: List[],
   boardName: string,
+  workspaceId?: string,
+  boardId?: string,
 ): Promise<{ reply: string; isFallback: boolean; actionPlan?: AssistantActionPlan; requiresConfirmation?: boolean }> {
   const aiContext = buildAIContext(tasks, lists);
 
@@ -112,6 +114,7 @@ async function callLLM(
         boardName,
         ...aiContext,
       },
+      ...(workspaceId ? { workspaceId, boardId } : {}),
     }),
   });
 
@@ -306,7 +309,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
       const actionType = detectActionIntent(prompt);
       if (actionType !== "unknown") {
         const boardName = boards.find((b) => b.id === selectedBoardId)?.title ?? "";
-        callLLM(prompt, tasks, lists, boardName)
+        callLLM(prompt, tasks, lists, boardName, undefined, undefined)
           .then(({ reply, isFallback, actionPlan, requiresConfirmation }) => {
             if (isFallback) {
               if (actionPlan) {
@@ -375,7 +378,14 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
 
       // LLM path: general / unclassified messages
       const boardName = boards.find((b) => b.id === selectedBoardId)?.title ?? "";
-      callLLM(prompt, tasks, lists, boardName)
+      callLLM(
+        prompt,
+        tasks,
+        lists,
+        boardName,
+        selectedWorkspaceId ?? undefined,
+        selectedBoardId ?? undefined,
+      )
         .then(({ reply, isFallback, actionPlan, requiresConfirmation }) => {
           if (isFallback) {
             if (actionPlan) {
@@ -426,7 +436,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
         })
         .finally(() => setIsLoading(false));
     },
-    [isLoading, tasks, lists, userEmail, boards, selectedBoardId],
+    [isLoading, tasks, lists, userEmail, boards, selectedBoardId, selectedWorkspaceId],
   );
 
   const handleSubmit = useCallback(() => {
