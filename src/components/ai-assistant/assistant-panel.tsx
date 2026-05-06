@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useBoardData } from "@/hooks/useBoardData";
 import {
   formatFocusResponse,
@@ -27,6 +28,7 @@ interface RagSource {
   taskId: string;
   similarity: number;
   preview: string;
+  boardId?: string;
 }
 
 interface ChatMessage {
@@ -296,11 +298,23 @@ interface AssistantPanelProps {
 }
 
 export function AssistantPanel({ userEmail }: AssistantPanelProps) {
+  const router = useRouter();
   const { tasks, lists, boards, selectedWorkspaceId, selectedBoardId, createTask, updateTask, moveTask } = useBoardData();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const handleSourceClick = useCallback(
+    (src: RagSource) => {
+      if (src.boardId) {
+        router.push(`/dashboard/board?boardId=${src.boardId}&taskId=${src.taskId}`);
+      } else {
+        console.log("[RAG Source] taskId:", src.taskId);
+      }
+    },
+    [router],
+  );
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -862,8 +876,29 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
             >
               {msg.content}
               {msg.ragSources && msg.ragSources.length > 0 && (
-                <div className="mt-1.5 text-[10px] text-zinc-400 dark:text-zinc-500">
-                  Sources: {msg.ragSources.length}
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {msg.ragSources.map((src) => {
+                    const label =
+                      src.preview.length > 65
+                        ? src.preview.slice(0, 65) + "…"
+                        : src.preview;
+                    return (
+                      <button
+                        key={src.taskId}
+                        type="button"
+                        title={src.preview}
+                        onClick={() => handleSourceClick(src)}
+                        className="inline-flex items-center gap-1 rounded-md border border-zinc-200 dark:border-zinc-700 bg-zinc-100/60 dark:bg-zinc-800/50 px-2 py-0.5 text-[10px] text-zinc-500 dark:text-zinc-400 hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-600 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-900/20 dark:hover:text-indigo-400 transition-colors"
+                      >
+                        <svg className="h-2.5 w-2.5 shrink-0 opacity-60" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+                        </svg>
+                        <span className="max-w-[160px] truncate">{label}</span>
+                        <span className="shrink-0 text-zinc-300 dark:text-zinc-600">·</span>
+                        <span className="shrink-0 tabular-nums">{Math.round(src.similarity * 100)}%</span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
               {msg.actionPlan && (

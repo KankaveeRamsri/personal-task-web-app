@@ -31,6 +31,7 @@ interface RagDocument {
   task_id: string;
   content: string;
   similarity: number;
+  board_id?: string | null;
 }
 
 const MAX_RAG_CONTENT_LENGTH = 300;
@@ -416,6 +417,7 @@ export async function POST(request: Request) {
         taskId: d.task_id,
         similarity: d.similarity,
         preview: d.content.slice(0, 100),
+        ...(d.board_id ? { boardId: d.board_id } : {}),
       }))
     : undefined;
 
