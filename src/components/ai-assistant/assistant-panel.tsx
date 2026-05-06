@@ -23,6 +23,12 @@ import type { Task, List, TaskPriority } from "@/types/database";
 
 type ActionStatus = "pending" | "executing" | "success" | "failed" | "cancelled";
 
+interface RagSource {
+  taskId: string;
+  similarity: number;
+  preview: string;
+}
+
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -30,6 +36,7 @@ interface ChatMessage {
   actionPlan?: AssistantActionPlan;
   requiresConfirmation?: boolean;
   actionStatus?: ActionStatus;
+  ragSources?: RagSource[];
 }
 
 type FilterType = "all" | "mine" | "overdue" | "today";
@@ -102,7 +109,7 @@ async function callLLM(
   boardName: string,
   workspaceId?: string,
   boardId?: string,
-): Promise<{ reply: string; isFallback: boolean; actionPlan?: AssistantActionPlan; requiresConfirmation?: boolean }> {
+): Promise<{ reply: string; isFallback: boolean; actionPlan?: AssistantActionPlan; requiresConfirmation?: boolean; ragSources?: RagSource[] }> {
   const aiContext = buildAIContext(tasks, lists);
 
   const res = await fetch("/api/ai/chat", {
@@ -134,6 +141,7 @@ async function callLLM(
     isFallback: false,
     actionPlan: data.actionPlan ?? undefined,
     requiresConfirmation: data.requiresConfirmation ?? false,
+    ragSources: Array.isArray(data.ragSources) ? data.ragSources : undefined,
   };
 }
 
@@ -362,21 +370,8 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
         return;
       }
 
-      // Rule-based path: known assistant intents (faster, free)
+      // LLM path: all non-action messages (intent used by route for prompt tuning)
       const intent = detectAssistantIntent(prompt);
-
-      if (intent !== "general") {
-        const delay = 300 + Math.random() * 500;
-        setTimeout(() => {
-          const filtered = applyFilter(tasks, lists, filter, userEmail);
-          const response = generateResponseByIntent(intent, filtered, lists);
-          setMessages((prev) => [...prev, { role: "assistant", content: response }]);
-          setIsLoading(false);
-        }, delay);
-        return;
-      }
-
-      // LLM path: general / unclassified messages
       const boardName = boards.find((b) => b.id === selectedBoardId)?.title ?? "";
       callLLM(
         prompt,
@@ -386,7 +381,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
         selectedWorkspaceId ?? undefined,
         selectedBoardId ?? undefined,
       )
-        .then(({ reply, isFallback, actionPlan, requiresConfirmation }) => {
+        .then(({ reply, isFallback, actionPlan, requiresConfirmation, ragSources }) => {
           if (isFallback) {
             if (actionPlan) {
               setMessages((prev) => [
@@ -418,6 +413,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
                 content: reply,
                 actionPlan,
                 requiresConfirmation,
+                ...(ragSources ? { ragSources } : {}),
               },
             ]);
           }
@@ -865,6 +861,11 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
               }`}
             >
               {msg.content}
+              {msg.ragSources && msg.ragSources.length > 0 && (
+                <div className="mt-1.5 text-[10px] text-zinc-400 dark:text-zinc-500">
+                  Sources: {msg.ragSources.length}
+                </div>
+              )}
               {msg.actionPlan && (
                 <ActionPreviewCard
                   plan={msg.actionPlan}
