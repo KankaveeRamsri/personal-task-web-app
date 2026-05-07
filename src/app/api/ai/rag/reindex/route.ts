@@ -3,6 +3,8 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { reindexTasks } from "@/lib/ai/rag/task-indexer";
 
+export const runtime = "edge";
+
 const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 50;
 

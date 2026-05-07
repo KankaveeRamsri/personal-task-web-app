@@ -11,6 +11,8 @@ import {
 import { retrieveTaskDocuments, type TaskDocument } from "@/lib/ai/rag/task-retriever";
 import { callLLM, getActiveLLMProvider, type LLMMessage } from "@/lib/ai/llm";
 
+export const runtime = "edge";
+
 // ── Constants ──────────────────────────────────────────────────────────
 
 const MAX_MESSAGE_LENGTH = 500;

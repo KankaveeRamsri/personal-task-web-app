@@ -3,6 +3,8 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { retrieveTaskDocuments } from "@/lib/ai/rag/task-retriever";
 
+export const runtime = "edge";
+
 const MAX_MATCH_COUNT = 20;
 
 export async function POST(request: Request) {
