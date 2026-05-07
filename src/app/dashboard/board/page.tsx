@@ -1014,7 +1014,7 @@ function DashboardBoard() {
             onDragCancel={handleDragCancel}
           >
           <SortableContext items={lists.map((l) => l.id)} strategy={horizontalListSortingStrategy}>
-          <div className="flex gap-5 overflow-x-auto pb-6 items-start -mx-1 px-1">
+          <div className="flex gap-4 overflow-x-auto pb-6 items-start -mx-1 px-1 scrollbar-thin">
           {lists.map((list) => (
             <BoardColumn
               key={list.id}

@@ -217,15 +217,15 @@ export default function BoardColumn({
       style={transform ? { transform: CSS.Transform.toString(transform), transition } : undefined}
       className={`w-[300px] flex-shrink-0 rounded-xl flex flex-col max-h-[calc(100vh-220px)] overflow-hidden transition-all duration-200 relative ${
         showTaskHighlight
-          ? "bg-blue-50/50 ring-2 ring-inset ring-blue-200 shadow-sm dark:bg-blue-950/25 dark:ring-blue-800"
+          ? "bg-blue-50/70 ring-2 ring-inset ring-blue-300/70 shadow-sm dark:bg-blue-950/30 dark:ring-blue-700/60"
           : list.is_done
-            ? "bg-emerald-50/30 dark:bg-emerald-950/10 ring-1 ring-inset ring-emerald-200/40 dark:ring-emerald-800/20"
-            : "bg-zinc-100/50 dark:bg-zinc-800/30"
+            ? "bg-emerald-50/40 dark:bg-emerald-950/15 ring-1 ring-inset ring-emerald-200/50 dark:ring-emerald-800/30"
+            : "bg-zinc-100/60 dark:bg-zinc-800/40"
       }${isDragging ? " opacity-30" : ""}`}
     >
       {/* Color bar */}
       <div
-        className="h-1.5 rounded-t-xl"
+        className="h-[5px] rounded-t-xl"
         style={{ backgroundColor: barColor }}
       />
 
@@ -235,7 +235,7 @@ export default function BoardColumn({
           {isRenaming ? (
             <div className="flex items-center gap-1.5 flex-1 min-w-0">
               <span
-                className="h-2 w-2 rounded-full shrink-0"
+                className="h-2.5 w-2.5 rounded-full shrink-0"
                 style={{ backgroundColor: barColor }}
               />
               <input
@@ -290,16 +290,16 @@ export default function BoardColumn({
                 </button>
               )}
               <span
-                className="h-2 w-2 rounded-full shrink-0"
+                className="h-2.5 w-2.5 rounded-full shrink-0"
                 style={{ backgroundColor: barColor }}
               />
-              <h3 className="text-sm font-semibold tracking-tight text-zinc-700 dark:text-zinc-300 truncate">
+              <h3 className="text-sm font-semibold tracking-tight text-zinc-800 dark:text-zinc-200 truncate">
                 {list.title === "Done" ? "Completed" : list.title}
               </h3>
               {list.is_done && (
                 <span
                   title="Tasks in this list won't be marked as overdue and will count as completed"
-                  className="shrink-0 inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 cursor-default"
+                  className="shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400 cursor-default"
                 >
                   Done
                 </span>
@@ -336,13 +336,13 @@ export default function BoardColumn({
                   ? "bg-blue-500 text-white"
                   : someSelected
                     ? "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400"
-                    : "bg-zinc-200/80 text-zinc-500 cursor-pointer hover:bg-zinc-300/80 dark:bg-zinc-700/60 dark:text-zinc-400 dark:hover:bg-zinc-600/60"
+                    : "bg-zinc-200 text-zinc-600 cursor-pointer hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600"
               }`}
             >
               {countLabel}
             </button>
           ) : (
-            <span className="flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold bg-zinc-200/80 text-zinc-500 dark:bg-zinc-700/60 dark:text-zinc-400">
+            <span className="flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
               {countLabel}
             </span>
           )}
@@ -447,7 +447,7 @@ export default function BoardColumn({
       {/* Task list */}
       <div className="flex-1 overflow-y-auto px-2.5 pb-2.5">
         {tasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-zinc-200/60 py-8 px-3 dark:border-zinc-700/40">
+          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-zinc-300/50 py-8 px-3 dark:border-zinc-700/50">
             {isFiltered ? (
               <>
                 <svg className="mb-2 h-5 w-5 text-zinc-300 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -474,7 +474,7 @@ export default function BoardColumn({
           </div>
         ) : (
           <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-            <ul className="space-y-2">
+            <ul className="space-y-1.5">
               {tasks.map((task) => (
                 <TaskCard
                   key={task.id}

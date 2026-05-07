@@ -243,12 +243,12 @@ export default function TaskCard({
       data-task-id={task.id}
       {...attributes}
       {...listeners}
-      className={`group relative rounded-lg border px-3 py-2.5 transition-all duration-200 select-none ${
+      className={`group relative rounded-lg border px-3 py-2 transition-all duration-200 select-none ${
         isDragging
           ? "opacity-50 scale-[0.98] shadow-2xl ring-2 ring-zinc-200 border-zinc-200 bg-white dark:ring-zinc-700 dark:border-zinc-600 dark:bg-zinc-800 z-50"
           : isSelected
-            ? "cursor-grab shadow-sm ring-2 ring-blue-400/50 border-blue-200 bg-blue-50/40 hover:shadow-md dark:ring-blue-500/40 dark:border-blue-800/50 dark:bg-blue-950/30"
-            : "cursor-grab shadow-sm border-zinc-100 bg-white hover:shadow-md hover:border-zinc-200 hover:bg-zinc-50/50 dark:border-zinc-700/50 dark:bg-zinc-800/80 dark:hover:shadow-lg dark:hover:border-zinc-600/50 dark:hover:bg-zinc-800"
+            ? "cursor-grab shadow-sm ring-2 ring-blue-400/60 border-blue-200/80 bg-blue-50/50 hover:shadow-md dark:ring-blue-500/50 dark:border-blue-800/60 dark:bg-blue-950/30"
+            : "cursor-grab shadow-sm border-zinc-200/60 bg-white hover:shadow-md hover:border-zinc-300/60 hover:bg-zinc-50/80 dark:border-zinc-700/50 dark:bg-zinc-800/80 dark:hover:border-zinc-600/60 dark:hover:bg-zinc-800"
       }`}
     >
       <div className={`flex items-start gap-2.5 ${task.is_completed && !isListDone ? "opacity-50" : ""}`}>
@@ -258,7 +258,9 @@ export default function TaskCard({
             checked={isSelected}
             onChange={() => onToggleSelect(task.id)}
             onPointerDown={(e) => e.stopPropagation()}
-            className="mt-[3px] h-3.5 w-3.5 rounded accent-blue-500 dark:accent-blue-400 cursor-pointer shrink-0 touch-manipulation"
+            className={`mt-[3px] h-3.5 w-3.5 rounded accent-blue-500 dark:accent-blue-400 cursor-pointer shrink-0 touch-manipulation transition-opacity duration-150 ${
+              isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            }`}
           />
         )}
         <div className="flex-1 min-w-0">
@@ -284,22 +286,21 @@ export default function TaskCard({
           )}
           {/* Metadata: priority dot + due date + assignee */}
           {(task.priority && task.priority !== "none") || task.due_date || task.assignee_id ? (
-            <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+            <div className="mt-1 flex items-center gap-1.5 flex-wrap">
               {task.priority && task.priority !== "none" && (
                 <span className="flex items-center gap-1">
                   <span
-                    className="h-1.5 w-1.5 rounded-full"
+                    className="h-2 w-2 rounded-full shrink-0"
                     style={{ backgroundColor: getPriorityColor(task.priority) }}
                   />
-                  <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 capitalize">{task.priority}</span>
+                  <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 capitalize">{task.priority}</span>
                 </span>
               )}
               {task.due_date && (() => {
                 const { diffDays } = getDueDateInfo(task.due_date);
                 const isOverdue = diffDays < 0;
                 const isToday = diffDays === 0;
-                const isCompletedColumn = isListDone;
-                const muted = task.is_completed || isCompletedColumn;
+                const muted = task.is_completed || isListDone;
 
                 let chipClass: string;
                 let displayLabel: string;
@@ -336,11 +337,13 @@ export default function TaskCard({
                 const assignee = members.find((m) => m.user_id === task.assignee_id);
                 if (!assignee) return null;
                 const initials = getInitials(assignee.email, assignee.display_name);
+                const displayName = assignee.display_name || assignee.email;
                 return (
-                  <span className="flex items-center gap-1 text-[11px] font-medium text-zinc-500 dark:text-zinc-400" title={assignee.email}>
-                    <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-zinc-200 text-[8px] font-semibold text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
-                      {initials}
-                    </span>
+                  <span
+                    className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-blue-100 text-[8px] font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                    title={displayName}
+                  >
+                    {initials}
                   </span>
                 );
               })()}
@@ -361,7 +364,11 @@ export default function TaskCard({
                 });
               }
             }}
-            className="shrink-0 flex items-center justify-center h-6 w-6 rounded-md text-zinc-300 transition-colors hover:bg-zinc-100 hover:text-zinc-600 active:bg-zinc-200 cursor-pointer dark:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-300 dark:active:bg-zinc-600"
+            className={`shrink-0 flex items-center justify-center h-6 w-6 rounded-md transition-all duration-150 hover:bg-zinc-100 active:bg-zinc-200 cursor-pointer dark:hover:bg-zinc-700 dark:active:bg-zinc-600 ${
+              menuOpen?.taskId === task.id
+                ? "opacity-100 text-zinc-500 bg-zinc-100 dark:text-zinc-300 dark:bg-zinc-700/60"
+                : "opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
+            }`}
           >
             <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
