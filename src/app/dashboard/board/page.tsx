@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect, useMemo, Suspense } from "react";
+import { useToast } from "@/components/ui/toast";
 import { useSearchParams } from "next/navigation";
 import {
   DndContext,
@@ -59,6 +60,8 @@ function DashboardBoard() {
     setErrorMsg,
   } = useBoardData();
 
+  const { toast } = useToast();
+
   const searchParams = useSearchParams();
   const boardIdParam = searchParams.get("boardId");
   const taskIdParam = searchParams.get("taskId");
@@ -114,7 +117,6 @@ function DashboardBoard() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState("");
   const [menuOpen, setMenuOpen] = useState<MenuPosition | null>(null);
   const [newTaskDescription, setNewTaskDescription] = useState("");
   const [newTaskPriority, setNewTaskPriority] = useState<TaskPriority>("none");
@@ -383,7 +385,7 @@ function DashboardBoard() {
         (l, i) => ({ ...l, position: (i + 1) * 1000 })
       );
       reorderLists(reordered, lists);
-      showSuccess("List reordered");
+      toast("List reordered");
       return;
     }
 
@@ -447,17 +449,19 @@ function DashboardBoard() {
             metadata: { task_title: activeTaskData.title, from: fromList?.title ?? "", to: targetList?.title ?? "" },
           });
         }
-        showSuccess(`Moved to ${displayTitle}`);
+        toast(`Moved to ${displayTitle}`);
       }
     } finally {
       dragSavingRef.current = false;
     }
   };
 
-  const showSuccess = useCallback((msg: string) => {
-    setSuccessMsg(msg);
-    setTimeout(() => setSuccessMsg(""), 3000);
-  }, []);
+  // Auto-surface API errors as toasts
+  useEffect(() => {
+    if (!errorMsg) return;
+    toast(errorMsg, "error");
+    clearError();
+  }, [errorMsg, toast, clearError]);
 
   // Bulk move
   const [bulkMoving, setBulkMoving] = useState(false);
@@ -513,9 +517,9 @@ function DashboardBoard() {
           metadata: { count: selectedIds.length, to: targetList.title },
         });
       }
-      showSuccess(`Moved ${selectedIds.length} task${selectedIds.length > 1 ? "s" : ""} to ${title}`);
+      toast(`Moved ${selectedIds.length} task${selectedIds.length > 1 ? "s" : ""} to ${title}`);
     }
-  }, [lists, tasks, selectedTaskIds, updateTask, clearSelection, showSuccess, setErrorMsg, selectedWorkspaceId, selectedBoardId]);
+  }, [lists, tasks, selectedTaskIds, updateTask, clearSelection, toast,setErrorMsg, selectedWorkspaceId, selectedBoardId]);
 
   // Bulk delete
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -550,9 +554,9 @@ function DashboardBoard() {
           metadata: { count: selectedIds.length },
         });
       }
-      showSuccess(`Deleted ${selectedIds.length} task${selectedIds.length > 1 ? "s" : ""}`);
+      toast(`Deleted ${selectedIds.length} task${selectedIds.length > 1 ? "s" : ""}`);
     }
-  }, [selectedTaskIds, deleteTask, clearSelection, showSuccess, setErrorMsg, selectedWorkspaceId, selectedBoardId]);
+  }, [selectedTaskIds, deleteTask, clearSelection, toast,setErrorMsg, selectedWorkspaceId, selectedBoardId]);
 
   // Toolbar toggle handlers
   const toggleNewWorkspace = () => {
@@ -579,7 +583,7 @@ function DashboardBoard() {
     const ws = await createWorkspace(newWorkspaceName.trim());
     setNewWorkspaceName("");
     setShowNewWorkspace(false);
-    if (ws) showSuccess("Workspace created");
+    if (ws) toast("Workspace created");
   };
 
   const handleCreateBoard = async (e: React.FormEvent) => {
@@ -588,7 +592,7 @@ function DashboardBoard() {
     await createBoard(newBoardTitle.trim());
     setNewBoardTitle("");
     setShowNewBoard(false);
-    showSuccess("Board created");
+    toast("Board created");
   };
 
   const MAX_LISTS = 10;
@@ -603,7 +607,7 @@ function DashboardBoard() {
       setNewListTitle("");
       setNewListIsDone(false);
       setShowAddList(false);
-      showSuccess("List added");
+      toast("List added");
     }
     setAddingList(false);
   };
@@ -621,27 +625,27 @@ function DashboardBoard() {
       return false;
     }
     const ok = await renameList(listId, trimmed);
-    if (ok) showSuccess("List renamed");
+    if (ok) toast("List renamed");
     return ok;
-  }, [lists, renameList, showSuccess, setErrorMsg]);
+  }, [lists, renameList, toast, setErrorMsg]);
 
   const handleDeleteList = useCallback(async (listId: string): Promise<boolean> => {
     const ok = await deleteList(listId);
-    if (ok) showSuccess("List deleted");
+    if (ok) toast("List deleted");
     return ok;
-  }, [deleteList, showSuccess]);
+  }, [deleteList, toast]);
 
   const handleUpdateListColor = useCallback(async (listId: string, color: string): Promise<boolean> => {
     const ok = await updateListColor(listId, color);
-    if (ok) showSuccess("Color updated");
+    if (ok) toast("Color updated");
     return ok;
-  }, [updateListColor, showSuccess]);
+  }, [updateListColor, toast]);
 
   const handleUpdateListIsDone = useCallback(async (listId: string, isDone: boolean): Promise<boolean> => {
     const ok = await updateListIsDone(listId, isDone);
-    if (ok) showSuccess(isDone ? "Marked as completed list" : "Unmarked as completed list");
+    if (ok) toast(isDone ? "Marked as completed list" : "Unmarked as completed list");
     return ok;
-  }, [updateListIsDone, showSuccess]);
+  }, [updateListIsDone, toast]);
 
   const handleAddTask = async (e: React.FormEvent, listId: string) => {
     e.preventDefault();
@@ -680,7 +684,7 @@ function DashboardBoard() {
       setNewTaskAssigneeId("");
       setAddingToListId(null);
       setAdding(false);
-      showSuccess("Task added");
+      toast("Task added");
     } else {
       setAdding(false);
     }
@@ -690,7 +694,7 @@ function DashboardBoard() {
     setUpdatingId(task.id);
     await updateTask(task.id, { is_completed: !task.is_completed } as Partial<Task>);
     setUpdatingId(null);
-    showSuccess(task.is_completed ? "Task reopened" : "Task completed");
+    toast(task.is_completed ? "Task reopened" : "Task completed");
   };
 
   const startEdit = (task: Task) => {
@@ -759,7 +763,7 @@ function DashboardBoard() {
 
     setUpdatingId(null);
     setEditingId(null);
-    showSuccess("Task updated");
+    toast("Task updated");
   };
 
   const handleDelete = async (id: string) => {
@@ -782,7 +786,7 @@ function DashboardBoard() {
       next.delete(id);
       return next;
     });
-    showSuccess("Task deleted");
+    toast("Task deleted");
   };
 
   const handleMoveTask = async (taskId: string, targetTitle: string) => {
@@ -810,7 +814,7 @@ function DashboardBoard() {
       });
     }
     setUpdatingId(null);
-    showSuccess(`Moved to ${targetTitle}`);
+    toast(`Moved to ${targetTitle}`);
   };
 
   // Member handlers
@@ -822,7 +826,7 @@ function DashboardBoard() {
       const result = await invite(inviteEmail.trim(), inviteRole);
       if (result.ok) {
         setInviteEmail("");
-        showSuccess("เชิญสมาชิกสำเร็จ");
+        toast("เชิญสมาชิกสำเร็จ");
       } else {
         setErrorMsg(result.error ?? "ไม่สามารถเชิญสมาชิกได้");
       }
@@ -838,7 +842,7 @@ function DashboardBoard() {
     const result = await remove(userId);
     if (result.ok) {
       setConfirmRemoveId(null);
-      showSuccess("ลบสมาชิกสำเร็จ");
+      toast("ลบสมาชิกสำเร็จ");
     } else {
       setErrorMsg(result.error ?? "ไม่สามารถลบสมาชิกได้");
     }
@@ -850,7 +854,7 @@ function DashboardBoard() {
   ) => {
     const result = await updateRole(userId, newRole);
     if (result.ok) {
-      showSuccess("เปลี่ยน role สำเร็จ");
+      toast("เปลี่ยน role สำเร็จ");
     } else {
       setErrorMsg(result.error ?? "ไม่สามารถเปลี่ยน role ได้");
     }
@@ -862,7 +866,7 @@ function DashboardBoard() {
     const ok = await deleteBoard(selectedBoardId);
     setDeletingBoard(false);
     setConfirmDeleteBoard(false);
-    if (ok) showSuccess("ลบบอร์ดสำเร็จ");
+    if (ok) toast("ลบบอร์ดสำเร็จ");
   };
 
   const handleDeleteWorkspace = async () => {
@@ -873,7 +877,7 @@ function DashboardBoard() {
     if (ok) {
       setConfirmDeleteWorkspace(false);
       setDeleteWorkspaceConfirmName("");
-      showSuccess("ลบ workspace สำเร็จ");
+      toast("ลบ workspace สำเร็จ");
     }
   };
 
@@ -887,31 +891,6 @@ function DashboardBoard() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      {/* Feedback toasts */}
-      {successMsg && (
-        <div
-          className="fixed top-4 right-4 z-30 flex items-center gap-2 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-600 shadow-lg border border-green-200/50 dark:bg-green-950 dark:text-green-400 dark:border-green-800"
-          style={{ animation: "toast-in 0.2s ease-out" }}
-        >
-          <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-          </svg>
-          {successMsg}
-        </div>
-      )}
-      {errorMsg && (
-        <div
-          className="fixed top-4 right-4 z-30 flex items-center gap-2 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 shadow-lg border border-red-200/50 dark:bg-red-950 dark:text-red-400 dark:border-red-800"
-          style={{ animation: "toast-in 0.2s ease-out" }}
-        >
-          <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-          </svg>
-          <span>{errorMsg}</span>
-          <button onClick={clearError} className="ml-1 font-bold opacity-60 hover:opacity-100">&times;</button>
-        </div>
-      )}
-
       <BoardToolbar
         workspaces={workspaces}
         selectedWorkspaceId={selectedWorkspaceId}

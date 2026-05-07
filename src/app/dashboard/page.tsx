@@ -923,8 +923,13 @@ export default function DashboardPage() {
               </ul>
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-center">
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+                  <svg className="h-5 w-5 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                  </svg>
+                </div>
                 <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Nothing urgent right now.</p>
-                <p className="mt-1 text-xs text-zinc-400">High-priority work will appear here.</p>
+                <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">High-priority work will appear here.</p>
               </div>
             )}
             <div className="border-t border-zinc-100 px-6 py-3 dark:border-zinc-800">
@@ -977,9 +982,14 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-6 text-center">
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+                  <svg className="h-5 w-5 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                  </svg>
+                </div>
                 <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">No recent activity yet.</p>
-                <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-400">Team updates and task changes will appear here.</p>
+                <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">Team updates and task changes will appear here.</p>
               </div>
             )}
           </div>

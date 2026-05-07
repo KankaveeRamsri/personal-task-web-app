@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Sidebar } from "@/components/sidebar";
+import { ToastProvider } from "@/components/ui/toast";
 
 export default function DashboardLayout({
   children,
@@ -28,11 +29,13 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="flex h-screen">
-      <Sidebar userEmail={userEmail} onSignOut={handleSignOut} />
-      <main className="flex flex-1 flex-col overflow-y-auto bg-background p-6 lg:p-8">
-        {children}
-      </main>
-    </div>
+    <ToastProvider>
+      <div className="flex h-screen">
+        <Sidebar userEmail={userEmail} onSignOut={handleSignOut} />
+        <main className="flex flex-1 flex-col overflow-y-auto bg-background p-6 lg:p-8">
+          {children}
+        </main>
+      </div>
+    </ToastProvider>
   );
 }
