@@ -1,0 +1,8 @@
+- AI assistant UX
+- productivity UX
+- kanban workflow UX
+- focus mode
+- notification ergonomics
+- dashboard prioritization
+- task hierarchy
+- enterprise-ish SaaS behavior

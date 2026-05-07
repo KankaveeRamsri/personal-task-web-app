@@ -1,0 +1,16 @@
+- Inspired by: Linear, Vercel, Notion, Supabase
+- Minimal but premium
+- Dark mode first
+- Neutral zinc/slate palette
+- Subtle borders instead of heavy shadows
+- Spacious layout
+- Clean typography hierarchy
+- Smooth hover states
+- Compact but readable UI
+- High information density without clutter
+- Glass/blur only when useful
+- Avoid childish gradients
+- Consistent radius/padding system
+- Elegant empty states
+- Skeleton loading states
+- Motion should be subtle
