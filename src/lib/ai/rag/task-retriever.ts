@@ -1,8 +1,10 @@
 import { SupabaseClient } from "@supabase/supabase-js";
+import { hybridRank, type RankingSignals } from "./hybrid-ranking";
 
 const EXPECTED_DIM = 384;
 const DEFAULT_THRESHOLD = 0;
 const DEFAULT_MATCH_COUNT = 5;
+const CANDIDATE_MULTIPLIER = 3;
 
 export interface TaskDocument {
   id: string;
@@ -10,7 +12,10 @@ export interface TaskDocument {
   workspace_id: string;
   board_id: string | null;
   content: string;
+  metadata: Record<string, unknown> | null;
   similarity: number;
+  hybridScore: number;
+  rankingSignals: RankingSignals;
 }
 
 export interface RetrieveOptions {
@@ -58,7 +63,15 @@ export async function retrieveTaskDocuments(
     matchCount = DEFAULT_MATCH_COUNT,
   } = options;
 
-  console.log("[TaskRetriever] params:", { workspaceId, boardId: boardId ?? null, matchThreshold, matchCount });
+  const candidateCount = matchCount * CANDIDATE_MULTIPLIER;
+
+  console.log("[TaskRetriever] params:", {
+    workspaceId,
+    boardId: boardId ?? null,
+    matchThreshold,
+    matchCount,
+    candidateCount,
+  });
 
   const queryEmbedding = await embedQuery(query);
 
@@ -66,11 +79,33 @@ export async function retrieveTaskDocuments(
     query_embedding: queryEmbedding,
     filter_workspace_id: workspaceId,
     match_threshold: matchThreshold,
-    match_count: matchCount,
+    match_count: candidateCount,
     filter_board_id: boardId ?? null,
   });
 
   if (error) throw error;
 
-  return (data ?? []) as TaskDocument[];
+  const candidates = (data ?? []) as Array<{
+    id: string;
+    task_id: string;
+    workspace_id: string;
+    board_id: string | null;
+    content: string;
+    metadata: Record<string, unknown> | null;
+    similarity: number;
+  }>;
+
+  const ranked = hybridRank(candidates);
+  const top = ranked.slice(0, matchCount);
+
+  console.log(
+    "[TaskRetriever] ranked:",
+    top.map((d) => ({
+      task_id: d.task_id,
+      similarity: d.similarity.toFixed(3),
+      hybridScore: d.hybridScore.toFixed(3),
+    })),
+  );
+
+  return top;
 }

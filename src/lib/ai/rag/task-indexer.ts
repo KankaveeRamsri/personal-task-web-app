@@ -83,7 +83,7 @@ export async function reindexTasks(
   // 2. Get lists for those boards (RLS-safe)
   const { data: lists, error: listErr } = await supabase
     .from("lists")
-    .select("id, board_id")
+    .select("id, board_id, is_done")
     .in("board_id", boardIds);
 
   if (listErr || !lists?.length) {
@@ -92,14 +92,17 @@ export async function reindexTasks(
   }
 
   const listBoardMap = new Map(
-    (lists as { id: string; board_id: string }[]).map((l) => [l.id, l.board_id]),
+    (lists as { id: string; board_id: string; is_done: boolean }[]).map((l) => [l.id, l.board_id]),
+  );
+  const listIsDoneMap = new Map(
+    (lists as { id: string; board_id: string; is_done: boolean }[]).map((l) => [l.id, l.is_done ?? false]),
   );
   const listIds = Array.from(listBoardMap.keys());
 
   // 3. Get tasks for those lists (RLS-safe), apply limit here
   const { data: tasks, error: taskErr } = await supabase
     .from("tasks")
-    .select("id, title, description, priority, due_date, is_completed, list_id")
+    .select("id, title, description, priority, due_date, is_completed, list_id, updated_at")
     .in("list_id", listIds)
     .limit(limit);
 
@@ -122,6 +125,7 @@ export async function reindexTasks(
     due_date: string | null;
     is_completed: boolean;
     list_id: string;
+    updated_at: string | null;
   }[]) {
     try {
       const taskBoardId = listBoardMap.get(task.list_id);
@@ -149,6 +153,8 @@ export async function reindexTasks(
           priority: task.priority ?? null,
           due_date: task.due_date ?? null,
           is_completed: task.is_completed ?? false,
+          list_is_done: listIsDoneMap.get(task.list_id) ?? false,
+          task_updated_at: task.updated_at ?? null,
         },
       });
 

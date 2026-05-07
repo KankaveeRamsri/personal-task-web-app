@@ -8,7 +8,7 @@ import {
   type AssistantActionPlan,
   type AssistantActionType,
 } from "@/lib/ai-assistant/action-planner";
-import { retrieveTaskDocuments } from "@/lib/ai/rag/task-retriever";
+import { retrieveTaskDocuments, type TaskDocument } from "@/lib/ai/rag/task-retriever";
 
 // ── Constants ──────────────────────────────────────────────────────────
 
@@ -27,22 +27,17 @@ interface FallbackResponse {
   errorType: ErrorType;
 }
 
-interface RagDocument {
-  task_id: string;
-  content: string;
-  similarity: number;
-  board_id?: string | null;
-}
+type RagDocument = Pick<TaskDocument, "task_id" | "content" | "similarity" | "hybridScore" | "rankingSignals" | "board_id">;
 
 const MAX_RAG_CONTENT_LENGTH = 300;
 
 function buildRagSection(docs: RagDocument[]): string {
   if (!docs.length) return "";
-  const lines = docs.map(
-    (d) =>
-      `- Task ID: ${d.task_id}\n  Content: ${d.content.slice(0, MAX_RAG_CONTENT_LENGTH)}\n  Similarity: ${d.similarity.toFixed(3)}`,
-  );
-  return `Relevant task context:\n${lines.join("\n")}`;
+  const lines = docs.map((d) => {
+    const score = d.hybridScore !== undefined ? d.hybridScore.toFixed(3) : d.similarity.toFixed(3);
+    return `- Task ID: ${d.task_id}\n  Content: ${d.content.slice(0, MAX_RAG_CONTENT_LENGTH)}\n  Score: ${score}`;
+  });
+  return `Relevant task context (ranked by relevance + urgency):\n${lines.join("\n")}`;
 }
 
 async function fetchRagInternal(
@@ -416,6 +411,8 @@ export async function POST(request: Request) {
     ? validRagDocs.map((d) => ({
         taskId: d.task_id,
         similarity: d.similarity,
+        hybridScore: d.hybridScore,
+        rankingSignals: d.rankingSignals,
         preview: d.content.slice(0, 100),
         ...(d.board_id ? { boardId: d.board_id } : {}),
       }))
