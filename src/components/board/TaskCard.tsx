@@ -251,7 +251,7 @@ export default function TaskCard({
             : "cursor-grab shadow-sm border-zinc-100 bg-white hover:shadow-md hover:border-zinc-200 hover:bg-zinc-50/50 dark:border-zinc-700/50 dark:bg-zinc-800/80 dark:hover:shadow-lg dark:hover:border-zinc-600/50 dark:hover:bg-zinc-800"
       }`}
     >
-      <div className={`flex items-start gap-2.5 ${task.is_completed ? "opacity-50" : ""}`}>
+      <div className={`flex items-start gap-2.5 ${task.is_completed && !isListDone ? "opacity-50" : ""}`}>
         {canEditTasks && (
           <input
             type="checkbox"
@@ -264,7 +264,7 @@ export default function TaskCard({
         <div className="flex-1 min-w-0">
           <span
             className={`block text-[13px] leading-snug font-medium ${
-              task.is_completed
+              task.is_completed && !isListDone
                 ? "line-through text-zinc-400 dark:text-zinc-500"
                 : "text-zinc-900 dark:text-zinc-100"
             }`}
@@ -274,7 +274,7 @@ export default function TaskCard({
           {task.description && (
             <p
               className={`mt-1 text-xs leading-relaxed line-clamp-2 ${
-                task.is_completed
+                task.is_completed && !isListDone
                   ? "line-through text-zinc-300 dark:text-zinc-600"
                   : "text-zinc-500 dark:text-zinc-400"
               }`}
