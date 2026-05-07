@@ -9,13 +9,12 @@ import {
   type AssistantActionType,
 } from "@/lib/ai-assistant/action-planner";
 import { retrieveTaskDocuments, type TaskDocument } from "@/lib/ai/rag/task-retriever";
+import { callLLM, getActiveLLMProvider, type LLMMessage } from "@/lib/ai/llm";
 
 // ── Constants ──────────────────────────────────────────────────────────
 
 const MAX_MESSAGE_LENGTH = 500;
 const MAX_CONTEXT_CHARS = 4000;
-const GEMINI_TIMEOUT_MS = 10_000;
-const MAX_OUTPUT_TOKENS = 512;
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -103,52 +102,9 @@ function fallbackReply(errorType: ErrorType, status: number) {
   );
 }
 
-// ── Gemini helper ──────────────────────────────────────────────────────
-
-async function callGemini(
-  apiKey: string,
-  contents: Array<{ role: string; parts: Array<{ text: string }> }>,
-  maxTokens: number = MAX_OUTPUT_TOKENS,
-): Promise<string> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
-
-  try {
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-
-    const res = await fetch(geminiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents,
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: maxTokens,
-        },
-      }),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!res.ok) {
-      console.error(`[AI Chat] Gemini API error: ${res.status}`);
-      throw new Error("api_error");
-    }
-
-    const data = await res.json();
-    const rawReply = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-
-    if (!rawReply) {
-      throw new Error("api_error");
-    }
-
-    return rawReply.trim();
-  } catch (err) {
-    clearTimeout(timeoutId);
-    throw err;
-  }
-}
+// ── LLM provider (abstracted) ──────────────────────────────────────────
+// callLLM() is imported from @/lib/ai/llm and dispatches to MiniMax or
+// Gemini based on the LLM_PROVIDER environment variable.
 
 // ── Chat prompts ───────────────────────────────────────────────────────
 
@@ -274,9 +230,13 @@ function parseActionPlan(raw: string, actionType: AssistantActionType): Assistan
 // ── Route ──────────────────────────────────────────────────────────────
 
 export async function POST(request: Request) {
-  // 1) Environment check
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
+  // 1) Environment check — provider-agnostic
+  const provider = getActiveLLMProvider();
+  const hasMinimaxKey = Boolean(process.env.MINIMAX_API_KEY);
+  const hasGeminiKey = Boolean(process.env.GEMINI_API_KEY);
+  const keyAvailable = provider === "minimax" ? hasMinimaxKey : hasGeminiKey;
+  if (!keyAvailable) {
+    console.error(`[AI Chat] Missing API key for provider: ${provider}`);
     return fallbackReply("missing_key", 500);
   }
 
@@ -321,16 +281,13 @@ export async function POST(request: Request) {
 
   if (actionType !== "unknown") {
     try {
-      const contents = [
-        { role: "user", parts: [{ text: ACTION_SYSTEM_PROMPT }] },
-        {
-          role: "model",
-          parts: [{ text: "เข้าใจครับ ผมจะส่ง action plan เป็น JSON เท่านั้น" }],
-        },
-        { role: "user", parts: [{ text: buildActionPrompt(trimmed, actionType) }] },
+      const actionMessages: LLMMessage[] = [
+        { role: "system", content: ACTION_SYSTEM_PROMPT },
+        { role: "assistant", content: "เข้าใจครับ ผมจะส่ง action plan เป็น JSON เท่านั้น" },
+        { role: "user", content: buildActionPrompt(trimmed, actionType) },
       ];
 
-      const rawReply = await callGemini(apiKey, contents, 400);
+      const rawReply = await callLLM(actionMessages, { temperature: 0.1, maxOutputTokens: 400 });
       const actionPlan = parseActionPlan(rawReply, actionType);
 
       if (actionPlan) {
@@ -348,6 +305,9 @@ export async function POST(request: Request) {
         intent: "general",
       });
     } catch (err) {
+      console.error("[AI Chat] Action planning LLM error:", err instanceof Error ? err.message : String(err));
+
+      // Always try fallback — never execute action without confirmation
       const fallbackPlan = buildFallbackActionPlan(trimmed, actionType);
       if (fallbackPlan) {
         return NextResponse.json({
@@ -358,7 +318,7 @@ export async function POST(request: Request) {
         });
       }
 
-      if (err instanceof DOMException && err.name === "AbortError") {
+      if (err instanceof Error && err.message === "timeout") {
         return fallbackReply("timeout", 504);
       }
       if (err instanceof Error && err.message === "api_error") {
@@ -398,13 +358,10 @@ export async function POST(request: Request) {
     `คำถาม: ${trimmed}`,
   ].join("\n");
 
-  const contents = [
-    { role: "user" as const, parts: [{ text: SYSTEM_PROMPT }] },
-    {
-      role: "model" as const,
-      parts: [{ text: "เข้าใจครับ ผมจะตอบเป็นภาษาไทย โดยใช้เฉพาะข้อมูลที่ให้มา ตาม intent ที่ระบุ" }],
-    },
-    { role: "user" as const, parts: [{ text: userContent }] },
+  const chatMessages: LLMMessage[] = [
+    { role: "system", content: SYSTEM_PROMPT },
+    { role: "assistant", content: "เข้าใจครับ ผมจะตอบเป็นภาษาไทย โดยใช้เฉพาะข้อมูลที่ให้มา ตาม intent ที่ระบุ" },
+    { role: "user", content: userContent },
   ];
 
   const ragSources = validRagDocs.length
@@ -419,14 +376,15 @@ export async function POST(request: Request) {
     : undefined;
 
   try {
-    const rawReply = await callGemini(apiKey, contents);
+    const rawReply = await callLLM(chatMessages);
     return NextResponse.json({
       reply: rawReply,
       intent,
       ...(ragSources ? { ragSources } : {}),
     });
   } catch (err) {
-    if (err instanceof DOMException && err.name === "AbortError") {
+    console.error("[AI Chat] Chat LLM error:", err instanceof Error ? err.message : String(err));
+    if (err instanceof Error && err.message === "timeout") {
       return fallbackReply("timeout", 504);
     }
     if (err instanceof Error && err.message === "api_error") {
