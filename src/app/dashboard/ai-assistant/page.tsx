@@ -24,8 +24,11 @@ export default function AiAssistantPage() {
           </svg>
         </div>
         <div>
-          <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">AI Assistant</h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">ถามอะไรก็ได้เกี่ยวกับงานในบอร์ดของคุณ</p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">AI Assistant</h1>
+            <span className="rounded-full border border-blue-100 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">Beta</span>
+          </div>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">ค้นหา วิเคราะห์ และจัดการงานด้วย AI · RAG-powered</p>
         </div>
       </div>
 

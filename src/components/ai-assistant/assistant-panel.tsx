@@ -50,10 +50,10 @@ const MAX_TITLE_LENGTH = 120;
 const VALID_PRIORITIES: TaskPriority[] = ["none", "low", "medium", "high"];
 
 const SUGGESTED_PROMPTS = [
-  "วันนี้ควรโฟกัสงานไหน?",
-  "สรุปบอร์ดนี้ให้หน่อย",
-  "วิเคราะห์ความเสี่ยง",
-  "สรุป progress ตอนนี้",
+  { icon: "🔍", text: "มี task ไหนเกี่ยวกับ deployment บ้าง" },
+  { icon: "⚠️", text: "สรุปงาน overdue ให้หน่อย" },
+  { icon: "📋", text: "ช่วยหา task ที่ควรทำวันนี้" },
+  { icon: "✏️", text: "สร้าง task ทำ report ส่งพรุ่งนี้" },
 ];
 
 const FOLLOW_UP_ACTIONS: { label: string; filter: FilterType; prompt: string }[] = [
@@ -204,55 +204,54 @@ function ActionPreviewCard({
           : "Confirm";
 
   return (
-    <div className="mt-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-zinc-100 dark:border-zinc-700/60">
-        <span>{meta.icon}</span>
+    <div className="mt-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/60 overflow-hidden">
+      <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-zinc-200/80 dark:border-zinc-700/60 bg-white dark:bg-zinc-800/40">
+        <span className="text-base leading-none">{meta.icon}</span>
         <span className={`text-xs font-semibold ${meta.color}`}>{meta.label}</span>
-        {statusMeta.label && (
-          <span className={`ml-auto text-[10px] font-medium ${statusMeta.color}`}>
+        {statusMeta.label ? (
+          <span className={`ml-auto text-xs font-medium ${statusMeta.color}`}>
             {statusMeta.label}
           </span>
-        )}
-        {!statusMeta.label && (
-          <span className="ml-auto text-[10px] text-zinc-400 dark:text-zinc-500">
-            Confidence: {Math.round(plan.confidence * 100)}%
+        ) : (
+          <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-zinc-100 dark:bg-zinc-700/60 px-2 py-0.5 text-[10px] text-zinc-500 dark:text-zinc-400">
+            {Math.round(plan.confidence * 100)}% confident
           </span>
         )}
       </div>
 
-      <div className="px-3 py-2 text-xs text-zinc-700 dark:text-zinc-300 space-y-1">
+      <div className="px-4 py-3 space-y-1.5">
         {payloadLines.map((line) => (
-          <div key={line}>{line}</div>
+          <div key={line} className="text-xs text-zinc-700 dark:text-zinc-300">{line}</div>
         ))}
       </div>
 
       {plan.warnings.length > 0 && (
-        <div className="px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 border-t border-amber-100 dark:border-amber-800/30">
+        <div className="px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border-t border-amber-100 dark:border-amber-800/30 space-y-1">
           {plan.warnings.map((w, i) => (
-            <div key={i} className="text-[11px] text-amber-700 dark:text-amber-400">
+            <div key={i} className="text-xs text-amber-700 dark:text-amber-400">
               ⚠️ {w}
             </div>
           ))}
         </div>
       )}
 
-      <div className="px-3 py-2 border-t border-zinc-100 dark:border-zinc-700/60 flex items-center justify-between gap-2">
+      <div className="px-4 py-2.5 border-t border-zinc-200/80 dark:border-zinc-700/60 flex items-center justify-between gap-2">
         <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
-          {isResolved ? "" : plan.type === "create_task" ? "Preview — กด Confirm เพื่อสร้างจริง" : "Preview — กด Confirm เพื่อดำเนินการ"}
+          {isResolved ? "" : "ตรวจสอบรายละเอียดก่อนยืนยัน"}
         </span>
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           {!isResolved && onCancel && (
             <button
               onClick={onCancel}
-              className="rounded-md bg-zinc-100 dark:bg-zinc-700 px-2 py-0.5 text-[10px] font-medium text-zinc-600 dark:text-zinc-400 transition-colors hover:bg-zinc-200 dark:hover:bg-zinc-600"
+              className="rounded-lg border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-700 px-3 py-1 text-xs font-medium text-zinc-600 dark:text-zinc-300 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-600"
             >
-              Cancel
+              ยกเลิก
             </button>
           )}
           {canConfirm && onConfirm && (
             <button
               onClick={onConfirm}
-              className={`rounded-md px-2 py-0.5 text-[10px] font-medium text-white transition-colors ${
+              className={`rounded-lg px-3 py-1 text-xs font-medium text-white transition-colors ${
                 plan.type === "create_task"
                   ? "bg-emerald-600 hover:bg-emerald-700"
                   : plan.type === "update_task"
@@ -266,9 +265,9 @@ function ActionPreviewCard({
           {!canConfirm && !isResolved && (
             <button
               disabled
-              className="rounded-md bg-zinc-100 dark:bg-zinc-700 px-2 py-0.5 text-[10px] font-medium text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+              className="rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-1 text-xs font-medium text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
             >
-              Confirm จะเปิดใช้ใน Step ถัดไป
+              ไม่รองรับ Action นี้
             </button>
           )}
         </div>
@@ -830,31 +829,71 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
   return (
     <div className="flex h-full flex-col rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
       {/* Chat area */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-        {/* Welcome */}
-        <div className="flex gap-2.5">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 mt-0.5">
-            <SparkleIcon className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-          </div>
-          <div className="rounded-xl bg-zinc-50 dark:bg-zinc-800/60 px-3.5 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">
-            {hasBoard ? (
-              <>
-                สวัสดีครับ! 👋 ผมคือ AI Assistant ของคุณ<br />
-                กำลังวิเคราะห์บอร์ด{" "}
-                <span className="font-medium text-blue-600 dark:text-blue-400">
-                  &ldquo;{boardTitle}&rdquo;
-                </span>
-                <br />
-                เลือกคำถามด้านล่างหรือถามอะไรก็ได้เกี่ยวกับงานได้เลยครับ
-              </>
-            ) : (
-              <>
-                สวัสดีครับ! 👋 ผมคือ AI Assistant ของคุณ<br />
-                กรุณาเลือกบอร์ดก่อน จึงจะวิเคราะห์งานให้ได้ครับ
-              </>
+      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
+
+        {/* Empty state — shown before any messages */}
+        {showInitialPrompts ? (
+          <div className="flex flex-col items-center gap-5 pt-6 pb-2">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-100 dark:border-blue-800/30 shadow-sm">
+              <SparkleIcon className="h-7 w-7 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="text-center">
+              {hasBoard ? (
+                <>
+                  <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                    วิเคราะห์บอร์ด &ldquo;{boardTitle}&rdquo;
+                  </h2>
+                  <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                    ถามอะไรก็ได้ หรือให้ AI จัดการงานให้โดยตรง
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                    AI Task Assistant
+                  </h2>
+                  <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                    กรุณาเลือกบอร์ดก่อน จึงจะวิเคราะห์งานให้ได้
+                  </p>
+                </>
+              )}
+            </div>
+            {hasBoard && (
+              <div className="grid grid-cols-2 gap-2 w-full max-w-xs">
+                {SUGGESTED_PROMPTS.map((p) => (
+                  <button
+                    key={p.text}
+                    onClick={() => handlePrompt(p.text)}
+                    disabled={isLoading}
+                    className="flex flex-col items-start gap-2 rounded-xl border border-zinc-200 dark:border-zinc-700/60 bg-zinc-50/50 dark:bg-zinc-800/40 p-3 text-left transition-all hover:border-blue-300 hover:bg-blue-50/60 dark:hover:border-blue-500/40 dark:hover:bg-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="text-lg leading-none">{p.icon}</span>
+                    <span className="text-[11px] font-medium leading-snug text-zinc-700 dark:text-zinc-300">{p.text}</span>
+                  </button>
+                ))}
+              </div>
             )}
           </div>
-        </div>
+        ) : (
+          /* Compact welcome — shown when there are messages */
+          <div className="flex gap-2.5">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 mt-0.5">
+              <SparkleIcon className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="rounded-2xl border border-zinc-100 dark:border-zinc-700/40 bg-zinc-50 dark:bg-zinc-800/60 px-3.5 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">
+              {hasBoard ? (
+                <>
+                  สวัสดีครับ! 👋 วิเคราะห์บอร์ด{" "}
+                  <span className="font-medium text-blue-600 dark:text-blue-400">
+                    &ldquo;{boardTitle}&rdquo;
+                  </span>
+                </>
+              ) : (
+                <>สวัสดีครับ! กรุณาเลือกบอร์ดก่อน</>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Chat messages */}
         {messages.map((msg, i) => (
@@ -867,59 +906,72 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
                 <SparkleIcon className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
               </div>
             )}
-            <div
-              className={`max-w-[85%] rounded-xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-line ${
-                msg.role === "user"
-                  ? "bg-blue-600 text-white dark:bg-blue-500"
-                  : "bg-zinc-50 text-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-300"
-              }`}
-            >
-              {msg.content}
-              {msg.ragSources && msg.ragSources.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {msg.ragSources.map((src) => {
-                    const label =
-                      src.preview.length > 65
-                        ? src.preview.slice(0, 65) + "…"
-                        : src.preview;
-                    return (
-                      <button
-                        key={src.taskId}
-                        type="button"
-                        title={src.preview}
-                        onClick={() => handleSourceClick(src)}
-                        className="inline-flex items-center gap-1 rounded-md border border-zinc-200 dark:border-zinc-700 bg-zinc-100/60 dark:bg-zinc-800/50 px-2 py-0.5 text-[10px] text-zinc-500 dark:text-zinc-400 hover:border-blue-300 hover:bg-blue-50/50 hover:text-blue-600 dark:hover:border-blue-500/40 dark:hover:bg-blue-900/20 dark:hover:text-blue-400 transition-colors"
-                      >
-                        <svg className="h-2.5 w-2.5 shrink-0 opacity-60" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
-                        </svg>
-                        <span className="max-w-[160px] truncate">{label}</span>
-                        <span className="shrink-0 text-zinc-300 dark:text-zinc-600">·</span>
-                        <span className="shrink-0 tabular-nums">{Math.round(src.similarity * 100)}%</span>
-                      </button>
-                    );
-                  })}
+            <div className="flex flex-col gap-1.5 max-w-[85%]">
+              <div
+                className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-line ${
+                  msg.role === "user"
+                    ? "bg-blue-600 text-white dark:bg-blue-500 rounded-br-sm"
+                    : "bg-zinc-50 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-300 border border-zinc-100 dark:border-zinc-700/40 rounded-bl-sm"
+                }`}
+              >
+                {msg.content}
+                {msg.ragSources && msg.ragSources.length > 0 && (
+                  <div className="mt-2.5 pt-2 border-t border-zinc-200/60 dark:border-zinc-700/40">
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500 mb-1.5">
+                      Sources
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {msg.ragSources.map((src) => {
+                        const label =
+                          src.preview.length > 55
+                            ? src.preview.slice(0, 55) + "…"
+                            : src.preview;
+                        return (
+                          <button
+                            key={src.taskId}
+                            type="button"
+                            title={src.preview}
+                            onClick={() => handleSourceClick(src)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white/80 dark:bg-zinc-800/50 px-2 py-1 text-[10px] text-zinc-500 dark:text-zinc-400 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 dark:hover:border-blue-500/40 dark:hover:bg-blue-900/20 dark:hover:text-blue-400 transition-colors"
+                          >
+                            <svg className="h-2.5 w-2.5 shrink-0 opacity-70" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+                            </svg>
+                            <span className="max-w-[140px] truncate">{label}</span>
+                            <span className="shrink-0 tabular-nums opacity-60">{Math.round(src.similarity * 100)}%</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {msg.actionPlan && (
+                  <ActionPreviewCard
+                    plan={msg.actionPlan}
+                    status={msg.actionStatus ?? "pending"}
+                    onConfirm={
+                      !msg.actionStatus && msg.actionPlan.type === "create_task"
+                        ? () => handleConfirmCreate(i, msg.actionPlan!)
+                        : !msg.actionStatus && msg.actionPlan.type === "update_task"
+                          ? () => handleConfirmUpdate(i, msg.actionPlan!)
+                          : !msg.actionStatus && msg.actionPlan.type === "move_task"
+                            ? () => handleConfirmMove(i, msg.actionPlan!)
+                            : undefined
+                    }
+                    onCancel={
+                      !msg.actionStatus ? () => handleCancelAction(i) : undefined
+                    }
+                  />
+                )}
+              </div>
+              {/* Fallback mode indicator */}
+              {msg.role === "assistant" && msg.isFallback && (
+                <div className="inline-flex items-center gap-1 self-start rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30 px-2 py-0.5">
+                  <svg className="h-2.5 w-2.5 text-amber-500 dark:text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                  </svg>
+                  <span className="text-[9px] font-medium text-amber-600 dark:text-amber-400">โหมดวิเคราะห์ภายใน</span>
                 </div>
-              )}
-              {msg.actionPlan && (
-                <ActionPreviewCard
-                  plan={msg.actionPlan}
-                  status={msg.actionStatus ?? "pending"}
-                  onConfirm={
-                    !msg.actionStatus && msg.actionPlan.type === "create_task"
-                      ? () => handleConfirmCreate(i, msg.actionPlan!)
-                      : !msg.actionStatus && msg.actionPlan.type === "update_task"
-                        ? () => handleConfirmUpdate(i, msg.actionPlan!)
-                        : !msg.actionStatus && msg.actionPlan.type === "move_task"
-                          ? () => handleConfirmMove(i, msg.actionPlan!)
-                          : undefined
-                  }
-                  onCancel={
-                    !msg.actionStatus
-                      ? () => handleCancelAction(i)
-                      : undefined
-                  }
-                />
               )}
             </div>
           </div>
@@ -931,53 +983,42 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 mt-0.5">
               <SparkleIcon className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
             </div>
-            <div className="rounded-xl bg-zinc-50 dark:bg-zinc-800/60 px-3.5 py-2.5 text-sm text-zinc-400 dark:text-zinc-500">
-              {(() => {
-                const lastMsg = messages[messages.length - 1];
-                const isCustom = lastMsg?.role === "user" && detectAssistantIntent(lastMsg.content ?? "") === "general";
-                return isCustom ? (
-                  <span className="inline-flex items-center gap-1">
-                    กำลังคิด
-                    <span className="animate-pulse">...</span>
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1">
-                    กำลังวิเคราะห์ข้อมูล
-                    <span className="animate-pulse">...</span>
-                  </span>
-                );
-              })()}
+            <div className="rounded-2xl rounded-bl-sm border border-zinc-100 dark:border-zinc-700/40 bg-zinc-50 dark:bg-zinc-800/60 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                  {(() => {
+                    const lastMsg = messages[messages.length - 1];
+                    if (!lastMsg || lastMsg.role !== "user") return "กำลังคิด";
+                    const actionType = detectActionIntent(lastMsg.content ?? "");
+                    if (actionType !== "unknown") return "กำลังวางแผนการดำเนินการ";
+                    const intent = detectAssistantIntent(lastMsg.content ?? "");
+                    if (intent === "focus") return "กำลังค้นหางานสำคัญ";
+                    if (intent === "summary" || intent === "progress") return "กำลังวิเคราะห์ข้อมูล";
+                    if (intent === "risk") return "กำลังประเมินความเสี่ยง";
+                    return "กำลังคิด";
+                  })()}
+                </span>
+                <span className="flex items-center gap-0.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 dark:bg-zinc-500 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 dark:bg-zinc-500 animate-bounce" style={{ animationDelay: "120ms" }} />
+                  <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 dark:bg-zinc-500 animate-bounce" style={{ animationDelay: "240ms" }} />
+                </span>
+              </div>
             </div>
           </div>
         )}
 
         <div ref={chatEndRef} />
 
-        {/* Initial suggested prompts */}
-        {showInitialPrompts && (
-          <div className="space-y-2 pt-2">
-            {SUGGESTED_PROMPTS.map((prompt) => (
-              <button
-                key={prompt}
-                onClick={() => handlePrompt(prompt)}
-                disabled={isLoading || !hasBoard}
-                className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-zinc-800/40 px-3.5 py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-300 transition-all hover:border-blue-300 hover:bg-blue-50/50 dark:hover:border-blue-500/40 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-zinc-200 disabled:hover:bg-white dark:disabled:hover:border-zinc-700/60 dark:disabled:hover:bg-zinc-800/40 dark:disabled:hover:text-zinc-300"
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Follow-up actions */}
+        {/* Follow-up action chips */}
         {!isLoading && messages.length > 0 && (
-          <div className="flex flex-wrap gap-2 pt-1">
+          <div className="flex flex-wrap gap-1.5 pt-1">
             {FOLLOW_UP_ACTIONS.map((action) => (
               <button
                 key={action.label}
                 onClick={() => handlePrompt(action.prompt, action.filter)}
                 disabled={isLoading || !hasBoard}
-                className="inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-zinc-800/40 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 transition-all hover:border-blue-300 hover:bg-blue-50/50 dark:hover:border-blue-500/40 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center rounded-full border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-zinc-800/40 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 transition-all hover:border-blue-300 hover:bg-blue-50 dark:hover:border-blue-500/40 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {action.label}
               </button>
@@ -987,8 +1028,8 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
       </div>
 
       {/* Input area */}
-      <div className="border-t border-zinc-100 dark:border-zinc-800/80 px-5 py-3">
-        <div className="flex items-center gap-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 px-3.5 py-2.5">
+      <div className="border-t border-zinc-100 dark:border-zinc-800/80 px-4 py-3">
+        <div className="flex items-center gap-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/40 px-3.5 py-2 focus-within:border-blue-300 dark:focus-within:border-blue-500/40 transition-colors">
           <input
             type="text"
             value={inputValue}
@@ -1009,6 +1050,11 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
             </svg>
           </button>
         </div>
+        {inputValue.length > MAX_INPUT_LENGTH * 0.8 && (
+          <div className="mt-1 text-right text-[10px] text-zinc-400 dark:text-zinc-500 tabular-nums">
+            {inputValue.length}/{MAX_INPUT_LENGTH}
+          </div>
+        )}
       </div>
     </div>
   );
