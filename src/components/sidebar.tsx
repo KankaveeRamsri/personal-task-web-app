@@ -235,8 +235,8 @@ export function Sidebar({ userEmail, onSignOut }: SidebarProps) {
                 href="/dashboard/ai-assistant"
                 className={`flex items-center rounded-lg text-sm font-medium transition-colors ${
                   pathname === "/dashboard/ai-assistant"
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300"
-                    : "text-indigo-500 hover:bg-indigo-50/50 hover:text-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-900/20 dark:hover:text-indigo-300"
+                    ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
+                    : "text-blue-500 hover:bg-blue-50/50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/20 dark:hover:text-blue-300"
                 } ${collapsed ? "justify-center px-0 py-2.5" : "gap-2.5 px-2.5 py-2"}`}
               >
                 <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">

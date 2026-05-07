@@ -157,7 +157,7 @@ const ACTION_TYPE_LABELS: Record<string, { label: string; icon: string; color: s
 
 const STATUS_LABELS: Record<ActionStatus, { label: string; color: string }> = {
   pending: { label: "", color: "" },
-  executing: { label: "กำลังดำเนินการ...", color: "text-indigo-600 dark:text-indigo-400" },
+  executing: { label: "กำลังดำเนินการ...", color: "text-blue-600 dark:text-blue-400" },
   success: { label: "ดำเนินการสำเร็จ ✓", color: "text-emerald-600 dark:text-emerald-400" },
   failed: { label: "ดำเนินการไม่สำเร็จ ✗", color: "text-red-600 dark:text-red-400" },
   cancelled: { label: "ยกเลิกแล้ว", color: "text-zinc-500 dark:text-zinc-400" },
@@ -833,15 +833,15 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
         {/* Welcome */}
         <div className="flex gap-2.5">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/30 mt-0.5">
-            <SparkleIcon className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 mt-0.5">
+            <SparkleIcon className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
           </div>
           <div className="rounded-xl bg-zinc-50 dark:bg-zinc-800/60 px-3.5 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">
             {hasBoard ? (
               <>
                 สวัสดีครับ! 👋 ผมคือ AI Assistant ของคุณ<br />
                 กำลังวิเคราะห์บอร์ด{" "}
-                <span className="font-medium text-indigo-600 dark:text-indigo-400">
+                <span className="font-medium text-blue-600 dark:text-blue-400">
                   &ldquo;{boardTitle}&rdquo;
                 </span>
                 <br />
@@ -863,14 +863,14 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
             className={`flex gap-2.5 ${msg.role === "user" ? "justify-end" : ""}`}
           >
             {msg.role === "assistant" && (
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/30 mt-0.5">
-                <SparkleIcon className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 mt-0.5">
+                <SparkleIcon className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
               </div>
             )}
             <div
               className={`max-w-[85%] rounded-xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-line ${
                 msg.role === "user"
-                  ? "bg-indigo-600 text-white dark:bg-indigo-500"
+                  ? "bg-blue-600 text-white dark:bg-blue-500"
                   : "bg-zinc-50 text-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-300"
               }`}
             >
@@ -888,7 +888,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
                         type="button"
                         title={src.preview}
                         onClick={() => handleSourceClick(src)}
-                        className="inline-flex items-center gap-1 rounded-md border border-zinc-200 dark:border-zinc-700 bg-zinc-100/60 dark:bg-zinc-800/50 px-2 py-0.5 text-[10px] text-zinc-500 dark:text-zinc-400 hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-600 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-900/20 dark:hover:text-indigo-400 transition-colors"
+                        className="inline-flex items-center gap-1 rounded-md border border-zinc-200 dark:border-zinc-700 bg-zinc-100/60 dark:bg-zinc-800/50 px-2 py-0.5 text-[10px] text-zinc-500 dark:text-zinc-400 hover:border-blue-300 hover:bg-blue-50/50 hover:text-blue-600 dark:hover:border-blue-500/40 dark:hover:bg-blue-900/20 dark:hover:text-blue-400 transition-colors"
                       >
                         <svg className="h-2.5 w-2.5 shrink-0 opacity-60" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
@@ -928,8 +928,8 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
         {/* Loading indicator */}
         {isLoading && (
           <div className="flex gap-2.5">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/30 mt-0.5">
-              <SparkleIcon className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 mt-0.5">
+              <SparkleIcon className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="rounded-xl bg-zinc-50 dark:bg-zinc-800/60 px-3.5 py-2.5 text-sm text-zinc-400 dark:text-zinc-500">
               {(() => {
@@ -961,7 +961,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
                 key={prompt}
                 onClick={() => handlePrompt(prompt)}
                 disabled={isLoading || !hasBoard}
-                className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-zinc-800/40 px-3.5 py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-300 transition-all hover:border-indigo-300 hover:bg-indigo-50/50 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-900/20 hover:text-indigo-700 dark:hover:text-indigo-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-zinc-200 disabled:hover:bg-white dark:disabled:hover:border-zinc-700/60 dark:disabled:hover:bg-zinc-800/40 dark:disabled:hover:text-zinc-300"
+                className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-zinc-800/40 px-3.5 py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-300 transition-all hover:border-blue-300 hover:bg-blue-50/50 dark:hover:border-blue-500/40 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-zinc-200 disabled:hover:bg-white dark:disabled:hover:border-zinc-700/60 dark:disabled:hover:bg-zinc-800/40 dark:disabled:hover:text-zinc-300"
               >
                 {prompt}
               </button>
@@ -977,7 +977,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
                 key={action.label}
                 onClick={() => handlePrompt(action.prompt, action.filter)}
                 disabled={isLoading || !hasBoard}
-                className="inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-zinc-800/40 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 transition-all hover:border-indigo-300 hover:bg-indigo-50/50 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-900/20 hover:text-indigo-700 dark:hover:text-indigo-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-zinc-800/40 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 transition-all hover:border-blue-300 hover:bg-blue-50/50 dark:hover:border-blue-500/40 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {action.label}
               </button>
@@ -1002,7 +1002,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
           <button
             onClick={handleSubmit}
             disabled={isLoading || !hasBoard || !inputValue.trim()}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white transition-colors hover:bg-indigo-700 disabled:bg-zinc-200 dark:disabled:bg-zinc-700 disabled:text-zinc-400 dark:disabled:text-zinc-500 disabled:cursor-not-allowed"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white transition-colors hover:bg-blue-700 disabled:bg-zinc-200 dark:disabled:bg-zinc-700 disabled:text-zinc-400 dark:disabled:text-zinc-500 disabled:cursor-not-allowed"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />

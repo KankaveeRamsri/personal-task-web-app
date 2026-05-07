@@ -125,7 +125,7 @@ export default function BulkActionToolbar({
             </svg>
           </button>
           {moveMenuOpen && (
-            <div className="absolute bottom-full left-0 mb-2 w-40 rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
+            <div className="dropdown-menu absolute bottom-full left-0 mb-2 w-40 rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
               <p className="px-3 py-1 text-[11px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
                 Move to
               </p>

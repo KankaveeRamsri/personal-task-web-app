@@ -141,7 +141,7 @@ function TaskActionMenuPortal({
       {/* Dropdown */}
       <div
         ref={menuRef}
-        className="fixed z-[9999] w-48 rounded-lg bg-white shadow-lg border border-zinc-200 py-1 dark:bg-zinc-800 dark:border-zinc-700"
+        className="dropdown-menu fixed z-[9999] w-48 rounded-lg bg-white shadow-lg border border-zinc-200 py-1 dark:bg-zinc-800 dark:border-zinc-700"
         style={{ top, left }}
       >
         <div className="px-3 py-1.5 border-b border-zinc-100 dark:border-zinc-700/50">
@@ -263,7 +263,7 @@ export default function TaskCard({
         )}
         <div className="flex-1 min-w-0">
           <span
-            className={`block text-[13px] leading-snug font-medium ${
+            className={`block text-sm leading-snug font-medium ${
               task.is_completed && !isListDone
                 ? "line-through text-zinc-400 dark:text-zinc-500"
                 : "text-zinc-900 dark:text-zinc-100"

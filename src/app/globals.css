@@ -1,25 +1,35 @@
 @import "tailwindcss";
 
+/* ── Design Tokens ───────────────────────────────────────── */
 :root {
-  --background: #f8f9fb;
-  --foreground: #171717;
-  --surface: #ffffff;
-  --muted: #6b7280;
+  --background:    #f8f9fb;
+  --foreground:    #171717;
+  --surface:       #ffffff;
+  --surface-raised:#f4f5f7;
+  --muted:         #6b7280;
+  --border:        rgba(0, 0, 0, 0.08);
+  --accent:        #2563eb;
+  --accent-fg:     #ffffff;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background:    var(--background);
+  --color-foreground:    var(--foreground);
+  --color-surface:       var(--surface);
+  --font-sans:           var(--font-geist-sans);
+  --font-mono:           var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0c0d10;
-    --foreground: #ededed;
-    --surface: #16181d;
-    --muted: #9ca3af;
+    --background:    #0c0d10;
+    --foreground:    #ededed;
+    --surface:       #16181d;
+    --surface-raised:#1e2026;
+    --muted:         #9ca3af;
+    --border:        rgba(255, 255, 255, 0.07);
+    --accent:        #3b82f6;
+    --accent-fg:     #ffffff;
   }
 }
 
@@ -29,24 +39,34 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
+/* ── Shared Utilities ────────────────────────────────────── */
+
+/* Apply to all portal dropdowns for consistent open animation */
+.dropdown-menu {
+  animation: menu-in 0.12s ease-out;
+  transform-origin: top left;
+}
+
+/* ── Keyframes ───────────────────────────────────────────── */
+
 @keyframes toast-in {
   from { opacity: 0; transform: translateX(100%); }
-  to { opacity: 1; transform: translateX(0); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
 @keyframes fade-in {
   from { opacity: 0; }
-  to { opacity: 1; }
+  to   { opacity: 1; }
 }
 
 @keyframes menu-in {
   from { opacity: 0; transform: scale(0.95) translateY(-4px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
 }
 
 @keyframes panel-in {
   from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+  to   { transform: translateX(0); }
 }
 
 @keyframes calendar-highlight {

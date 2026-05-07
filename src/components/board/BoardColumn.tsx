@@ -225,7 +225,7 @@ export default function BoardColumn({
     >
       {/* Color bar */}
       <div
-        className="h-1 rounded-t-xl"
+        className="h-1.5 rounded-t-xl"
         style={{ backgroundColor: barColor }}
       />
 
@@ -248,7 +248,7 @@ export default function BoardColumn({
                   if (e.key === "Escape") setIsRenaming(false);
                 }}
                 disabled={listBusy}
-                className="flex-1 min-w-0 rounded border border-zinc-300 bg-white px-1.5 py-0.5 text-[13px] font-semibold text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-200 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:focus:border-zinc-500"
+                className="flex-1 min-w-0 rounded border border-zinc-300 bg-white px-1.5 py-0.5 text-sm font-semibold text-zinc-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/20 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:focus:border-blue-500"
               />
               <button
                 onClick={handleSaveRename}
@@ -293,7 +293,7 @@ export default function BoardColumn({
                 className="h-2 w-2 rounded-full shrink-0"
                 style={{ backgroundColor: barColor }}
               />
-              <h3 className="text-[13px] font-semibold tracking-tight text-zinc-700 dark:text-zinc-300 truncate">
+              <h3 className="text-sm font-semibold tracking-tight text-zinc-700 dark:text-zinc-300 truncate">
                 {list.title === "Done" ? "Completed" : list.title}
               </h3>
               {list.is_done && (
@@ -526,20 +526,20 @@ export default function BoardColumn({
                   onNewTaskAssigneeIdChange("");
                 }
               }}
-              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 dark:border-zinc-700 dark:bg-zinc-800/80 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 dark:focus:ring-zinc-700/50"
+              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800/80 dark:placeholder:text-zinc-500 dark:focus:border-blue-500 dark:focus:ring-blue-500/20"
             />
             <textarea
               placeholder="Description (optional)"
               rows={2}
               value={newTaskDescription}
               onChange={(e) => onNewTaskDescriptionChange(e.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/50 resize-none dark:border-zinc-700 dark:bg-zinc-800/80 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 dark:focus:ring-zinc-700/50"
+              className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none dark:border-zinc-700 dark:bg-zinc-800/80 dark:placeholder:text-zinc-500 dark:focus:border-blue-500 dark:focus:ring-blue-500/20"
             />
             <div className="mt-1.5 flex items-center gap-2">
               <select
                 value={newTaskPriority}
                 onChange={(e) => onNewTaskPriorityChange(e.target.value as TaskPriority)}
-                className="rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-600 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-400 dark:focus:border-zinc-600"
+                className="rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-600 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-400 dark:focus:border-blue-500"
               >
                 <option value="none">Priority</option>
                 <option value="low">Low</option>
@@ -612,7 +612,7 @@ export default function BoardColumn({
           />
           <div
             ref={listMenuPanelRef}
-            className="fixed z-[9999] w-44 rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800"
+            className="dropdown-menu fixed z-[9999] w-44 rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800"
             style={{
               top: menuPos.top,
               left: Math.min(menuPos.left, (typeof window !== "undefined" ? window.innerWidth : 1200) - 192 - 8),
