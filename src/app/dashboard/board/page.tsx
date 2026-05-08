@@ -883,7 +883,7 @@ function DashboardBoard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="nx-empty py-20">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900 dark:border-zinc-700 dark:border-t-zinc-100" />
       </div>
     );
@@ -942,14 +942,14 @@ function DashboardBoard() {
 
       {/* No workspaces at all */}
       {workspaces.length === 0 && !showNewWorkspace && (
-        <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+        <div className="nx-empty py-24">
+          <div className="nx-empty-icon">
             <svg className="h-5 w-5 text-zinc-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
             </svg>
           </div>
-          <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">No workspaces yet</h3>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-5 max-w-[240px]">Create a workspace to organize tasks and collaborate with your team.</p>
+          <h3 className="nx-empty-title mb-1">No workspaces yet</h3>
+          <p className="nx-empty-desc mb-5 max-w-[240px]">Create a workspace to organize tasks and collaborate with your team.</p>
           <button
             onClick={() => setShowNewWorkspace(true)}
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 active:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:focus:ring-zinc-600"
@@ -962,13 +962,13 @@ function DashboardBoard() {
       {/* No boards in workspace */}
       {selectedWorkspaceId && boards.length === 0 && !selectedBoardId && !showNewBoard && (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+          <div className="nx-empty-icon">
             <svg className="h-5 w-5 text-zinc-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
             </svg>
           </div>
-          <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">No boards yet</h3>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-5 max-w-[240px]">Add a board to track tasks across To Do, In Progress, and Completed.</p>
+          <h3 className="nx-empty-title mb-1">No boards yet</h3>
+          <p className="nx-empty-desc mb-5 max-w-[240px]">Add a board to track tasks across To Do, In Progress, and Completed.</p>
           <button
             onClick={() => setShowNewBoard(true)}
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 active:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:focus:ring-zinc-600"
@@ -1177,13 +1177,13 @@ function DashboardBoard() {
       {/* Board selected but no lists */}
       {selectedBoardId && lists.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+          <div className="nx-empty-icon">
             <svg className="h-5 w-5 text-zinc-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
             </svg>
           </div>
-          <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">This board has no lists</h3>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500 max-w-[260px]">Something went wrong. Try creating a new board to get started.</p>
+          <h3 className="nx-empty-title mb-1">This board has no lists</h3>
+          <p className="nx-empty-desc max-w-[260px]">Something went wrong. Try creating a new board to get started.</p>
         </div>
       )}
 

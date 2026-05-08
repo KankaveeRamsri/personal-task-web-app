@@ -7,12 +7,12 @@ interface ComingSoonPageProps {
 export function ComingSoonPage({ title, description, icon }: ComingSoonPageProps) {
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+      <h1 className="nx-heading-lg">
         {title}
       </h1>
 
-      <div className="mt-6 flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-white px-6 py-16 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+      <div className="mt-6 nx-empty rounded-2xl border border-dashed border-zinc-300 bg-white px-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="nx-empty-icon">
           {icon}
         </div>
         <h2 className="mt-5 text-lg font-semibold text-zinc-900 dark:text-zinc-100">

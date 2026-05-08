@@ -624,8 +624,8 @@ function EmptyState({
   sub?: string;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 py-20 dark:border-zinc-700">
-      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800">
+    <div className="nx-empty rounded-2xl border border-dashed border-zinc-200 py-20 dark:border-zinc-700">
+      <div className="nx-empty-icon">
         {icon === "calendar" && (
           <svg className="h-5 w-5 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
@@ -653,7 +653,7 @@ function EmptyState({
           </svg>
         )}
       </div>
-      <p className="text-sm font-medium text-zinc-400 dark:text-zinc-500">{message}</p>
+      <p className="nx-empty-title">{message}</p>
       {sub && (
         <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500 text-center max-w-xs">
           {sub}
@@ -1115,7 +1115,7 @@ export default function CalendarPage() {
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
             >
-              <div className="rounded-xl border border-zinc-200 bg-white overflow-x-auto dark:border-zinc-700 dark:bg-zinc-900">
+              <div className="nx-card overflow-x-auto dark:border-zinc-700">
                 <div className="min-w-[700px]">
                   {/* Weekday header row */}
                   <div className="grid grid-cols-7 border-b border-zinc-200 dark:border-zinc-700">

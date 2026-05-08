@@ -200,7 +200,7 @@ export default function NotificationsPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+        <h1 className="nx-heading-lg">
           Notifications
         </h1>
         {!loading && notifications.length > 0 && (
@@ -209,14 +209,14 @@ export default function NotificationsPage() {
               <button
                 onClick={handleMarkAllRead}
                 disabled={marking}
-                className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                className="nx-btn-primary"
               >
                 {marking ? "Marking..." : "Mark all as read"}
               </button>
             )}
             <button
               onClick={refresh}
-              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              className="nx-btn-secondary"
             >
               Refresh
             </button>
@@ -285,8 +285,8 @@ export default function NotificationsPage() {
 
       {/* Empty */}
       {!loading && !error && notifications.length === 0 && (
-        <div className="mt-8 flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-white px-6 py-16 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500">
+        <div className="mt-8 nx-empty rounded-2xl border border-dashed border-zinc-300 bg-white px-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="nx-empty-icon">
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
             </svg>
@@ -302,7 +302,7 @@ export default function NotificationsPage() {
 
       {/* Empty tab */}
       {!loading && !error && notifications.length > 0 && displayed.length === 0 && (
-        <div className="mt-8 rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-10 text-center dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="mt-8 nx-empty rounded-xl border border-dashed border-zinc-300 bg-white px-6 dark:border-zinc-700 dark:bg-zinc-900">
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             {tab === "important"
               ? "No important notifications. Switch to \"All\" to see all activity."
@@ -319,7 +319,7 @@ export default function NotificationsPage() {
               Showing latest {displayed.length} notifications
             </p>
           )}
-          <div className="overflow-y-auto rounded-xl border border-zinc-200 dark:border-zinc-800 max-h-[calc(100vh-260px)]">
+          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-y-auto max-h-[calc(100vh-260px)]">
             <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
               {(() => {
                 let lastDate = "";

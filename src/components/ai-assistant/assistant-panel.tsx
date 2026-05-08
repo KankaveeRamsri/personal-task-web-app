@@ -827,7 +827,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
   );
 
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
+    <div className="flex h-full flex-col nx-card shadow-sm overflow-hidden">
       {/* Chat area */}
       <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
 

@@ -636,7 +636,7 @@ export default function TasksPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
+        <div className="nx-empty py-20">
           <svg
             className="h-6 w-6 animate-spin text-zinc-400"
             fill="none"
@@ -658,7 +658,7 @@ export default function TasksPage() {
           </svg>
         </div>
       ) : !selectedWorkspaceId ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 py-20 dark:border-zinc-700">
+        <div className="nx-empty rounded-2xl border border-dashed border-zinc-200 py-20 dark:border-zinc-700">
           <svg
             className="mb-3 h-8 w-8 text-zinc-300 dark:text-zinc-600"
             fill="none"
@@ -672,12 +672,12 @@ export default function TasksPage() {
               d="M2.25 7.125C2.25 6.504 2.754 6 3.375 6h6c.621 0 1.125.504 1.125 1.125v3.75c0 .621-.504 1.125-1.125 1.125h-6a1.125 1.125 0 0 1-1.125-1.125v-3.75ZM14.25 8.625c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125v8.25c0 .621-.504 1.125-1.125 1.125h-5.25a1.125 1.125 0 0 1-1.125-1.125v-8.25ZM2.25 15.375c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125v2.25c0 .621-.504 1.125-1.125 1.125h-5.25a1.125 1.125 0 0 1-1.125-1.125v-2.25Z"
             />
           </svg>
-          <p className="text-sm font-medium text-zinc-400 dark:text-zinc-500">
+          <p className="nx-empty-title">
             Select a workspace to view tasks
           </p>
         </div>
       ) : sortedTasks.length === 0 && tasks.length > 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 py-20 dark:border-zinc-700">
+        <div className="nx-empty rounded-2xl border border-dashed border-zinc-200 py-20 dark:border-zinc-700">
           <svg
             className="mb-3 h-8 w-8 text-zinc-300 dark:text-zinc-600"
             fill="none"
@@ -691,7 +691,7 @@ export default function TasksPage() {
               d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
             />
           </svg>
-          <p className="text-sm font-medium text-zinc-400 dark:text-zinc-500">
+          <p className="nx-empty-title">
             No matching tasks
           </p>
           <button
@@ -702,7 +702,7 @@ export default function TasksPage() {
           </button>
         </div>
       ) : sortedTasks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 py-20 dark:border-zinc-700">
+        <div className="nx-empty rounded-2xl border border-dashed border-zinc-200 py-20 dark:border-zinc-700">
           <svg
             className="mb-3 h-8 w-8 text-zinc-300 dark:text-zinc-600"
             fill="none"
@@ -716,12 +716,12 @@ export default function TasksPage() {
               d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
             />
           </svg>
-          <p className="text-sm font-medium text-zinc-400 dark:text-zinc-500">
+          <p className="nx-empty-title">
             No tasks yet
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="nx-card overflow-hidden shadow-sm">
           <table className="w-full">
             <thead>
               <tr className="border-b border-zinc-100 bg-zinc-50/80 dark:border-zinc-800 dark:bg-zinc-800/50">

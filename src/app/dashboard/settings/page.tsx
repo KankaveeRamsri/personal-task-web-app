@@ -168,13 +168,13 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+      <h1 className="nx-heading-lg">
         Settings
       </h1>
 
       {/* Profile section */}
-      <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
+      <div className="nx-card">
+        <div className="nx-card-header">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
             Profile
           </h2>
@@ -243,8 +243,8 @@ export default function SettingsPage() {
       </div>
 
       {/* Workspace section */}
-      <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
+      <div className="nx-card">
+        <div className="nx-card-header">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
             Workspace
           </h2>
@@ -332,8 +332,8 @@ export default function SettingsPage() {
       </div>
 
       {/* Account info section */}
-      <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
+      <div className="nx-card">
+        <div className="nx-card-header">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
             Account
           </h2>
@@ -360,7 +360,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="nx-card p-5">
         <button
           onClick={handleSignOut}
           className="rounded-xl border border-red-200 px-4 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"

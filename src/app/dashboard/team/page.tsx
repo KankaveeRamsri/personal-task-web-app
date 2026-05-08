@@ -305,8 +305,8 @@ export default function TeamPage() {
             Overview of members in your workspace
           </p>
         </div>
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 py-20 dark:border-zinc-700">
-          <p className="text-sm font-medium text-zinc-400 dark:text-zinc-500">Loading team...</p>
+        <div className="nx-empty rounded-2xl border border-dashed border-zinc-200 py-20 dark:border-zinc-700">
+          <p className="nx-empty-title">Loading team...</p>
         </div>
       </div>
     );
@@ -357,17 +357,17 @@ export default function TeamPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 py-20 dark:border-zinc-700">
-          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800">
+        <div className="nx-empty rounded-2xl border border-dashed border-zinc-200 py-20 dark:border-zinc-700">
+          <div className="nx-empty-icon">
             <svg className="h-5 w-5 animate-spin text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
           </div>
-          <p className="text-sm font-medium text-zinc-400 dark:text-zinc-500">Loading members...</p>
+          <p className="nx-empty-title">Loading members...</p>
         </div>
       ) : errorMsg ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 py-20 dark:border-zinc-700">
+        <div className="nx-empty rounded-2xl border border-dashed border-zinc-200 py-20 dark:border-zinc-700">
           <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-red-100 dark:bg-red-900/30">
             <svg className="h-5 w-5 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -377,24 +377,24 @@ export default function TeamPage() {
           <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{errorMsg}</p>
         </div>
       ) : !selectedWorkspaceId ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 py-20 dark:border-zinc-700">
-          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800">
+        <div className="nx-empty rounded-2xl border border-dashed border-zinc-200 py-20 dark:border-zinc-700">
+          <div className="nx-empty-icon">
             <svg className="h-5 w-5 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 7.125C2.25 6.504 2.754 6 3.375 6h6c.621 0 1.125.504 1.125 1.125v3.75c0 .621-.504 1.125-1.125 1.125h-6a1.125 1.125 0 0 1-1.125-1.125v-3.75ZM14.25 8.625c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125v8.25c0 .621-.504 1.125-1.125 1.125h-5.25a1.125 1.125 0 0 1-1.125-1.125v-8.25ZM2.25 15.375c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125v2.25c0 .621-.504 1.125-1.125 1.125h-5.25a1.125 1.125 0 0 1-1.125-1.125v-2.25Z" />
             </svg>
           </div>
-          <p className="text-sm font-medium text-zinc-400 dark:text-zinc-500">
+          <p className="nx-empty-title">
             Select a workspace to view members
           </p>
         </div>
       ) : members.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 py-20 dark:border-zinc-700">
-          <p className="text-sm font-medium text-zinc-400 dark:text-zinc-500">
+        <div className="nx-empty rounded-2xl border border-dashed border-zinc-200 py-20 dark:border-zinc-700">
+          <p className="nx-empty-title">
             No members found
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="nx-card overflow-x-auto shadow-sm">
           <table className="w-full min-w-[500px]">
             <thead>
               <tr className="border-b border-zinc-100 bg-zinc-50/80 dark:border-zinc-800 dark:bg-zinc-800/50">

@@ -551,7 +551,7 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-7xl space-y-8">
         <div className="flex items-start justify-between gap-4 border-b border-zinc-100 dark:border-zinc-800 pb-6">
           <div className="space-y-2">
-            <div className="h-8 w-64 animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800" />
+            <div className="h-8 w-64 nx-skeleton" />
             <div className="h-4 w-48 animate-pulse rounded-lg bg-zinc-100/60 dark:bg-zinc-800/60" />
           </div>
           <div className="flex gap-2">
@@ -560,15 +560,15 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
-        <div className="h-64 w-full animate-pulse rounded-2xl bg-zinc-50 dark:bg-zinc-800/20" />
+        <div className="h-64 w-full nx-skeleton-card" />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-32 animate-pulse rounded-2xl bg-zinc-50 dark:bg-zinc-800/20" />
+            <div key={i} className="h-32 nx-skeleton-card" />
           ))}
         </div>
         <div className="grid gap-6 lg:grid-cols-5">
-          <div className="lg:col-span-2 h-96 animate-pulse rounded-2xl bg-zinc-50 dark:bg-zinc-800/20" />
-          <div className="lg:col-span-3 h-96 animate-pulse rounded-2xl bg-zinc-50 dark:bg-zinc-800/20" />
+          <div className="lg:col-span-2 h-96 nx-skeleton-card" />
+          <div className="lg:col-span-3 h-96 nx-skeleton-card" />
         </div>
       </div>
     );
@@ -657,7 +657,7 @@ export default function DashboardPage() {
         {statCards.map((card) => (
           <div
             key={card.label}
-            className="group flex flex-col rounded-2xl border border-zinc-200/70 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
+            className="group flex flex-col nx-card-interactive p-4 shadow-sm"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -832,8 +832,8 @@ export default function DashboardPage() {
           </section>
 
           {/* L2. Priority Tasks */}
-          <div className="rounded-2xl border border-zinc-200/70 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
-            <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-3.5 dark:border-zinc-800">
+          <div className="nx-card shadow-sm overflow-hidden">
+            <div className="nx-card-header">
               <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Priority Tasks</h2>
               <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wide">Top {priorityTasks.length}</span>
             </div>
@@ -873,7 +873,7 @@ export default function DashboardPage() {
                 })}
               </ul>
             ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
+              <div className="nx-empty py-8">
                 <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
                   <svg className="h-5 w-5 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
@@ -891,42 +891,40 @@ export default function DashboardPage() {
           </div>
 
           {/* L3. Activity Timeline */}
-          <div className="rounded-2xl border border-zinc-200/70 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Activity Timeline</h2>
+          <div className="nx-card shadow-sm overflow-hidden">
+            <div className="nx-card-header">
+              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Activity</h2>
               {groupedActivities.length > 0 && (
-                <span className="text-[10px] font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Recent</span>
+                <span className="nx-label">Recent</span>
               )}
             </div>
             {groupedActivities.length > 0 ? (
-              <div className="space-y-5 max-h-[400px] lg:max-h-[500px] overflow-y-auto">
+              <div className="px-5 py-4 space-y-5 max-h-[400px] lg:max-h-[500px] overflow-y-auto">
                 {groupedActivities.map((group) => (
-                  <div key={group.title} className="space-y-3">
-                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 border-b border-zinc-50 dark:border-zinc-800 pb-1">
+                  <div key={group.title} className="space-y-1">
+                    <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
                       {group.title}
                     </h3>
-                    <ul className="space-y-3">
+                    <ul className="space-y-0.5">
                       {group.items.map((a) => {
                         const link = getActivityLink(a);
                         const Content = (
-                          <div className="flex items-start gap-2 rounded-lg p-2 -m-2 transition-all hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
-                            <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold ${actionIcon[a.action] ?? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
+                          <div className="flex items-start gap-3 rounded-lg px-2 py-2 -mx-2 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                            <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${actionIcon[a.action] ?? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
                               {(a.actor_display_name || a.actor_email || "?").slice(0, 1).toUpperCase()}
                             </span>
                             <div className="min-w-0 flex-1">
-                              <div className="flex items-baseline justify-between gap-2">
-                                <p className="truncate text-xs leading-snug text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-colors">
-                                  {formatActivityLine(a)}
-                                </p>
-                                <span className="shrink-0 text-[10px] text-zinc-400 dark:text-zinc-500">
-                                  {timeAgo(a.created_at)}
-                                </span>
-                              </div>
+                              <p className="text-xs leading-snug text-zinc-700 dark:text-zinc-300">
+                                {formatActivityLine(a)}
+                              </p>
+                              <span className="mt-0.5 block text-[10px] text-zinc-300 dark:text-zinc-600">
+                                {timeAgo(a.created_at)}
+                              </span>
                             </div>
                           </div>
                         );
                         return (
-                          <li key={a.id} className="group active:scale-[0.99] transition-transform">
+                          <li key={a.id} className="active:scale-[0.99] transition-transform">
                             {link ? (
                               <Link href={link} className="block cursor-pointer">{Content}</Link>
                             ) : (
@@ -940,14 +938,14 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+              <div className="nx-empty py-8">
+                <div className="nx-empty-icon">
                   <svg className="h-5 w-5 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                   </svg>
                 </div>
-                <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">No recent activity yet.</p>
-                <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">Team updates and task changes will appear here.</p>
+                <p className="nx-empty-title">No recent activity yet.</p>
+                <p className="nx-empty-desc">Team updates and task changes will appear here.</p>
               </div>
             )}
           </div>
@@ -957,7 +955,7 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-6">
 
           {/* R1. Quick Actions */}
-          <div className="rounded-2xl border border-zinc-200/70 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="nx-card shadow-sm p-4">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-3">Quick Actions</h2>
             <div className="grid grid-cols-2 gap-1.5">
               <Link
@@ -1016,72 +1014,89 @@ export default function DashboardPage() {
           </div>
 
           {/* R2. Progress Overview */}
-          <div className="rounded-2xl border border-zinc-200/70 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="flex items-center justify-between mb-3">
+          <div className="nx-card shadow-sm overflow-hidden">
+            <div className="nx-card-header">
               <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Progress Overview</h2>
-              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                {completedTasks} of {totalTasks} ({completionPct}%)
-              </span>
+              <span className="nx-badge-muted">{completionPct}%</span>
             </div>
-            <div className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800">
-              <div className="h-2 rounded-full bg-emerald-500 transition-all" style={{ width: `${completionPct}%` }} />
+            <div className="px-5 pt-4 pb-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] text-zinc-400 dark:text-zinc-500">{completedTasks} of {totalTasks} tasks complete</span>
+              </div>
+              <div className="h-1 w-full rounded-full bg-zinc-100 dark:bg-zinc-800">
+                <div className="h-1 rounded-full bg-emerald-500 transition-all duration-700" style={{ width: `${completionPct}%` }} />
+              </div>
             </div>
             {progressItems.length > 0 ? (
-              <div className="mt-4 space-y-3">
+              <div className="px-5 pb-5 pt-3.5 space-y-3.5 border-t border-zinc-50 dark:border-zinc-800/60">
                 {progressItems.map((item) => {
                   const pct = item.total > 0 ? Math.round((item.count / item.total) * 100) : 0;
                   return (
-                    <div key={item.label}>
-                      <div className="flex items-center justify-between text-sm mb-0.5">
-                        <span className="flex items-center gap-2 font-medium text-zinc-700 dark:text-zinc-300">
-                          <span className={`h-2 w-2 shrink-0 rounded-full ${item.color}`} />
+                    <div key={item.label} className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+                          <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${item.color}`} />
                           {item.label}
                         </span>
-                        <span className="text-xs text-zinc-400">{item.count} of {item.total}</span>
+                        <span className="text-[11px] tabular-nums text-zinc-400 dark:text-zinc-500">{item.count} · {pct}%</span>
                       </div>
-                      <div className="h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800">
-                        <div className={`h-1.5 rounded-full ${item.color} transition-all`} style={{ width: `${pct}%` }} />
+                      <div className="h-1 rounded-full bg-zinc-100 dark:bg-zinc-800">
+                        <div className={`h-1 rounded-full ${item.color} transition-all duration-500`} style={{ width: `${pct}%` }} />
                       </div>
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <p className="mt-3 pt-3 text-sm text-zinc-400 border-t border-zinc-100 dark:border-zinc-800">
+              <p className="px-5 pb-5 pt-3.5 text-xs text-zinc-400 dark:text-zinc-500 border-t border-zinc-50 dark:border-zinc-800/60">
                 Select a board to see task status
               </p>
             )}
           </div>
 
           {/* R3. Team Workload */}
-          <div className="rounded-2xl border border-zinc-200/70 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">Team Workload</h2>
+          <div className="nx-card shadow-sm overflow-hidden">
+            <div className="nx-card-header">
+              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Team Workload</h2>
+              <span className="text-[11px] text-zinc-400 dark:text-zinc-500">{totalTasks} tasks total</span>
+            </div>
             {assigneeSummary.length > 0 ? (
               <>
-                <div className="space-y-2.5">
-                  {assigneeSummary.slice(0, 4).map((item) => {
+                <div className="px-5 py-4 space-y-4">
+                  {assigneeSummary.slice(0, 4).map((item, idx) => {
                     const pct = totalTasks > 0 ? Math.round((item.count / totalTasks) * 100) : 0;
                     const isUnassigned = item.id === "__unassigned__";
+                    const avatarColors = [
+                      "bg-violet-100 text-violet-600 dark:bg-violet-900/40 dark:text-violet-400",
+                      "bg-sky-100 text-sky-600 dark:bg-sky-900/40 dark:text-sky-400",
+                      "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400",
+                      "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400",
+                    ];
+                    const barColors = ["bg-violet-400", "bg-sky-400", "bg-emerald-400", "bg-amber-400"];
+                    const avatarColor = isUnassigned
+                      ? "bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500"
+                      : avatarColors[idx % avatarColors.length];
+                    const barColor = isUnassigned
+                      ? "bg-zinc-200 dark:bg-zinc-700"
+                      : barColors[idx % barColors.length];
                     return (
-                      <div key={item.id}>
-                        <div className="flex items-center justify-between text-xs mb-0.5">
+                      <div key={item.id} className="space-y-1.5">
+                        <div className="flex items-center justify-between">
                           <span className="flex items-center gap-2 min-w-0">
-                            {isUnassigned ? (
-                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[10px] font-semibold text-zinc-400 dark:bg-zinc-800 dark:text-zinc-400">?</span>
-                            ) : (
-                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[10px] font-semibold text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">
-                                {item.name.slice(0, 1).toUpperCase()}
-                              </span>
-                            )}
-                            <span className={`font-medium truncate ${isUnassigned ? "text-zinc-400 dark:text-zinc-500" : "text-zinc-700 dark:text-zinc-300"}`}>
+                            <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${avatarColor}`}>
+                              {isUnassigned ? "?" : item.name.slice(0, 1).toUpperCase()}
+                            </span>
+                            <span className={`text-xs truncate ${isUnassigned ? "text-zinc-400 dark:text-zinc-500" : "text-zinc-700 dark:text-zinc-300"}`}>
                               {item.name}
                             </span>
                           </span>
-                          <span className="text-[10px] text-zinc-400 shrink-0 ml-2">{item.count}</span>
+                          <span className={`text-[11px] tabular-nums shrink-0 ml-2 ${isUnassigned ? "text-zinc-400 dark:text-zinc-500" : "text-zinc-500 dark:text-zinc-400"}`}>
+                            {item.count} · {pct}%
+                          </span>
                         </div>
-                        <div className="h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800">
+                        <div className="h-1 rounded-full bg-zinc-100 dark:bg-zinc-800">
                           <div
-                            className={`h-1.5 rounded-full transition-all ${isUnassigned ? "bg-zinc-300 dark:bg-zinc-600" : "bg-blue-400 dark:bg-blue-500"}`}
+                            className={`h-1 rounded-full transition-all duration-500 ${barColor}`}
                             style={{ width: `${pct}%` }}
                           />
                         </div>
@@ -1090,13 +1105,17 @@ export default function DashboardPage() {
                   })}
                 </div>
                 {assigneeSummary.length > 4 && (
-                  <p className="mt-2.5 text-xs text-zinc-400 dark:text-zinc-500">
-                    +{assigneeSummary.length - 4} more members
-                  </p>
+                  <div className="border-t border-zinc-100 dark:border-zinc-800 px-5 py-2.5">
+                    <Link href="/dashboard/team" className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-zinc-200">
+                      +{assigneeSummary.length - 4} more members &rarr;
+                    </Link>
+                  </div>
                 )}
               </>
             ) : (
-              <p className="text-sm text-zinc-400">No assigned tasks yet.</p>
+              <div className="px-5 py-4">
+                <p className="text-xs text-zinc-400 dark:text-zinc-500">No assigned tasks yet.</p>
+              </div>
             )}
           </div>
 
