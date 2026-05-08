@@ -11,7 +11,7 @@ export default function Home() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15a2.25 2.25 0 0 1 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
             </svg>
           </div>
-          <span className="font-bold tracking-tight text-lg">Task Board</span>
+          <span className="font-bold tracking-tight text-lg">Nexdo</span>
         </div>
         <div className="flex items-center gap-4">
           <Link href="/auth/sign-in" className="text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors">
@@ -27,13 +27,13 @@ export default function Home() {
       <header className="flex flex-col items-center justify-center text-center px-6 pt-20 pb-16 max-w-4xl mx-auto w-full">
         <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50/50 px-3 py-1 text-xs font-medium text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400 mb-6">
           <span className="flex h-2 w-2 rounded-full bg-blue-500" />
-          The future of workspace productivity
+          AI-powered workspace
         </div>
         <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-b from-zinc-900 to-zinc-500 dark:from-white dark:to-zinc-500">
-          Task Board
+          Nexdo
         </h1>
         <p className="text-lg md:text-xl text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-2xl mb-10">
-          Organize tasks, collaborate with your team, and stay on schedule — all in one workspace.
+          Plan smarter. Do faster. Your AI-powered workspace for focused productivity.
         </p>
         <div className="flex flex-col sm:flex-row items-center gap-4">
           <Link
@@ -102,7 +102,7 @@ export default function Home() {
             </div>
             <h3 className="text-lg font-bold mb-2">Smart Notifications</h3>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-              Stay updated with important assignments, role changes, and due date updates.
+              Stay on top of assignments, role changes, and due dates with smart alerts.
             </p>
           </div>
         </div>
@@ -111,7 +111,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="mt-auto py-10 px-6 border-t border-zinc-100 dark:border-zinc-900 text-center">
         <p className="text-xs text-zinc-400 dark:text-zinc-600">
-          Built for focused teams and personal productivity.
+          Built for focused teams and personal productivity. Powered by Nexdo AI.
         </p>
       </footer>
     </div>

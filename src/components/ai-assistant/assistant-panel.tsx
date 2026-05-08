@@ -850,7 +850,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
               ) : (
                 <>
                   <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-                    AI Task Assistant
+                    Nexdo AI
                   </h2>
                   <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
                     กรุณาเลือกบอร์ดก่อน จึงจะวิเคราะห์งานให้ได้

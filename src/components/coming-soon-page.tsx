@@ -22,7 +22,7 @@ export function ComingSoonPage({ title, description, icon }: ComingSoonPageProps
           {description}
         </p>
         <span className="mt-6 rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-          Under Development
+          In Development
         </span>
       </div>
     </div>

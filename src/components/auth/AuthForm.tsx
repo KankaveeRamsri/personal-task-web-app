@@ -96,10 +96,10 @@ export default function AuthForm({ initialMode }: AuthFormProps) {
             </svg>
           </Link>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-            {mode === "signin" ? "Welcome back" : "Create an account"}
+            {mode === "signin" ? "Welcome back" : "Get started"}
           </h1>
           <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-            {mode === "signin" ? "Sign in to your workspace" : "Get started with your new board"}
+            {mode === "signin" ? "Sign in to your Nexdo workspace" : "Create your Nexdo account"}
           </p>
         </div>
 
@@ -186,7 +186,7 @@ export default function AuthForm({ initialMode }: AuthFormProps) {
               )}
               {loading 
                 ? (mode === "signin" ? "Signing in..." : "Creating account...") 
-                : (mode === "signin" ? "Sign In" : "Create Account")
+                : (mode === "signin" ? "Sign In" : "Get Started")
               }
             </button>
           </form>
@@ -199,7 +199,7 @@ export default function AuthForm({ initialMode }: AuthFormProps) {
                 onClick={() => toggleMode(mode === "signin" ? "signup" : "signin")}
                 className="font-bold text-zinc-900 hover:underline dark:text-zinc-100"
               >
-                {mode === "signin" ? "Sign up for free" : "Sign in here"}
+                {mode === "signin" ? "Sign up for free" : "Sign in"}
               </button>
             </p>
           </div>

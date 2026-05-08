@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Task Board",
-  description: "Collaborative task board",
+  title: "Nexdo",
+  description: "AI-powered workspace — Plan smarter. Do faster.",
 };
 
 export default function RootLayout({
