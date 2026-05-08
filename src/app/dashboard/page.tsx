@@ -10,6 +10,13 @@ import { useRecentActivities } from "@/hooks/useRecentActivities";
 import type { Activity } from "@/hooks/useRecentActivities";
 import type { Task } from "@/types/database";
 
+// ── AI Insight Types ─────────────────────────────────────────────
+interface DashboardInsight {
+  id: string;
+  type: "alert" | "warning" | "info" | "success";
+  text: string;
+}
+
 // ── Helpers ──────────────────────────────────────────────────────
 
 function getGreeting() {
@@ -408,6 +415,127 @@ export default function DashboardPage() {
     [totalTasks, inProgressTasks, completedTasks, completionPct, overdueCount]
   );
 
+  // ── AI: Dashboard Insights (rule-based) ──────────────────────────────
+  const dashboardInsights = useMemo((): DashboardInsight[] => {
+    if (totalTasks === 0) return [];
+    const insights: DashboardInsight[] = [];
+    const today = getLocalDate(new Date());
+
+    // A. Long overdue (>3 days)
+    const longOverdueCount = overdueTasks.filter((t) => {
+      const due = getLocalDate(new Date(t.due_date! + "T00:00:00"));
+      return Math.floor((today.getTime() - due.getTime()) / 86400000) > 3;
+    }).length;
+    if (longOverdueCount > 0) {
+      insights.push({ id: "overdue-long", type: "alert", text: `${longOverdueCount} งานเลยกำหนดนานกว่า 3 วัน — ควรจัดการด่วน` });
+    } else if (overdueCount > 0) {
+      insights.push({ id: "overdue", type: "warning", text: `${overdueCount} งานเลยกำหนด — แนะนำให้เคลียร์ก่อนรับงานใหม่` });
+    }
+
+    // B. Near-due (1–2 days ahead)
+    const nearDueCount = tasks.filter((t) => {
+      if (isCompletedTask(t, doneListIds) || !t.due_date) return false;
+      const due = getLocalDate(new Date(t.due_date + "T00:00:00"));
+      const diff = Math.floor((due.getTime() - today.getTime()) / 86400000);
+      return diff >= 1 && diff <= 2;
+    }).length;
+    if (nearDueCount > 0) {
+      insights.push({ id: "near-due", type: "warning", text: `${nearDueCount} งานจะครบกำหนดใน 1–2 วัน — เตรียมพร้อม` });
+    }
+
+    // C. Bottleneck list detection
+    const nonDoneLists = lists.filter((l) => !l.is_done);
+    let bottleneck: { title: string; count: number } | null = null;
+    for (const list of nonDoneLists) {
+      const pending = tasks.filter((t) => t.list_id === list.id && !isCompletedTask(t, doneListIds)).length;
+      if (!bottleneck || pending > bottleneck.count) bottleneck = { title: list.title, count: pending };
+    }
+    if (bottleneck && bottleneck.count >= 5) {
+      insights.push({ id: "bottleneck", type: "info", text: `"${bottleneck.title}" มีงานค้าง ${bottleneck.count} งาน — อาจกลายเป็น bottleneck` });
+    }
+
+    // D. Unassigned task ratio
+    const activeUnassigned = tasks.filter((t) => !t.assignee_id && !isCompletedTask(t, doneListIds)).length;
+    const activeTasks = tasks.filter((t) => !isCompletedTask(t, doneListIds)).length;
+    const unassignedRatio = activeTasks > 0 ? activeUnassigned / activeTasks : 0;
+    if (unassignedRatio > 0.4 && activeTasks >= 4) {
+      insights.push({ id: "unassigned", type: "info", text: `งาน active ${Math.round(unassignedRatio * 100)}% ยังไม่มีผู้รับผิดชอบ — แนะนำมอบหมาย` });
+    }
+
+    // E. Overloaded member
+    const assignedMembers = assigneeSummary.filter((s) => s.id !== "__unassigned__");
+    if (assignedMembers.length >= 1 && totalTasks > 0) {
+      const top = assignedMembers[0];
+      const topPct = Math.round((top.count / totalTasks) * 100);
+      if (topPct > 55 && top.count >= 3) {
+        insights.push({ id: "overloaded", type: "warning", text: `${top.name} รับงานกว่า ${topPct}% ของ workspace — ควรกระจายงาน` });
+      }
+    }
+
+    // F. Healthy workspace signal
+    if (insights.length === 0 && completionPct >= 60) {
+      insights.push({ id: "healthy", type: "success", text: `Completion rate ${completionPct}% — workspace สุขภาพดี รักษาฟอร์มนี้ไว้` });
+    } else if (insights.length === 0) {
+      insights.push({ id: "on-track", type: "info", text: `ไม่พบสัญญาณเสี่ยง — ทุกอย่างดำเนินไปตามแผน` });
+    }
+
+    return insights.slice(0, 4);
+  }, [tasks, lists, doneListIds, totalTasks, overdueCount, overdueTasks, completionPct, assigneeSummary]);
+
+  // ── AI: Focus task reasoning ──────────────────────────────────────────
+  const focusTaskReasonMap = useMemo(() => {
+    const map = new Map<string, string>();
+    const today = getLocalDate(new Date());
+    focusTasks.forEach((task) => {
+      const parts: string[] = [];
+      if (task.due_date) {
+        const due = getLocalDate(new Date(task.due_date + "T00:00:00"));
+        if (due < today) {
+          const days = Math.floor((today.getTime() - due.getTime()) / 86400000);
+          parts.push(`เลยกำหนด ${days} วัน`);
+        }
+      }
+      if (task.priority === "high") parts.push("priority สูง");
+      else if (task.priority === "medium") parts.push("priority กลาง");
+      if (parts.length > 0) map.set(task.id, parts.join(" · "));
+    });
+    return map;
+  }, [focusTasks]);
+
+  // ── AI: Workload intelligence signal ─────────────────────────────────
+  const workloadSignal = useMemo((): string | null => {
+    if (assigneeSummary.length === 0 || totalTasks === 0) return null;
+    const assignedMembers = assigneeSummary.filter((s) => s.id !== "__unassigned__");
+    if (assignedMembers.length >= 1) {
+      const top = assignedMembers[0];
+      const pct = Math.round((top.count / totalTasks) * 100);
+      if (pct > 55 && top.count >= 3) return `${top.name} มีภาระงานสูงกว่าคนอื่น`;
+    }
+    const unassignedEntry = assigneeSummary.find((s) => s.id === "__unassigned__");
+    if (unassignedEntry) {
+      const uPct = Math.round((unassignedEntry.count / totalTasks) * 100);
+      if (uPct > 35 && unassignedEntry.count >= 3) return `งาน ${uPct}% ยังไม่มีผู้รับผิดชอบ`;
+    }
+    if (assignedMembers.length >= 2) {
+      const maxCount = assignedMembers[0].count;
+      const minCount = assignedMembers[assignedMembers.length - 1].count;
+      if (maxCount > 0 && maxCount > minCount * 3) return `ภาระงานกระจุกตัว — ลองกระจายงานเพิ่ม`;
+    }
+    return null;
+  }, [assigneeSummary, totalTasks]);
+
+  // ── AI: Workspace intelligence one-liner ─────────────────────────────
+  const workspaceIntelligence = useMemo((): string | null => {
+    if (totalTasks === 0) return null;
+    if (overdueCount > 3) return `${overdueCount} งานเลยกำหนด — ต้องการความสนใจ`;
+    if (completionPct >= 80) return `${completionPct}% เสร็จแล้ว — ทำได้ดีมาก`;
+    const recentCreated = activities.filter((a) => a.action === "task_created").length;
+    const recentMoved = activities.filter((a) => a.action === "task_moved").length;
+    if (recentCreated >= 3) return `${recentCreated} งานใหม่เพิ่งถูกสร้าง · workspace กำลังเติบโต`;
+    if (recentMoved >= 3) return `${recentMoved} งานถูกเคลื่อนไหว recently · ทีมกำลัง active`;
+    return null;
+  }, [totalTasks, overdueCount, completionPct, activities]);
+
   // Priority Tasks: top 5 urgent items
   const priorityTasks = useMemo(() => {
     const today = getLocalDate(new Date());
@@ -584,6 +712,15 @@ export default function DashboardPage() {
           </h1>
           <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
             <span className="whitespace-nowrap">{formatDate()}</span>
+            {workspaceIntelligence && (
+              <span className="hidden sm:inline text-zinc-300 dark:text-zinc-700">&middot;</span>
+            )}
+            {workspaceIntelligence && (
+              <span className="flex items-center gap-1 text-zinc-400 dark:text-zinc-500">
+                <span className="rounded bg-zinc-100 px-1 py-px text-[9px] font-bold uppercase tracking-widest text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500">AI</span>
+                {workspaceIntelligence}
+              </span>
+            )}
             {workspaces.length > 0 && selectedWorkspaceId && (
               <div className="flex items-center gap-2">
                 <span className="hidden sm:inline text-zinc-300 dark:text-zinc-700">&middot;</span>
@@ -692,6 +829,36 @@ export default function DashboardPage() {
         ))}
       </section>
 
+      {/* ── AI Insights Card ──────────────────────────────── */}
+      {dashboardInsights.length > 0 && (
+        <section className="rounded-2xl border border-zinc-100 bg-white p-4 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/50">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="flex h-5 w-5 items-center justify-center rounded-md bg-zinc-900 dark:bg-zinc-100 shrink-0">
+              <svg className="h-3 w-3 text-white dark:text-zinc-900" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+              </svg>
+            </span>
+            <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">Nexdo AI</span>
+            <span className="text-[10px] text-zinc-400 dark:text-zinc-500">Workspace Insights</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {dashboardInsights.map((insight) => {
+              const styles: Record<string, string> = {
+                alert: "border-red-100 bg-red-50/60 text-red-700 dark:border-red-900/30 dark:bg-red-950/20 dark:text-red-400",
+                warning: "border-amber-100 bg-amber-50/60 text-amber-700 dark:border-amber-900/30 dark:bg-amber-950/20 dark:text-amber-400",
+                info: "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-400",
+                success: "border-emerald-100 bg-emerald-50/60 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-950/20 dark:text-emerald-400",
+              };
+              return (
+                <div key={insight.id} className={`rounded-xl border px-3.5 py-2.5 text-xs leading-relaxed ${styles[insight.type]}`}>
+                  {insight.text}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* ── Two-Column Dashboard ────────────────────────── */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
@@ -774,6 +941,11 @@ export default function DashboardPage() {
                           <p className="text-[10px] text-zinc-400 mt-1 font-medium">
                             {listTitleMap.get(task.list_id) || "Task"} &middot; {new Date(task.due_date!).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                           </p>
+                          {focusTaskReasonMap.get(task.id) && (
+                            <p className="text-[10px] text-red-400/80 dark:text-red-400/70 mt-0.5 font-medium">
+                              {focusTaskReasonMap.get(task.id)}
+                            </p>
+                          )}
                         </div>
                         <svg className="h-4 w-4 text-zinc-300 group-hover:text-red-400 transition-colors transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
@@ -811,6 +983,11 @@ export default function DashboardPage() {
                           <p className="text-[10px] text-zinc-400 mt-1 font-medium">
                             {listTitleMap.get(task.list_id) || "Task"} &middot; Today
                           </p>
+                          {focusTaskReasonMap.get(task.id) && (
+                            <p className="text-[10px] text-orange-400/80 dark:text-orange-400/70 mt-0.5 font-medium">
+                              {focusTaskReasonMap.get(task.id)}
+                            </p>
+                          )}
                         </div>
                         <svg className="h-4 w-4 text-zinc-300 group-hover:text-orange-400 transition-colors transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
@@ -1089,6 +1266,9 @@ export default function DashboardPage() {
                             <span className={`text-xs truncate ${isUnassigned ? "text-zinc-400 dark:text-zinc-500" : "text-zinc-700 dark:text-zinc-300"}`}>
                               {item.name}
                             </span>
+                            {!isUnassigned && pct > 55 && item.count >= 3 && (
+                              <span className="shrink-0 rounded-full bg-amber-50 px-1.5 py-px text-[9px] font-semibold text-amber-600 dark:bg-amber-900/20 dark:text-amber-400">heavy</span>
+                            )}
                           </span>
                           <span className={`text-[11px] tabular-nums shrink-0 ml-2 ${isUnassigned ? "text-zinc-400 dark:text-zinc-500" : "text-zinc-500 dark:text-zinc-400"}`}>
                             {item.count} · {pct}%
@@ -1104,6 +1284,18 @@ export default function DashboardPage() {
                     );
                   })}
                 </div>
+                {workloadSignal && (
+                  <div className="px-5 pb-3 -mt-1">
+                    <p className="flex items-center gap-1.5 text-[11px] text-amber-600/80 dark:text-amber-500/70">
+                      <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded bg-zinc-100 dark:bg-zinc-800">
+                        <svg className="h-2 w-2 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+                        </svg>
+                      </span>
+                      {workloadSignal}
+                    </p>
+                  </div>
+                )}
                 {assigneeSummary.length > 4 && (
                   <div className="border-t border-zinc-100 dark:border-zinc-800 px-5 py-2.5">
                     <Link href="/dashboard/team" className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-zinc-200">
