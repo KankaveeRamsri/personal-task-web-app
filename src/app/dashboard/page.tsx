@@ -676,689 +676,588 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-7xl space-y-8">
-        <div className="flex items-start justify-between gap-4 border-b border-zinc-100 dark:border-zinc-800 pb-6">
-          <div className="space-y-2">
-            <div className="h-8 w-64 nx-skeleton" />
-            <div className="h-4 w-48 animate-pulse rounded-lg bg-zinc-100/60 dark:bg-zinc-800/60" />
-          </div>
-          <div className="flex gap-2">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-8 w-8 animate-pulse rounded-full bg-zinc-100 dark:bg-zinc-800" />
-            ))}
-          </div>
+      <div className="mx-auto max-w-7xl space-y-5 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <div className="h-48 w-full nx-skeleton-card rounded-2xl" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div className="h-64 nx-skeleton-card rounded-2xl" />
+          <div className="h-64 nx-skeleton-card rounded-2xl" />
         </div>
-        <div className="h-64 w-full nx-skeleton-card" />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-32 nx-skeleton-card" />
+            <div key={i} className="h-48 nx-skeleton-card rounded-2xl" />
           ))}
         </div>
-        <div className="grid gap-6 lg:grid-cols-5">
-          <div className="lg:col-span-2 h-96 nx-skeleton-card" />
-          <div className="lg:col-span-3 h-96 nx-skeleton-card" />
-        </div>
+        <div className="h-24 nx-skeleton-card rounded-2xl" />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5 sm:space-y-6 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-      {/* ── A. Welcome Section ──────────────────────────────── */}
-      <section className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 border-b border-zinc-100 dark:border-zinc-800 pb-6">
-        <div className="space-y-1">
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-            {getGreeting()}, {displayName}
-          </h1>
-          <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
-            <span className="whitespace-nowrap">{formatDate()}</span>
-            {workspaceIntelligence && (
-              <span className="hidden sm:inline text-zinc-300 dark:text-zinc-700">&middot;</span>
-            )}
-            {workspaceIntelligence && (
-              <span className="flex items-center gap-1 text-zinc-400 dark:text-zinc-500">
-                <span className="rounded bg-zinc-100 px-1 py-px text-[9px] font-bold uppercase tracking-widest text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500">AI</span>
-                {workspaceIntelligence}
-              </span>
-            )}
-            {workspaces.length > 0 && selectedWorkspaceId && (
-              <div className="flex items-center gap-2">
-                <span className="hidden sm:inline text-zinc-300 dark:text-zinc-700">&middot;</span>
-                <select
-                  value={selectedWorkspaceId ?? ""}
-                  onChange={(e) => setSelectedWorkspaceId(e.target.value)}
-                  className="rounded-md border border-zinc-200 bg-transparent px-2 py-0.5 text-xs sm:text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:focus:ring-zinc-600"
-                >
-                  {workspaces.map((ws) => (
-                    <option key={ws.id} value={ws.id}>
-                      {ws.icon} {ws.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            {selectedWorkspaceId && boards.length > 0 && selectedBoardId && (
-              <div className="flex items-center gap-2">
-                <span className="text-zinc-300 dark:text-zinc-700">/</span>
-                <select
-                  value={selectedBoardId ?? ""}
-                  onChange={(e) => setSelectedBoardId(e.target.value)}
-                  className="rounded-md border border-zinc-200 bg-transparent px-2 py-0.5 text-xs sm:text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:focus:ring-zinc-600"
-                >
-                  {boards.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center self-start">
-          {members.slice(0, 4).map((m, i) => {
-            const name = m.display_name || m.email;
-            const initials = name.split(/[\s._-]+/).map(w => w[0]).join("").slice(0, 2).toUpperCase() || name[0]?.toUpperCase() || "?";
-            const colors = ["bg-violet-500", "bg-sky-500", "bg-emerald-500", "bg-amber-500"];
-            return (
-              <div
-                key={m.user_id}
-                title={`${m.display_name || m.email}${m.role !== "member" ? ` (${m.role})` : ""}`}
-                className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full ${colors[i % colors.length]} text-[10px] sm:text-[11px] font-semibold text-white ring-2 ring-white dark:ring-zinc-950 transition-transform hover:scale-110 hover:z-10 cursor-default ${i > 0 ? "-ml-2" : ""}`}
-              >
-                {initials}
-              </div>
-            );
-          })}
-          {members.length > 4 && (
-            <div
-              title={`${members.length - 4} more member${members.length - 4 > 1 ? "s" : ""}`}
-              className="flex h-7 w-7 sm:h-8 sm:w-8 -ml-2 items-center justify-center rounded-full bg-zinc-200 text-[10px] sm:text-[11px] font-semibold text-zinc-600 ring-2 ring-white dark:bg-zinc-700 dark:text-zinc-300 dark:ring-zinc-950 transition-transform hover:scale-110 hover:z-10 cursor-default"
-            >
-              +{members.length - 4}
-            </div>
-          )}
-          <button
-            title="Invite members"
-            className="flex h-7 w-7 sm:h-8 sm:w-8 -ml-2 items-center justify-center rounded-full border-2 border-dashed border-zinc-300 text-zinc-400 ring-2 ring-white transition-all hover:scale-110 hover:border-zinc-400 hover:text-zinc-600 dark:border-zinc-600 dark:text-zinc-500 dark:ring-zinc-950 dark:hover:border-zinc-400 dark:hover:text-zinc-300"
-          >
-            <svg className="h-3 sm:h-3.5 w-3 sm:w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-          </button>
-        </div>
-      </section>
+    <div className="mx-auto max-w-7xl space-y-5 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
 
-      {/* ── 2. KPI Row ────────────────────────────────────── */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {statCards.map((card) => (
-          <div
-            key={card.label}
-            className="group flex flex-col nx-card-interactive p-4 shadow-sm"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${card.iconBg} ${card.accent}`}>
-                  {card.icon}
-                </span>
-                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                  {card.label}
-                </span>
-              </div>
-              {card.badge && (
-                <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-500 dark:bg-red-900/30 dark:text-red-400">
-                  {card.badge}
-                </span>
+      {/* ── A. AI COMMAND CENTER ─────────────────────────────── */}
+      <section className="rounded-2xl border border-zinc-200/70 bg-white shadow-sm overflow-hidden dark:border-zinc-800 dark:bg-zinc-900">
+
+        {/* Header row: greeting + workspace nav + team */}
+        <div className="px-6 py-5 flex flex-col sm:flex-row sm:items-start gap-4 justify-between">
+          <div className="space-y-1">
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+              {getGreeting()}, {displayName}
+            </h1>
+            <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-400 dark:text-zinc-500">
+              <span>{formatDate()}</span>
+              {workspaces.length > 0 && selectedWorkspaceId && (
+                <>
+                  <span className="text-zinc-200 dark:text-zinc-700">&middot;</span>
+                  <select
+                    value={selectedWorkspaceId ?? ""}
+                    onChange={(e) => setSelectedWorkspaceId(e.target.value)}
+                    className="rounded border border-zinc-200 bg-transparent px-1.5 py-px text-xs text-zinc-600 focus:outline-none dark:border-zinc-700 dark:text-zinc-400"
+                  >
+                    {workspaces.map((ws) => (
+                      <option key={ws.id} value={ws.id}>{ws.icon} {ws.name}</option>
+                    ))}
+                  </select>
+                </>
+              )}
+              {selectedWorkspaceId && boards.length > 0 && selectedBoardId && (
+                <>
+                  <span className="text-zinc-300 dark:text-zinc-600">/</span>
+                  <select
+                    value={selectedBoardId ?? ""}
+                    onChange={(e) => setSelectedBoardId(e.target.value)}
+                    className="rounded border border-zinc-200 bg-transparent px-1.5 py-px text-xs text-zinc-600 focus:outline-none dark:border-zinc-700 dark:text-zinc-400"
+                  >
+                    {boards.map((b) => (
+                      <option key={b.id} value={b.id}>{b.title}</option>
+                    ))}
+                  </select>
+                </>
               )}
             </div>
-            <p className="mt-2.5 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-              {card.value}
-            </p>
-            <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
-              {card.change}
-            </p>
-            {card.progressPct !== undefined && (
-              <div className="mt-3 h-1.5 w-full rounded-full bg-zinc-100 dark:bg-zinc-800">
-                <div
-                  className="h-1.5 rounded-full bg-emerald-500 transition-all duration-700"
-                  style={{ width: `${card.progressPct}%` }}
-                />
+          </div>
+
+          <div className="flex items-start gap-5 shrink-0">
+            {/* Ambient stats */}
+            {totalTasks > 0 && (
+              <div className="hidden sm:flex items-center gap-3 text-xs pt-0.5">
+                <span className="text-zinc-400 dark:text-zinc-500">
+                  <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-200">{totalTasks}</span> tasks
+                </span>
+                <span className="text-zinc-200 dark:text-zinc-700">&middot;</span>
+                <span className="text-zinc-400 dark:text-zinc-500">
+                  <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-200">{completionPct}%</span> done
+                </span>
+                {overdueCount > 0 && (
+                  <>
+                    <span className="text-zinc-200 dark:text-zinc-700">&middot;</span>
+                    <span className="flex items-center gap-1 font-medium text-red-500">
+                      <span className="h-1.5 w-1.5 rounded-full bg-red-400 animate-pulse" />
+                      {overdueCount} overdue
+                    </span>
+                  </>
+                )}
               </div>
             )}
-          </div>
-        ))}
-      </section>
 
-      {/* ── AI Insights Card ──────────────────────────────── */}
-      {dashboardInsights.length > 0 && (
-        <section className="rounded-2xl border border-zinc-100 bg-white p-4 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/50">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="flex h-5 w-5 items-center justify-center rounded-md bg-zinc-900 dark:bg-zinc-100 shrink-0">
-              <svg className="h-3 w-3 text-white dark:text-zinc-900" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            {/* Team avatars */}
+            <div className="flex items-center">
+              {members.slice(0, 4).map((m, i) => {
+                const name = m.display_name || m.email;
+                const initials = name.split(/[\s._-]+/).map(w => w[0]).join("").slice(0, 2).toUpperCase() || name[0]?.toUpperCase() || "?";
+                const colors = ["bg-violet-500", "bg-sky-500", "bg-emerald-500", "bg-amber-500"];
+                return (
+                  <div
+                    key={m.user_id}
+                    title={`${m.display_name || m.email}${m.role !== "member" ? ` (${m.role})` : ""}`}
+                    className={`flex h-7 w-7 items-center justify-center rounded-full ${colors[i % colors.length]} text-[10px] font-semibold text-white ring-2 ring-white dark:ring-zinc-900 hover:scale-110 transition-transform cursor-default ${i > 0 ? "-ml-2" : ""}`}
+                  >
+                    {initials}
+                  </div>
+                );
+              })}
+              {members.length > 4 && (
+                <div className="flex h-7 w-7 -ml-2 items-center justify-center rounded-full bg-zinc-200 text-[10px] font-semibold text-zinc-600 ring-2 ring-white dark:bg-zinc-700 dark:text-zinc-300 dark:ring-zinc-900">
+                  +{members.length - 4}
+                </div>
+              )}
+              <button
+                title="Invite members"
+                className="flex h-7 w-7 -ml-2 items-center justify-center rounded-full border-2 border-dashed border-zinc-300 text-zinc-400 ring-2 ring-white hover:border-zinc-400 hover:text-zinc-600 dark:border-zinc-600 dark:ring-zinc-900 dark:hover:border-zinc-400 transition-all"
+              >
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Nexdo AI Insights */}
+        {dashboardInsights.length > 0 && (
+          <div className="border-t border-zinc-100 dark:border-zinc-800 px-6 py-4">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="flex h-5 w-5 items-center justify-center rounded-md bg-zinc-900 dark:bg-zinc-100 shrink-0">
+                <svg className="h-3 w-3 text-white dark:text-zinc-900" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+                </svg>
+              </span>
+              <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">Nexdo AI</span>
+              <span className="text-[10px] text-zinc-400 dark:text-zinc-500">Workspace Intelligence</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+              {dashboardInsights.map((insight) => {
+                const insightStyles: Record<string, string> = {
+                  alert:   "border-red-100 bg-red-50/60 text-red-700 dark:border-red-900/30 dark:bg-red-950/20 dark:text-red-400",
+                  warning: "border-amber-100 bg-amber-50/60 text-amber-700 dark:border-amber-900/30 dark:bg-amber-950/20 dark:text-amber-400",
+                  info:    "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-400",
+                  success: "border-emerald-100 bg-emerald-50/60 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-950/20 dark:text-emerald-400",
+                };
+                return (
+                  <div key={insight.id} className={`rounded-xl border px-3.5 py-2.5 text-xs leading-relaxed ${insightStyles[insight.type]}`}>
+                    {insight.text}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Quick Actions + workspace signal */}
+        <div className="border-t border-zinc-100 dark:border-zinc-800 px-6 py-3 flex flex-wrap items-center gap-2 bg-zinc-50/50 dark:bg-zinc-800/20">
+          <Link href="/dashboard/board" className="nx-btn-primary text-xs">
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            New Task
+          </Link>
+          {overdueCount > 0 && (
+            <Link href="/dashboard/board" className="nx-btn-danger text-xs">
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+              </svg>
+              Fix Overdue ({overdueCount})
+            </Link>
+          )}
+          {dueTodayCount > 0 && (
+            <Link href="/dashboard/tasks" className="nx-btn-secondary text-xs">
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+              </svg>
+              Plan Today ({dueTodayCount})
+            </Link>
+          )}
+          {members.length < 2 && (
+            <Link href="/dashboard/team" className="nx-btn-ghost text-xs">
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
+              </svg>
+              Invite Team
+            </Link>
+          )}
+          {workspaceIntelligence && (
+            <span className="ml-auto flex items-center gap-1.5 text-[11px] text-zinc-400 dark:text-zinc-500">
+              <svg className="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
               </svg>
+              {workspaceIntelligence}
             </span>
-            <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">Nexdo AI</span>
-            <span className="text-[10px] text-zinc-400 dark:text-zinc-500">Workspace Insights</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {dashboardInsights.map((insight) => {
-              const styles: Record<string, string> = {
-                alert: "border-red-100 bg-red-50/60 text-red-700 dark:border-red-900/30 dark:bg-red-950/20 dark:text-red-400",
-                warning: "border-amber-100 bg-amber-50/60 text-amber-700 dark:border-amber-900/30 dark:bg-amber-950/20 dark:text-amber-400",
-                info: "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-400",
-                success: "border-emerald-100 bg-emerald-50/60 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-950/20 dark:text-emerald-400",
-              };
-              return (
-                <div key={insight.id} className={`rounded-xl border px-3.5 py-2.5 text-xs leading-relaxed ${styles[insight.type]}`}>
-                  {insight.text}
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
+          )}
+        </div>
+      </section>
 
-      {/* ── Two-Column Dashboard ────────────────────────── */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* ── B. EXECUTION ZONE ────────────────────────────────── */}
 
-        {/* ── LEFT COLUMN ──────────────────────────────────── */}
-        <div className="flex flex-col gap-6">
+      {/* ── B. EXECUTION ZONE ─────────────────────────────── */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-          {/* L1. Focus Today */}
-          <section className="rounded-2xl border border-amber-200/80 bg-amber-50/40 p-6 shadow-sm dark:border-amber-900/40 dark:bg-amber-950/15">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-base">🔥</span>
-                  <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100">Focus Today</h2>
-                  {(overdueCount > 0 || dueTodayTasks.length > 0) && (
-                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
-                      {overdueCount + dueTodayTasks.length} tasks
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-zinc-400 dark:text-zinc-500 pl-6">
-                  {dueTodayTasks.length} due today &bull; {overdueCount} overdue
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleCompleteAll}
-                  disabled={!canComplete || completingAll}
-                  className="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed dark:bg-blue-500 dark:hover:bg-blue-400"
-                >
-                  {completingAll ? "Completing..." : "Complete All"}
-                </button>
-                <button
-                  onClick={handleStartFocus}
-                  disabled={focusTasks.length === 0}
-                  className="px-3 py-1.5 text-xs font-semibold border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Start Focus
-                </button>
-              </div>
+        {/* B1. Today's Focus — unified */}
+        <div className="nx-card shadow-sm overflow-hidden">
+          <div className="nx-card-header">
+            <div className="space-y-0.5">
+              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Today&apos;s Focus</h2>
+              <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
+                {focusTasks.length > 0
+                  ? `${overdueCount} overdue · ${dueTodayTasks.length} due today`
+                  : "You're all caught up"}
+              </p>
             </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={handleCompleteAll}
+                disabled={!canComplete || completingAll}
+                className="nx-btn-accent text-[11px] disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {completingAll ? "..." : "Complete All"}
+              </button>
+              <button
+                onClick={handleStartFocus}
+                disabled={focusTasks.length === 0}
+                className="nx-btn-secondary text-[11px] disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Start Focus
+              </button>
+            </div>
+          </div>
 
-            <div className="mb-6">
-              <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1.5">
-                <span>Progress</span>
-                <span>{completedTodayCount} / {totalTodayCount} completed</span>
+          {totalTodayCount > 0 && (
+            <div className="px-5 py-2.5 border-b border-zinc-100 dark:border-zinc-800">
+              <div className="flex items-center justify-between text-[10px] text-zinc-400 dark:text-zinc-500 mb-1.5">
+                <span>Today&apos;s progress</span>
+                <span>{completedTodayCount} / {totalTodayCount}</span>
               </div>
-              <div className="h-1.5 w-full rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+              <div className="h-1 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-zinc-900 dark:bg-zinc-100 transition-all duration-500 ease-out"
+                  className="h-full bg-zinc-900 dark:bg-zinc-100 rounded-full transition-all duration-500"
                   style={{ width: `${totalTodayCount > 0 ? (completedTodayCount / totalTodayCount) * 100 : 0}%` }}
                 />
               </div>
             </div>
+          )}
 
-            {overdueCount === 0 && dueTodayTasks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-6 text-center">
-                <span className="text-2xl mb-2">🎉</span>
-                <p className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">You&apos;re all caught up</p>
-                <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">No urgent tasks for today.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-red-500/80">Overdue</h3>
-                    <span className="text-xs text-zinc-400">({overdueCount})</span>
-                  </div>
-                  <div className="space-y-2">
-                    {overdueTasks.slice(0, 3).map((task) => (
-                      <Link
-                        key={task.id}
-                        href={`/dashboard/board?boardId=${listBoardMap.get(task.list_id)}&taskId=${task.id}`}
-                        className="group flex items-center justify-between rounded-lg border border-red-100 bg-white p-3 shadow-sm transition-all hover:border-red-200 hover:shadow-md dark:border-red-900/20 dark:bg-zinc-900"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-zinc-800 dark:text-zinc-200 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
-                            {task.title}
-                          </p>
-                          <p className="text-[10px] text-zinc-400 mt-1 font-medium">
-                            {listTitleMap.get(task.list_id) || "Task"} &middot; {new Date(task.due_date!).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                          </p>
-                          {focusTaskReasonMap.get(task.id) && (
-                            <p className="text-[10px] text-red-400/80 dark:text-red-400/70 mt-0.5 font-medium">
-                              {focusTaskReasonMap.get(task.id)}
-                            </p>
+          {focusTasks.length > 0 ? (
+            <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              {focusTasks.slice(0, 6).map((task) => {
+                const isOverdue = overdueTasks.some((t) => t.id === task.id);
+                return (
+                  <li key={task.id}>
+                    <Link
+                      href={`/dashboard/board?boardId=${listBoardMap.get(task.list_id)}&taskId=${task.id}`}
+                      className="group flex items-center gap-3 px-5 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+                    >
+                      <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${isOverdue ? "bg-red-400 animate-pulse" : "bg-orange-400"}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-colors">
+                          {task.title}
+                        </p>
+                        <p className="text-[10px] mt-0.5 flex items-center gap-1.5">
+                          {isOverdue ? (
+                            <span className="text-red-400 font-medium">
+                              {focusTaskReasonMap.get(task.id) || "Overdue"}
+                            </span>
+                          ) : (
+                            <span className="text-orange-400 font-medium">Due today</span>
                           )}
-                        </div>
-                        <svg className="h-4 w-4 text-zinc-300 group-hover:text-red-400 transition-colors transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                        </svg>
-                      </Link>
-                    ))}
-                    {overdueCount > 3 && (
-                      <Link href="/dashboard/tasks" className="block text-center text-[11px] font-bold text-red-500/60 hover:text-red-500 transition-colors py-1">
-                        View all {overdueCount} overdue &rarr;
-                      </Link>
-                    )}
-                    {overdueCount === 0 && (
-                      <p className="py-3 text-center text-xs text-zinc-400 dark:text-zinc-500 italic">No overdue tasks</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-orange-500" />
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-orange-500/80">Due Today</h3>
-                    <span className="text-xs text-zinc-400">({dueTodayTasks.length})</span>
-                  </div>
-                  <div className="space-y-2">
-                    {dueTodayTasks.slice(0, 3).map((task) => (
-                      <Link
-                        key={task.id}
-                        href={`/dashboard/board?boardId=${listBoardMap.get(task.list_id)}&taskId=${task.id}`}
-                        className="group flex items-center justify-between rounded-lg border border-orange-100 bg-white p-3 shadow-sm transition-all hover:border-orange-200 hover:shadow-md dark:border-orange-900/20 dark:bg-zinc-900"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-zinc-800 dark:text-zinc-200 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
-                            {task.title}
-                          </p>
-                          <p className="text-[10px] text-zinc-400 mt-1 font-medium">
-                            {listTitleMap.get(task.list_id) || "Task"} &middot; Today
-                          </p>
-                          {focusTaskReasonMap.get(task.id) && (
-                            <p className="text-[10px] text-orange-400/80 dark:text-orange-400/70 mt-0.5 font-medium">
-                              {focusTaskReasonMap.get(task.id)}
-                            </p>
-                          )}
-                        </div>
-                        <svg className="h-4 w-4 text-zinc-300 group-hover:text-orange-400 transition-colors transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                        </svg>
-                      </Link>
-                    ))}
-                    {dueTodayTasks.length > 3 && (
-                      <Link href="/dashboard/tasks" className="block text-center text-[11px] font-bold text-orange-500/60 hover:text-orange-500 transition-colors py-1">
-                        View all {dueTodayTasks.length} today &rarr;
-                      </Link>
-                    )}
-                    {dueTodayTasks.length === 0 && (
-                      <p className="py-3 text-center text-xs text-zinc-400 dark:text-zinc-500 italic">Nothing due today</p>
-                    )}
-                  </div>
-                </div>
+                          <span className="text-zinc-300 dark:text-zinc-600">&middot;</span>
+                          <span className="text-zinc-400 dark:text-zinc-500">{listTitleMap.get(task.list_id) || "Task"}</span>
+                        </p>
+                      </div>
+                      {task.priority && task.priority !== "none" && (
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${priorityBadge(task.priority)}`}>
+                          {task.priority}
+                        </span>
+                      )}
+                      <svg className="h-4 w-4 text-zinc-300 group-hover:text-zinc-500 dark:group-hover:text-zinc-400 transition-colors shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                      </svg>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <div className="nx-empty py-10">
+              <div className="nx-empty-icon">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
               </div>
-            )}
-          </section>
-
-          {/* L2. Priority Tasks */}
-          <div className="nx-card shadow-sm overflow-hidden">
-            <div className="nx-card-header">
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Priority Tasks</h2>
-              <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wide">Top {priorityTasks.length}</span>
+              <p className="nx-empty-title">You&apos;re all caught up</p>
+              <p className="nx-empty-desc">No overdue or due-today tasks.</p>
             </div>
-            {priorityTasks.length > 0 ? (
-              <ul className="divide-y divide-zinc-100 dark:divide-zinc-800 max-h-72 overflow-y-auto">
-                {priorityTasks.map((task) => {
-                  const listTitle = listTitleMap.get(task.list_id) ?? "";
-                  const taskStatus = listTitle === "Done" ? "Completed" : (listTitle || "To Do");
-                  const dotColor = listColorMap.get(listTitle) ?? "bg-zinc-300";
-                  const today = getLocalDate(new Date());
-                  const dueDate = task.due_date ? getLocalDate(new Date(task.due_date + "T00:00:00")) : null;
-                  const isOverdue = dueDate && dueDate < today;
-                  const isToday = dueDate && dueDate.getTime() === today.getTime();
-                  return (
-                    <li key={task.id}>
-                      <Link
-                        href={`/dashboard/board?boardId=${listBoardMap.get(task.list_id)}&taskId=${task.id}`}
-                        className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-                      >
-                        <span className={`h-2 w-2 shrink-0 rounded-full ${dotColor}`} />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="truncate text-sm font-medium text-zinc-800 dark:text-zinc-200">{task.title}</p>
-                            {isOverdue && <span className="shrink-0 text-[10px] font-bold text-red-500 uppercase tracking-tight">Overdue</span>}
-                            {isToday && <span className="shrink-0 text-[10px] font-bold text-orange-500 uppercase tracking-tight">Today</span>}
-                          </div>
-                          <p className="mt-0.5 text-xs text-zinc-400">{taskStatus}</p>
-                        </div>
-                        {task.priority && task.priority !== "none" && (
-                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${priorityBadge(task.priority)}`}>
-                            {task.priority}
-                          </span>
-                        )}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <div className="nx-empty py-8">
-                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
-                  <svg className="h-5 w-5 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                  </svg>
-                </div>
-                <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Nothing urgent right now.</p>
-                <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">High-priority work will appear here.</p>
-              </div>
-            )}
-            <div className="border-t border-zinc-100 px-5 py-2.5 dark:border-zinc-800">
-              <Link href="/dashboard/tasks" className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-zinc-200">
-                View all tasks &rarr;
+          )}
+
+          {focusTasks.length > 6 && (
+            <div className="border-t border-zinc-100 dark:border-zinc-800 px-5 py-2.5">
+              <Link href="/dashboard/tasks" className="text-xs font-medium text-zinc-400 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-zinc-200 transition-colors">
+                View all {focusTasks.length} urgent tasks &rarr;
               </Link>
             </div>
-          </div>
-
-          {/* L3. Activity Timeline */}
-          <div className="nx-card shadow-sm overflow-hidden">
-            <div className="nx-card-header">
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Activity</h2>
-              {groupedActivities.length > 0 && (
-                <span className="nx-label">Recent</span>
-              )}
-            </div>
-            {groupedActivities.length > 0 ? (
-              <div className="px-5 py-4 space-y-5 max-h-[400px] lg:max-h-[500px] overflow-y-auto">
-                {groupedActivities.map((group) => (
-                  <div key={group.title} className="space-y-1">
-                    <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
-                      {group.title}
-                    </h3>
-                    <ul className="space-y-0.5">
-                      {group.items.map((a) => {
-                        const link = getActivityLink(a);
-                        const Content = (
-                          <div className="flex items-start gap-3 rounded-lg px-2 py-2 -mx-2 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
-                            <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${actionIcon[a.action] ?? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
-                              {(a.actor_display_name || a.actor_email || "?").slice(0, 1).toUpperCase()}
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs leading-snug text-zinc-700 dark:text-zinc-300">
-                                {formatActivityLine(a)}
-                              </p>
-                              <span className="mt-0.5 block text-[10px] text-zinc-300 dark:text-zinc-600">
-                                {timeAgo(a.created_at)}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                        return (
-                          <li key={a.id} className="active:scale-[0.99] transition-transform">
-                            {link ? (
-                              <Link href={link} className="block cursor-pointer">{Content}</Link>
-                            ) : (
-                              Content
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="nx-empty py-8">
-                <div className="nx-empty-icon">
-                  <svg className="h-5 w-5 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                  </svg>
-                </div>
-                <p className="nx-empty-title">No recent activity yet.</p>
-                <p className="nx-empty-desc">Team updates and task changes will appear here.</p>
-              </div>
-            )}
-          </div>
+          )}
         </div>
 
-        {/* ── RIGHT COLUMN ─────────────────────────────────── */}
-        <div className="flex flex-col gap-6">
-
-          {/* R1. Quick Actions */}
-          <div className="nx-card shadow-sm p-4">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-3">Quick Actions</h2>
-            <div className="grid grid-cols-2 gap-1.5">
-              <Link
-                href="/dashboard/board"
-                className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-bold text-white shadow-sm shadow-zinc-900/10 transition-all hover:bg-zinc-800 active:scale-95 dark:bg-zinc-100 dark:text-zinc-900 dark:shadow-none dark:hover:bg-zinc-200"
-              >
-                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
-                New Task
-              </Link>
-              {overdueCount > 0 && (
-                <Link
-                  href="/dashboard/board"
-                  className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50/50 px-3 py-1.5 text-xs font-semibold text-red-700 transition-all hover:bg-red-50 active:scale-95 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/20"
-                >
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
-                  </svg>
-                  Fix Overdue
-                </Link>
-              )}
-              {dueTodayCount > 0 && (
-                <Link
-                  href="/dashboard/tasks"
-                  className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50/50 px-3 py-1.5 text-xs font-semibold text-orange-700 transition-all hover:bg-orange-50 active:scale-95 dark:border-orange-900/30 dark:bg-orange-900/10 dark:text-orange-400 dark:hover:bg-orange-900/20"
-                >
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
-                  </svg>
-                  Plan Today
-                </Link>
-              )}
-              {members.length < 2 ? (
-                <Link
-                  href="/dashboard/team"
-                  className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 transition-all hover:bg-zinc-50 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700/50"
-                >
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
-                  </svg>
-                  Invite Team
-                </Link>
-              ) : (
-                <Link
-                  href="/dashboard/board"
-                  className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 transition-all hover:bg-zinc-50 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700/50"
-                >
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
-                  </svg>
-                  Open Board
-                </Link>
-              )}
+        {/* B2. Execution Queue */}
+        <div className="nx-card shadow-sm overflow-hidden">
+          <div className="nx-card-header">
+            <div className="space-y-0.5">
+              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Execution Queue</h2>
+              <p className="text-[11px] text-zinc-400 dark:text-zinc-500">AI-ranked by urgency</p>
             </div>
+            <span className="nx-badge-muted">Top {priorityTasks.length}</span>
           </div>
-
-          {/* R2. Progress Overview */}
-          <div className="nx-card shadow-sm overflow-hidden">
-            <div className="nx-card-header">
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Progress Overview</h2>
-              <span className="nx-badge-muted">{completionPct}%</span>
-            </div>
-            <div className="px-5 pt-4 pb-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] text-zinc-400 dark:text-zinc-500">{completedTasks} of {totalTasks} tasks complete</span>
-              </div>
-              <div className="h-1 w-full rounded-full bg-zinc-100 dark:bg-zinc-800">
-                <div className="h-1 rounded-full bg-emerald-500 transition-all duration-700" style={{ width: `${completionPct}%` }} />
-              </div>
-            </div>
-            {progressItems.length > 0 ? (
-              <div className="px-5 pb-5 pt-3.5 space-y-3.5 border-t border-zinc-50 dark:border-zinc-800/60">
-                {progressItems.map((item) => {
-                  const pct = item.total > 0 ? Math.round((item.count / item.total) * 100) : 0;
-                  return (
-                    <div key={item.label} className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
-                          <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${item.color}`} />
-                          {item.label}
+          {priorityTasks.length > 0 ? (
+            <ul className="divide-y divide-zinc-100 dark:divide-zinc-800 max-h-72 overflow-y-auto">
+              {priorityTasks.map((task) => {
+                const listTitle = listTitleMap.get(task.list_id) ?? "";
+                const taskStatus = listTitle === "Done" ? "Completed" : (listTitle || "To Do");
+                const dotColor = listColorMap.get(listTitle) ?? "bg-zinc-300";
+                const todayDate = getLocalDate(new Date());
+                const dueDate = task.due_date ? getLocalDate(new Date(task.due_date + "T00:00:00")) : null;
+                const isOverdueQ = dueDate && dueDate < todayDate;
+                const isTodayQ = dueDate && dueDate.getTime() === todayDate.getTime();
+                return (
+                  <li key={task.id}>
+                    <Link
+                      href={`/dashboard/board?boardId=${listBoardMap.get(task.list_id)}&taskId=${task.id}`}
+                      className="flex items-center gap-3 px-5 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors group"
+                    >
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${dotColor}`} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="truncate text-sm font-medium text-zinc-800 dark:text-zinc-200">{task.title}</p>
+                          {isOverdueQ && <span className="shrink-0 text-[10px] font-bold text-red-500 uppercase">Overdue</span>}
+                          {isTodayQ && <span className="shrink-0 text-[10px] font-bold text-orange-500 uppercase">Today</span>}
+                        </div>
+                        <p className="mt-0.5 text-xs text-zinc-400">{taskStatus}</p>
+                      </div>
+                      {task.priority && task.priority !== "none" && (
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${priorityBadge(task.priority)}`}>
+                          {task.priority}
                         </span>
-                        <span className="text-[11px] tabular-nums text-zinc-400 dark:text-zinc-500">{item.count} · {pct}%</span>
-                      </div>
-                      <div className="h-1 rounded-full bg-zinc-100 dark:bg-zinc-800">
-                        <div className={`h-1 rounded-full ${item.color} transition-all duration-500`} style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="px-5 pb-5 pt-3.5 text-xs text-zinc-400 dark:text-zinc-500 border-t border-zinc-50 dark:border-zinc-800/60">
-                Select a board to see task status
-              </p>
-            )}
-          </div>
-
-          {/* R3. Team Workload */}
-          <div className="nx-card shadow-sm overflow-hidden">
-            <div className="nx-card-header">
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Team Workload</h2>
-              <span className="text-[11px] text-zinc-400 dark:text-zinc-500">{totalTasks} tasks total</span>
-            </div>
-            {assigneeSummary.length > 0 ? (
-              <>
-                <div className="px-5 py-4 space-y-4">
-                  {assigneeSummary.slice(0, 4).map((item, idx) => {
-                    const pct = totalTasks > 0 ? Math.round((item.count / totalTasks) * 100) : 0;
-                    const isUnassigned = item.id === "__unassigned__";
-                    const avatarColors = [
-                      "bg-violet-100 text-violet-600 dark:bg-violet-900/40 dark:text-violet-400",
-                      "bg-sky-100 text-sky-600 dark:bg-sky-900/40 dark:text-sky-400",
-                      "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400",
-                      "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400",
-                    ];
-                    const barColors = ["bg-violet-400", "bg-sky-400", "bg-emerald-400", "bg-amber-400"];
-                    const avatarColor = isUnassigned
-                      ? "bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500"
-                      : avatarColors[idx % avatarColors.length];
-                    const barColor = isUnassigned
-                      ? "bg-zinc-200 dark:bg-zinc-700"
-                      : barColors[idx % barColors.length];
-                    return (
-                      <div key={item.id} className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <span className="flex items-center gap-2 min-w-0">
-                            <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${avatarColor}`}>
-                              {isUnassigned ? "?" : item.name.slice(0, 1).toUpperCase()}
-                            </span>
-                            <span className={`text-xs truncate ${isUnassigned ? "text-zinc-400 dark:text-zinc-500" : "text-zinc-700 dark:text-zinc-300"}`}>
-                              {item.name}
-                            </span>
-                            {!isUnassigned && pct > 55 && item.count >= 3 && (
-                              <span className="shrink-0 rounded-full bg-amber-50 px-1.5 py-px text-[9px] font-semibold text-amber-600 dark:bg-amber-900/20 dark:text-amber-400">heavy</span>
-                            )}
-                          </span>
-                          <span className={`text-[11px] tabular-nums shrink-0 ml-2 ${isUnassigned ? "text-zinc-400 dark:text-zinc-500" : "text-zinc-500 dark:text-zinc-400"}`}>
-                            {item.count} · {pct}%
-                          </span>
-                        </div>
-                        <div className="h-1 rounded-full bg-zinc-100 dark:bg-zinc-800">
-                          <div
-                            className={`h-1 rounded-full transition-all duration-500 ${barColor}`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                {workloadSignal && (
-                  <div className="px-5 pb-3 -mt-1">
-                    <p className="flex items-center gap-1.5 text-[11px] text-amber-600/80 dark:text-amber-500/70">
-                      <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded bg-zinc-100 dark:bg-zinc-800">
-                        <svg className="h-2 w-2 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
-                        </svg>
-                      </span>
-                      {workloadSignal}
-                    </p>
-                  </div>
-                )}
-                {assigneeSummary.length > 4 && (
-                  <div className="border-t border-zinc-100 dark:border-zinc-800 px-5 py-2.5">
-                    <Link href="/dashboard/team" className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-zinc-200">
-                      +{assigneeSummary.length - 4} more members &rarr;
+                      )}
                     </Link>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="px-5 py-4">
-                <p className="text-xs text-zinc-400 dark:text-zinc-500">No assigned tasks yet.</p>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <div className="nx-empty py-10">
+              <div className="nx-empty-icon">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
               </div>
-            )}
-          </div>
-
-          {/* R4. Weekly Activity */}
-          <div className="rounded-2xl border border-zinc-100 bg-zinc-50/50 p-4 dark:border-zinc-800/70 dark:bg-zinc-800/30">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Weekly Activity</h2>
-              <div className="flex items-center gap-3 text-[10px] font-medium text-zinc-400 dark:text-zinc-500">
-                <span className="flex items-center gap-1"><span className={`h-1.5 w-1.5 rounded-full ${STATUS_COLORS.completed.dot}`} />Done</span>
-                <span className="flex items-center gap-1"><span className={`h-1.5 w-1.5 rounded-full ${STATUS_COLORS.inProgress.dot}`} />Active</span>
-                <span className="flex items-center gap-1"><span className={`h-1.5 w-1.5 rounded-full ${STATUS_COLORS.todo.dot}`} />Todo</span>
-              </div>
+              <p className="nx-empty-title">Nothing urgent right now.</p>
+              <p className="nx-empty-desc">High-priority work will appear here.</p>
             </div>
-            {weeklyChartData.maxCount === 0 ? (
-              <div className="flex items-center justify-center h-20">
-                <p className="text-xs text-zinc-400 dark:text-zinc-500">No task activity this week.</p>
-              </div>
-            ) : (
-              <div className="flex items-end gap-1.5 h-20">
-                {weeklyChartData.days.map((day) => {
-                  const bars = [
-                    { count: day.todo, color: STATUS_COLORS.todo.bar },
-                    { count: day.inProgress, color: STATUS_COLORS.inProgress.bar },
-                    { count: day.completed, color: STATUS_COLORS.completed.bar },
-                  ];
-                  return (
-                    <div key={day.label} className="flex flex-1 flex-col items-center gap-1">
-                      <div className="flex items-end gap-0.5 w-full h-14">
-                        {bars.map((bar, i) => {
-                          const pct = bar.count > 0
-                            ? Math.max(8, (bar.count / weeklyChartData.maxCount) * 100)
-                            : 0;
-                          return (
-                            <div
-                              key={i}
-                              className={`flex-1 rounded-t-sm ${bar.color} transition-all`}
-                              style={{ height: `${pct}%` }}
-                              title={`${bar.count}`}
-                            />
-                          );
-                        })}
-                      </div>
-                      <span className="text-[9px] font-medium text-zinc-400 dark:text-zinc-500">{day.label}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+          )}
+          <div className="border-t border-zinc-100 dark:border-zinc-800 px-5 py-2.5">
+            <Link href="/dashboard/tasks" className="text-xs font-medium text-zinc-400 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-zinc-200 transition-colors">
+              View all tasks &rarr;
+            </Link>
           </div>
         </div>
       </section>
+
+      {/* ── C. WORKSPACE HEALTH ──────────────────────────────── */}
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+
+        {/* C1. Progress Overview */}
+        <div className="nx-card shadow-sm overflow-hidden">
+          <div className="nx-card-header">
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Progress</h2>
+            <span className="nx-badge-muted">{completionPct}%</span>
+          </div>
+          <div className="px-5 py-4">
+            <div className="flex items-center justify-between text-[11px] text-zinc-400 dark:text-zinc-500 mb-2">
+              <span>{completedTasks} of {totalTasks} complete</span>
+            </div>
+            <div className="h-1 w-full rounded-full bg-zinc-100 dark:bg-zinc-800">
+              <div className="h-1 rounded-full bg-emerald-500 transition-all duration-700" style={{ width: `${completionPct}%` }} />
+            </div>
+          </div>
+          {progressItems.length > 0 ? (
+            <div className="px-5 pb-5 space-y-3.5 border-t border-zinc-50 dark:border-zinc-800/60">
+              {progressItems.map((item) => {
+                const pct = item.total > 0 ? Math.round((item.count / item.total) * 100) : 0;
+                return (
+                  <div key={item.label} className="space-y-1.5 pt-3.5 first:pt-0">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+                        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${item.color}`} />
+                        {item.label}
+                      </span>
+                      <span className="text-[11px] tabular-nums text-zinc-400 dark:text-zinc-500">{item.count} · {pct}%</span>
+                    </div>
+                    <div className="h-1 rounded-full bg-zinc-100 dark:bg-zinc-800">
+                      <div className={`h-1 rounded-full ${item.color} transition-all duration-500`} style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="px-5 pb-5 text-xs text-zinc-400 dark:text-zinc-500 border-t border-zinc-50 dark:border-zinc-800/60 pt-3">
+              Select a board to see task status.
+            </p>
+          )}
+        </div>
+
+        {/* C2. Team Workload */}
+        <div className="nx-card shadow-sm overflow-hidden">
+          <div className="nx-card-header">
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Team Workload</h2>
+            <span className="text-[11px] text-zinc-400 dark:text-zinc-500">{totalTasks} tasks</span>
+          </div>
+          {assigneeSummary.length > 0 ? (
+            <>
+              <div className="px-5 py-4 space-y-4">
+                {assigneeSummary.slice(0, 4).map((item, idx) => {
+                  const pct = totalTasks > 0 ? Math.round((item.count / totalTasks) * 100) : 0;
+                  const isUnassigned = item.id === "__unassigned__";
+                  const avatarColors = [
+                    "bg-violet-100 text-violet-600 dark:bg-violet-900/40 dark:text-violet-400",
+                    "bg-sky-100 text-sky-600 dark:bg-sky-900/40 dark:text-sky-400",
+                    "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400",
+                    "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400",
+                  ];
+                  const barColors = ["bg-violet-400", "bg-sky-400", "bg-emerald-400", "bg-amber-400"];
+                  const avatarColor = isUnassigned
+                    ? "bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500"
+                    : avatarColors[idx % avatarColors.length];
+                  const barColor = isUnassigned ? "bg-zinc-200 dark:bg-zinc-700" : barColors[idx % barColors.length];
+                  return (
+                    <div key={item.id} className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-2 min-w-0">
+                          <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${avatarColor}`}>
+                            {isUnassigned ? "?" : item.name.slice(0, 1).toUpperCase()}
+                          </span>
+                          <span className={`text-xs truncate ${isUnassigned ? "text-zinc-400 dark:text-zinc-500" : "text-zinc-700 dark:text-zinc-300"}`}>
+                            {item.name}
+                          </span>
+                          {!isUnassigned && pct > 55 && item.count >= 3 && (
+                            <span className="shrink-0 rounded-full bg-amber-50 px-1.5 py-px text-[9px] font-semibold text-amber-600 dark:bg-amber-900/20 dark:text-amber-400">heavy</span>
+                          )}
+                        </span>
+                        <span className={`text-[11px] tabular-nums shrink-0 ml-2 ${isUnassigned ? "text-zinc-400 dark:text-zinc-500" : "text-zinc-500 dark:text-zinc-400"}`}>
+                          {item.count} · {pct}%
+                        </span>
+                      </div>
+                      <div className="h-1 rounded-full bg-zinc-100 dark:bg-zinc-800">
+                        <div className={`h-1 rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {workloadSignal && (
+                <div className="px-5 pb-3 -mt-1">
+                  <p className="flex items-center gap-1.5 text-[11px] text-amber-600/80 dark:text-amber-500/70">
+                    <svg className="h-3 w-3 shrink-0 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+                    </svg>
+                    {workloadSignal}
+                  </p>
+                </div>
+              )}
+              {assigneeSummary.length > 4 && (
+                <div className="border-t border-zinc-100 dark:border-zinc-800 px-5 py-2.5">
+                  <Link href="/dashboard/team" className="text-xs font-medium text-zinc-400 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-zinc-200 transition-colors">
+                    +{assigneeSummary.length - 4} more members &rarr;
+                  </Link>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="px-5 py-4">
+              <p className="text-xs text-zinc-400 dark:text-zinc-500">No assigned tasks yet.</p>
+            </div>
+          )}
+        </div>
+
+        {/* C3. Activity Feed */}
+        <div className="nx-card shadow-sm overflow-hidden md:col-span-2 lg:col-span-1">
+          <div className="nx-card-header">
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Activity</h2>
+            {groupedActivities.length > 0 && <span className="nx-label">Recent</span>}
+          </div>
+          {groupedActivities.length > 0 ? (
+            <div className="px-5 py-4 space-y-4 max-h-72 overflow-y-auto">
+              {groupedActivities.map((group) => (
+                <div key={group.title}>
+                  <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                    {group.title}
+                  </h3>
+                  <ul className="space-y-0.5">
+                    {group.items.map((a) => {
+                      const link = getActivityLink(a);
+                      const Content = (
+                        <div className="flex items-start gap-3 rounded-lg px-2 py-2 -mx-2 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                          <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${actionIcon[a.action] ?? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
+                            {(a.actor_display_name || a.actor_email || "?").slice(0, 1).toUpperCase()}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs leading-snug text-zinc-700 dark:text-zinc-300">
+                              {formatActivityLine(a)}
+                            </p>
+                            <span className="mt-0.5 block text-[10px] text-zinc-300 dark:text-zinc-600">
+                              {timeAgo(a.created_at)}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                      return (
+                        <li key={a.id}>
+                          {link ? <Link href={link} className="block">{Content}</Link> : Content}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="nx-empty py-8">
+              <div className="nx-empty-icon">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+              </div>
+              <p className="nx-empty-title">No recent activity yet.</p>
+              <p className="nx-empty-desc">Team updates will appear here.</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── D. WEEKLY PULSE ──────────────────────────────────── */}
+      <section className="rounded-2xl border border-zinc-100 bg-zinc-50/50 p-4 dark:border-zinc-800/70 dark:bg-zinc-800/30">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Weekly Pulse</h2>
+          <div className="flex items-center gap-3 text-[10px] font-medium text-zinc-400 dark:text-zinc-500">
+            <span className="flex items-center gap-1"><span className={`h-1.5 w-1.5 rounded-full ${STATUS_COLORS.completed.dot}`} />Done</span>
+            <span className="flex items-center gap-1"><span className={`h-1.5 w-1.5 rounded-full ${STATUS_COLORS.inProgress.dot}`} />Active</span>
+            <span className="flex items-center gap-1"><span className={`h-1.5 w-1.5 rounded-full ${STATUS_COLORS.todo.dot}`} />Todo</span>
+          </div>
+        </div>
+        {weeklyChartData.maxCount === 0 ? (
+          <div className="flex items-center justify-center h-20">
+            <p className="text-xs text-zinc-400 dark:text-zinc-500">No task activity this week.</p>
+          </div>
+        ) : (
+          <div className="flex items-end gap-1.5 h-20">
+            {weeklyChartData.days.map((day) => {
+              const bars = [
+                { count: day.todo, color: STATUS_COLORS.todo.bar },
+                { count: day.inProgress, color: STATUS_COLORS.inProgress.bar },
+                { count: day.completed, color: STATUS_COLORS.completed.bar },
+              ];
+              return (
+                <div key={day.label} className="flex flex-1 flex-col items-center gap-1">
+                  <div className="flex items-end gap-0.5 w-full h-14">
+                    {bars.map((bar, i) => {
+                      const pct = bar.count > 0
+                        ? Math.max(8, (bar.count / weeklyChartData.maxCount) * 100)
+                        : 0;
+                      return (
+                        <div
+                          key={i}
+                          className={`flex-1 rounded-t-sm ${bar.color} transition-all`}
+                          style={{ height: `${pct}%` }}
+                          title={`${bar.count}`}
+                        />
+                      );
+                    })}
+                  </div>
+                  <span className="text-[9px] font-medium text-zinc-400 dark:text-zinc-500">{day.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
     </div>
   );
 }
