@@ -1,5 +1,10 @@
-import AuthForm from "@/components/auth/AuthForm";
+import { Suspense } from "react";
+import SignUpForm from "@/components/auth/SignUpForm";
 
 export default function SignUpPage() {
-  return <AuthForm initialMode="signup" />;
+  return (
+    <Suspense>
+      <SignUpForm />
+    </Suspense>
+  );
 }

@@ -7,21 +7,21 @@ import { createClient } from "@/lib/auth/server";
 // Helpers
 // ---------------------------------------------------------------------------
 
-export function getSiteUrl(): string {
+function getSiteUrl(): string {
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
   if (process.env.NEXT_PUBLIC_VERCEL_URL)
     return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`;
   return "http://localhost:3000";
 }
 
-export function sanitizeReturnTo(returnTo: string | null | undefined): string {
+function sanitizeReturnTo(returnTo: string | null | undefined): string {
   if (!returnTo) return "/dashboard";
   // Must be a relative path, never protocol-relative (//evil.com) or absolute URL
   if (returnTo.startsWith("/") && !returnTo.startsWith("//")) return returnTo;
   return "/dashboard";
 }
 
-export function normalizeAuthError(message: string): string {
+function normalizeAuthError(message: string): string {
   const map: Record<string, string> = {
     "Invalid login credentials": "Incorrect email or password.",
     "Email not confirmed":

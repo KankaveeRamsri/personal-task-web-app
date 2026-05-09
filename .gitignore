@@ -58,3 +58,16 @@ __pycache__/
 
 # Cache
 .cache/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Supabase local
+supabase/.temp/
+supabase/.branches/
+**/supabase/.temp/
+**/supabase/.branches/
+
+# Local settings
+.claude/settings.local.json

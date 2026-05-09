@@ -134,6 +134,9 @@ export default function TasksPage() {
 
   const { members, currentRole } = useWorkspaceMembers(selectedWorkspaceId);
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -470,7 +473,7 @@ export default function TasksPage() {
             ))}
           </select>
         )}
-        {selectedWorkspaceId && (
+        {mounted && selectedWorkspaceId && (
           <>
             <span className="text-zinc-300 dark:text-zinc-600">/</span>
             {boards.length > 0 ? (
