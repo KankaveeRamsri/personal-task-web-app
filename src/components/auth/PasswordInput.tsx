@@ -31,6 +31,7 @@ const PasswordInput = forwardRef<HTMLInputElement, Props>(
           type="button"
           tabIndex={-1}
           aria-label={show ? "Hide password" : "Show password"}
+          aria-pressed={show}
           onClick={() => setShow((s) => !s)}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 transition-colors hover:text-zinc-600 dark:hover:text-zinc-300"
         >

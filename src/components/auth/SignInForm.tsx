@@ -61,11 +61,12 @@ export default function SignInForm() {
     });
 
     if (authError) {
-      const msg =
-        authError.message === "Invalid login credentials"
-          ? "Incorrect email or password."
-          : authError.message;
-      setError(msg);
+      const friendlyMessages: Record<string, string> = {
+        "Invalid login credentials": "Incorrect email or password.",
+        "Email not confirmed":
+          "Please verify your email before signing in. Check your inbox for the confirmation link.",
+      };
+      setError(friendlyMessages[authError.message] ?? authError.message);
       setLoading(false);
       return;
     }
@@ -86,6 +87,7 @@ export default function SignInForm() {
         <div className="mb-8 flex flex-col items-center text-center">
           <Link
             href="/"
+            aria-label="Nexdo — back to home"
             className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-900 shadow-lg shadow-zinc-900/20 transition-transform hover:scale-105 active:scale-95 dark:bg-zinc-100"
           >
             <svg
@@ -94,6 +96,7 @@ export default function SignInForm() {
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -156,7 +159,6 @@ export default function SignInForm() {
                 <Link
                   href="/auth/forgot-password"
                   className="text-[11px] font-medium text-zinc-500 transition-colors hover:text-zinc-800 dark:text-zinc-500 dark:hover:text-zinc-300"
-                  tabIndex={-1}
                 >
                   Forgot password?
                 </Link>

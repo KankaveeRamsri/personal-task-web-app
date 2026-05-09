@@ -131,11 +131,12 @@ export default function ResetPasswordForm() {
   if (status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-zinc-50 to-white p-4 dark:from-zinc-950 dark:to-zinc-900">
-        <div className="flex flex-col items-center gap-3 text-zinc-400 dark:text-zinc-600">
+        <div role="status" className="flex flex-col items-center gap-3 text-zinc-400 dark:text-zinc-600">
           <svg
             className="h-7 w-7 animate-spin"
             fill="none"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
@@ -242,6 +243,7 @@ export default function ResetPasswordForm() {
         <div className="mb-8 flex flex-col items-center text-center">
           <Link
             href="/"
+            aria-label="Nexdo — back to home"
             className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-900 shadow-lg shadow-zinc-900/20 transition-transform hover:scale-105 active:scale-95 dark:bg-zinc-100"
           >
             <svg
@@ -250,6 +252,7 @@ export default function ResetPasswordForm() {
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"

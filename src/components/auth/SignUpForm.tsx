@@ -124,6 +124,7 @@ export default function SignUpForm() {
         <div className="mb-8 flex flex-col items-center text-center">
           <Link
             href="/"
+            aria-label="Nexdo — back to home"
             className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-900 shadow-lg shadow-zinc-900/20 transition-transform hover:scale-105 active:scale-95 dark:bg-zinc-100"
           >
             <svg
@@ -132,6 +133,7 @@ export default function SignUpForm() {
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"

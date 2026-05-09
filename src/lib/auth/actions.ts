@@ -150,7 +150,6 @@ export async function forgotPasswordAction(input: {
   if (!email?.trim()) return { success: false, error: "Email is required." };
 
   const redirectTo = `${getSiteUrl()}/auth/reset-password`;
-  console.log("[forgotPassword] resolved redirectTo:", redirectTo);
 
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
