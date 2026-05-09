@@ -8,10 +8,13 @@ import { createClient } from "@/lib/auth/server";
 // ---------------------------------------------------------------------------
 
 function getSiteUrl(): string {
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
-  if (process.env.NEXT_PUBLIC_VERCEL_URL)
-    return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`;
-  return "http://localhost:3000";
+  const raw =
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (process.env.NEXT_PUBLIC_VERCEL_URL
+      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+      : "http://localhost:3000");
+  // Remove trailing slash so the /auth/reset-password suffix is never double-slashed.
+  return raw.replace(/\/$/, "");
 }
 
 function sanitizeReturnTo(returnTo: string | null | undefined): string {
@@ -147,6 +150,7 @@ export async function forgotPasswordAction(input: {
   if (!email?.trim()) return { success: false, error: "Email is required." };
 
   const redirectTo = `${getSiteUrl()}/auth/reset-password`;
+  console.log("[forgotPassword] resolved redirectTo:", redirectTo);
 
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
