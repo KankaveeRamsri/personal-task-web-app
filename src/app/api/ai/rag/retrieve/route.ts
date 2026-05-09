@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { requireAuth } from "@/lib/auth/api";
+import { createClient } from "@/lib/auth/server";
 import { retrieveTaskDocuments } from "@/lib/ai/rag/task-retriever";
 
 export const runtime = "edge";
@@ -8,32 +8,12 @@ export const runtime = "edge";
 const MAX_MATCH_COUNT = 20;
 
 export async function POST(request: Request) {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options),
-          );
-        },
-      },
-    },
-  );
+  // 0) Auth check
+  // NOTE: workspace membership validation (workspaceId owned by user) is deferred to Phase 2C.
+  const { response: authResponse } = await requireAuth();
+  if (authResponse) return authResponse;
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const supabase = await createClient();
 
   let body: unknown;
   try {

@@ -9,9 +9,15 @@ export default function AiAssistantPage() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setUserEmail(data.user.email ?? "");
-    });
+    const load = async () => {
+      const result = await supabase.auth.getUser();
+      if (result.error) return;
+      const user = result.data.user;
+      if (user) {
+        setUserEmail(user.email ?? "");
+      }
+    };
+    void load();
   }, []);
 
   return (
