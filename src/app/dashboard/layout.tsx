@@ -15,10 +15,14 @@ export default function DashboardLayout({
   const [userEmail, setUserEmail] = useState("");
 
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setUserEmail(data.user.email ?? "");
-    });
+    const loadUser = async () => {
+      const supabase = createClient();
+      const result = await supabase.auth.getUser();
+      if (result.error) return;
+      const user = result.data.user;
+      if (user) setUserEmail(user.email ?? "");
+    };
+    loadUser();
   }, []);
 
   const handleSignOut = async () => {

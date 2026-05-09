@@ -122,7 +122,7 @@ export function useBoardData() {
       return;
     }
 
-    const listIds = boardLists.map((l) => l.id);
+    const listIds = boardLists.map((l: { id: string }) => l.id);
 
     const { data, error } = await supabase
       .from("tasks")

@@ -10,6 +10,8 @@ import {
 import { logActivity } from "@/lib/activity-log";
 import type { WorkspaceRole, WorkspaceMember } from "@/types/database";
 
+type ProfileRow = { id: string; email: string; display_name: string };
+
 export type MemberWithProfile = WorkspaceMember & {
   email: string;
   display_name: string;
@@ -43,7 +45,7 @@ export function useWorkspaceMembers(workspaceId: string | null) {
       return;
     }
 
-    const { data: memberRows, error: memberError } = await supabase
+    const { data: memberRowsData, error: memberError } = await supabase
       .from("workspace_members")
       .select("*")
       .eq("workspace_id", workspaceId);
@@ -54,15 +56,16 @@ export function useWorkspaceMembers(workspaceId: string | null) {
       return;
     }
 
-    if (!memberRows || memberRows.length === 0) {
+    if (!memberRowsData || memberRowsData.length === 0) {
       setMembers([]);
       setCurrentRole(null);
       setLoading(false);
       return;
     }
 
+    const memberRows = memberRowsData as WorkspaceMember[];
     const userIds = memberRows.map((m) => m.user_id);
-    const { data: profileRows, error: profileError } = await supabase
+    const { data: profileRowsData, error: profileError } = await supabase
       .from("profiles")
       .select("*")
       .in("id", userIds);
@@ -73,7 +76,8 @@ export function useWorkspaceMembers(workspaceId: string | null) {
       return;
     }
 
-    const profileMap = new Map((profileRows ?? []).map((p) => [p.id, p]));
+    const profileRows = (profileRowsData ?? []) as ProfileRow[];
+    const profileMap = new Map(profileRows.map((p) => [p.id, p]));
 
     const merged: MemberWithProfile[] = memberRows.map((m) => ({
       ...m,

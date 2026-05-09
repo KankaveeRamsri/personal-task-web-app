@@ -11,6 +11,14 @@ export type NotificationItem = Activity & {
   is_important: boolean;
 };
 
+type MembershipRef = { workspace_id: string; role: string };
+type BoardRef = { id: string; workspace_id: string; title: string };
+type ProfileRef = { id: string; email: string; display_name: string };
+type WsRef = { id: string; name: string };
+type ReadRef = { activity_id: string };
+type TaskRef = { id: string; title: string };
+type ListRef = { id: string };
+
 export function useNotifications() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,34 +40,36 @@ export function useNotifications() {
         return;
       }
 
-      const { data: memberships, error: mError } = await supabase
+      const { data: membershipsData, error: mError } = await supabase
         .from("workspace_members")
         .select("workspace_id, role")
         .eq("user_id", user.id);
 
-      if (mError || !memberships || memberships.length === 0) {
+      if (mError || !membershipsData || membershipsData.length === 0) {
         setNotifications([]);
         if (!silent) setLoading(false);
         return;
       }
 
+      const memberships = membershipsData as MembershipRef[];
       const workspaceIds = memberships.map((m) => m.workspace_id);
       const isOwnerOrAdmin = memberships.some(
         (m) => m.role === "owner" || m.role === "admin"
       );
 
-      const { data: boards } = await supabase
+      const { data: boardsData } = await supabase
         .from("boards")
         .select("id, workspace_id, title")
         .in("workspace_id", workspaceIds)
         .eq("is_closed", false);
 
-      if (!boards || boards.length === 0) {
+      if (!boardsData || boardsData.length === 0) {
         setNotifications([]);
         if (!silent) setLoading(false);
         return;
       }
 
+      const boards = boardsData as BoardRef[];
       const boardIds = boards.map((b) => b.id);
       const boardMap = new Map(boards.map((b) => [b.id, b]));
 
@@ -76,31 +86,33 @@ export function useNotifications() {
 
         rawActivities = (activities ?? []) as Record<string, unknown>[];
       } else {
-        const { data: lists } = await supabase
+        const { data: listsData } = await supabase
           .from("lists")
           .select("id")
           .in("board_id", boardIds);
 
-        if (!lists || lists.length === 0) {
+        if (!listsData || listsData.length === 0) {
           setNotifications([]);
           if (!silent) setLoading(false);
           return;
         }
 
+        const lists = listsData as ListRef[];
         const listIds = lists.map((l) => l.id);
 
-        const { data: assignedTasks } = await supabase
+        const { data: assignedTasksData } = await supabase
           .from("tasks")
           .select("id, title")
           .in("list_id", listIds)
           .eq("assignee_id", user.id);
 
-        if (!assignedTasks || assignedTasks.length === 0) {
+        if (!assignedTasksData || assignedTasksData.length === 0) {
           setNotifications([]);
           if (!silent) setLoading(false);
           return;
         }
 
+        const assignedTasks = assignedTasksData as TaskRef[];
         const assignedTaskIds = assignedTasks.map((t) => t.id);
         const taskTitleMap = new Map(
           assignedTasks.map((t) => [t.id, t.title])
@@ -133,12 +145,13 @@ export function useNotifications() {
           rawActivities.map((a) => a.actor_id as string).filter(Boolean)
         ),
       ];
-      const { data: profiles } = await supabase
+      const { data: profilesData } = await supabase
         .from("profiles")
         .select("id, email, display_name")
         .in("id", actorIds);
 
-      const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+      const profiles = (profilesData ?? []) as ProfileRef[];
+      const profileMap = new Map(profiles.map((p) => [p.id, p]));
 
       // Fetch task titles + assignee_ids for importance detection
       const taskIds = [
@@ -161,7 +174,7 @@ export function useNotifications() {
 
       // ─── Team Notifications ───
       // Actions where current user is the target
-      const { data: teamActivities } = await supabase
+      const { data: teamActivitiesData } = await supabase
         .from("task_activities")
         .select("*")
         .in("action", ["invited", "role_changed", "removed"])
@@ -170,7 +183,8 @@ export function useNotifications() {
         .order("created_at", { ascending: false })
         .limit(20);
 
-      if (teamActivities && teamActivities.length > 0) {
+      const teamActivities = (teamActivitiesData ?? []) as Record<string, unknown>[];
+      if (teamActivities.length > 0) {
         rawActivities = [...rawActivities, ...teamActivities].sort(
           (a, b) =>
             new Date(b.created_at as string).getTime() -
@@ -195,21 +209,23 @@ export function useNotifications() {
 
       // Fetch Workspace names for context
       const allWsIds = [...new Set(rawActivities.map((a) => a.workspace_id as string))];
-      const { data: wsData } = await supabase
+      const { data: wsDataRaw } = await supabase
         .from("workspaces")
         .select("id, name")
         .in("id", allWsIds);
-      const wsMap = new Map(wsData?.map((w) => [w.id, w.name]));
+      const wsData = (wsDataRaw ?? []) as WsRef[];
+      const wsMap = new Map(wsData.map((w) => [w.id, w.name]));
 
       // Fetch read state
       const activityIds = rawActivities.map((a) => a.id as string);
-      const { data: reads } = await supabase
+      const { data: readsData } = await supabase
         .from("notification_reads")
         .select("activity_id")
         .eq("user_id", user.id)
         .in("activity_id", activityIds);
 
-      const readSet = new Set((reads ?? []).map((r) => r.activity_id));
+      const reads = (readsData ?? []) as ReadRef[];
+      const readSet = new Set(reads.map((r) => r.activity_id));
 
       const IMPORTANT_ACTIONS = new Set(["task_assigned", "due_date_changed"]);
 
@@ -270,9 +286,10 @@ export function useNotifications() {
     let stale = false;
     const supabase = createClient();
 
-    supabase.auth.getUser().then(({ data }) => {
-      if (stale || !data.user) return;
-      userIdRef.current = data.user.id;
+    const loadUser = async () => {
+      const result = await supabase.auth.getUser();
+      if (stale || result.error || !result.data.user) return;
+      userIdRef.current = result.data.user.id;
 
       channelRef.current = supabase
         .channel("notifications-feed")
@@ -295,7 +312,8 @@ export function useNotifications() {
           }
         )
         .subscribe();
-    });
+    };
+    loadUser();
 
     return () => {
       stale = true;

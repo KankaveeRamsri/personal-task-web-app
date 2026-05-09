@@ -169,16 +169,20 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        setUserEmail(data.user.email ?? "");
+    const loadUser = async () => {
+      const result = await supabase.auth.getUser();
+      if (result.error) return;
+      const user = result.data.user;
+      if (user) {
+        setUserEmail(user.email ?? "");
         setUserName(
-          data.user.user_metadata?.full_name ||
-          data.user.email?.split("@")[0] ||
+          user.user_metadata?.full_name ||
+          user.email?.split("@")[0] ||
           ""
         );
       }
-    });
+    };
+    loadUser();
   }, []);
 
   const {

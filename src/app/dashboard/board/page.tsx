@@ -153,11 +153,12 @@ function DashboardBoard() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    createClient()
-      .auth.getUser()
-      .then(({ data: { user } }) => {
-        if (user) setCurrentUserId(user.id);
-      });
+    (async () => {
+      const result = await createClient().auth.getUser();
+      if (result.error) return;
+      const user = result.data.user;
+      if (user) setCurrentUserId(user.id);
+    })();
   }, []);
 
   // Esc closes members drawer
