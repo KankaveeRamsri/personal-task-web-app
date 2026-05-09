@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import PasswordInput from "./PasswordInput";
 import FormError from "./FormError";
-import FormSuccess from "./FormSuccess";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
@@ -28,7 +27,6 @@ export default function SignUpForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [loading, setLoading] = useState(false);
 
@@ -70,7 +68,6 @@ export default function SignUpForm() {
     if (!validate()) return;
 
     setError("");
-    setSuccess("");
     setLoading(true);
 
     const supabase = createClient();
@@ -87,21 +84,27 @@ export default function SignUpForm() {
     });
 
     if (authError) {
-      const msg =
-        authError.message === "User already registered"
-          ? "An account with this email already exists."
-          : authError.message;
-      setError(msg);
+      // "User already registered" would reveal whether the email exists — redirect
+      // to the same check-email screen so we never confirm or deny registration.
+      if (authError.message === "User already registered") {
+        router.push(
+          `/auth/check-email?email=${encodeURIComponent(email.trim())}`
+        );
+        return;
+      }
+      setError(authError.message);
       setLoading(false);
       return;
     }
 
-    // Email confirmation required — no session returned
+    // Email confirmation required — Supabase returned a user but no active session.
+    // Redirect to the dedicated check-email page; pass the email so the page can
+    // display it to the user.  returnTo is intentionally omitted here because
+    // after email verification the callback route lands on /dashboard by default.
     if (!data.session) {
-      setSuccess(
-        "Account created! Check your inbox and confirm your email address before signing in."
+      router.push(
+        `/auth/check-email?email=${encodeURIComponent(email.trim())}`
       );
-      setLoading(false);
       return;
     }
 
@@ -112,41 +115,6 @@ export default function SignUpForm() {
     router.push(dest);
     router.refresh();
   };
-
-  // Show only success state after email confirmation is required
-  if (success) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-zinc-50 to-white p-4 dark:from-zinc-950 dark:to-zinc-900">
-        <div className="w-full max-w-md text-center">
-          <div className="mb-6 flex justify-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
-              <svg
-                className="h-8 w-8 text-emerald-600 dark:text-emerald-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-              </svg>
-            </div>
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Check your inbox
-          </h1>
-          <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
-            {success}
-          </p>
-          <Link
-            href={signInHref}
-            className="mt-8 inline-flex items-center gap-1.5 text-sm font-semibold text-zinc-900 hover:underline dark:text-zinc-100"
-          >
-            Back to sign in
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-zinc-50 to-white p-4 dark:from-zinc-950 dark:to-zinc-900">
