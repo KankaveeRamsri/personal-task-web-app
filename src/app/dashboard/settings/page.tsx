@@ -60,23 +60,27 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (data.user) {
-        setEmail(data.user.email ?? "");
-        setName(data.user.user_metadata?.full_name ?? "");
-        setUserId(data.user.id);
+    const loadUser = async () => {
+      const result = await supabase.auth.getUser();
+      if (result.error) return;
+      const user = result.data.user;
+      if (user) {
+        setEmail(user.email ?? "");
+        setName(user.user_metadata?.full_name ?? "");
+        setUserId(user.id);
 
         const { data: profile } = await supabase
           .from("profiles")
           .select("display_name")
-          .eq("id", data.user.id)
+          .eq("id", user.id)
           .single();
 
         if (profile?.display_name) {
           setDisplayName(profile.display_name);
         }
       }
-    });
+    };
+    loadUser();
   }, []);
 
   const handleStartEditWs = () => {

@@ -76,7 +76,13 @@ export default function AuthForm({ initialMode }: AuthFormProps) {
         if (authError) throw authError;
       }
 
-      router.push("/dashboard");
+      const params = new URLSearchParams(window.location.search);
+      const returnTo = params.get("returnTo");
+      router.push(
+        returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")
+          ? returnTo
+          : "/dashboard"
+      );
       router.refresh();
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred");

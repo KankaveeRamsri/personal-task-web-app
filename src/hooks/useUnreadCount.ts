@@ -3,6 +3,10 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase";
 
+type WsIdRef = { workspace_id: string };
+type IdRef = { id: string };
+type ActivityIdRef = { activity_id: string };
+
 async function getImportantUnreadIds(
   supabase: ReturnType<typeof createClient>,
   userId: string
@@ -14,7 +18,7 @@ async function getImportantUnreadIds(
 
   if (!memberships || memberships.length === 0) return [];
 
-  const workspaceIds = memberships.map((m) => m.workspace_id);
+  const workspaceIds = (memberships as WsIdRef[]).map((m) => m.workspace_id);
 
   const { data: boards } = await supabase
     .from("boards")
@@ -24,7 +28,7 @@ async function getImportantUnreadIds(
 
   if (!boards || boards.length === 0) return [];
 
-  const boardIds = boards.map((b) => b.id);
+  const boardIds = (boards as IdRef[]).map((b) => b.id);
 
   const { data: lists } = await supabase
     .from("lists")
@@ -33,7 +37,7 @@ async function getImportantUnreadIds(
 
   if (!lists || lists.length === 0) return [];
 
-  const listIds = lists.map((l) => l.id);
+  const listIds = (lists as IdRef[]).map((l) => l.id);
 
   const { data: assignedTasks } = await supabase
     .from("tasks")
@@ -43,7 +47,7 @@ async function getImportantUnreadIds(
 
   if (!assignedTasks || assignedTasks.length === 0) return [];
 
-  const taskIds = assignedTasks.map((t) => t.id);
+  const taskIds = (assignedTasks as IdRef[]).map((t) => t.id);
 
   const { data: activities } = await supabase
     .from("task_activities")
@@ -54,7 +58,7 @@ async function getImportantUnreadIds(
     .order("created_at", { ascending: false })
     .limit(100);
 
-  return (activities ?? []).map((a) => a.id);
+  return ((activities ?? []) as IdRef[]).map((a) => a.id);
 }
 
 export function useUnreadCount() {
@@ -88,7 +92,7 @@ export function useUnreadCount() {
         .eq("user_id", user.id)
         .in("activity_id", relevantIds);
 
-      const readSet = new Set((reads ?? []).map((r) => r.activity_id));
+      const readSet = new Set(((reads ?? []) as ActivityIdRef[]).map((r) => r.activity_id));
       setCount(relevantIds.filter((id) => !readSet.has(id)).length);
     } catch {
       setCount(0);
@@ -102,9 +106,10 @@ export function useUnreadCount() {
     let stale = false;
     const supabase = createClient();
 
-    supabase.auth.getUser().then(({ data }) => {
-      if (stale || !data.user) return;
-      userIdRef.current = data.user.id;
+    const loadUser = async () => {
+      const result = await supabase.auth.getUser();
+      if (stale || result.error || !result.data.user) return;
+      userIdRef.current = result.data.user.id;
 
       channelRef.current = supabase
         .channel("unread-badge")
@@ -128,7 +133,8 @@ export function useUnreadCount() {
           }
         )
         .subscribe();
-    });
+    };
+    loadUser();
 
     return () => {
       stale = true;

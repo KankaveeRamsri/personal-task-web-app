@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { requireAuth } from "@/lib/auth/api";
 import { detectAssistantIntent, type AssistantIntent } from "@/lib/ai-assistant/intent";
 import {
   detectActionIntent,
@@ -232,6 +233,11 @@ function parseActionPlan(raw: string, actionType: AssistantActionType): Assistan
 // ── Route ──────────────────────────────────────────────────────────────
 
 export async function POST(request: Request) {
+  // 0) Auth check
+  const { user, response: authResponse } = await requireAuth();
+  if (authResponse) return authResponse;
+  void user;
+
   // 1) Environment check — provider-agnostic
   const provider = getActiveLLMProvider();
   const hasMinimaxKey = Boolean(process.env.MINIMAX_API_KEY);

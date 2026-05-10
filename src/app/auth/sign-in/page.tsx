@@ -1,5 +1,10 @@
-import AuthForm from "@/components/auth/AuthForm";
+import { Suspense } from "react";
+import SignInForm from "@/components/auth/SignInForm";
 
 export default function SignInPage() {
-  return <AuthForm initialMode="signin" />;
+  return (
+    <Suspense>
+      <SignInForm />
+    </Suspense>
+  );
 }

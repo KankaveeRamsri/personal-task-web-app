@@ -3,6 +3,18 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase";
 
+type ActivityRow = {
+  id: string;
+  workspace_id: string;
+  board_id: string;
+  task_id: string | null;
+  actor_id: string;
+  action: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+};
+type ProfileRef = { id: string; email: string; display_name: string };
+
 export type Activity = {
   id: string;
   workspace_id: string;
@@ -43,16 +55,18 @@ export function useRecentActivities(workspaceId: string | null, boardId: string 
       return;
     }
 
-    const actorIds = [...new Set(data.map((a) => a.actor_id))];
-    const { data: profiles } = await supabase
+    const rows = data as ActivityRow[];
+    const actorIds = [...new Set(rows.map((a) => a.actor_id))];
+    const { data: profilesData } = await supabase
       .from("profiles")
       .select("id, email, display_name")
       .in("id", actorIds);
 
-    const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+    const profiles = (profilesData ?? []) as ProfileRef[];
+    const profileMap = new Map(profiles.map((p) => [p.id, p]));
 
     setActivities(
-      data.map((a) => ({
+      rows.map((a) => ({
         ...a,
         actor_email: profileMap.get(a.actor_id)?.email ?? "",
         actor_display_name: profileMap.get(a.actor_id)?.display_name ?? "",
