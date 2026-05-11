@@ -61,7 +61,30 @@ export default function ResetPasswordForm() {
         return;
       }
 
-      // No code — check for an existing recovery session
+      // Implicit flow: tokens in URL hash fragment (#access_token=...&refresh_token=...&type=recovery)
+      // The server cannot read hash fragments — this must be processed client-side.
+      const hash = window.location.hash.startsWith("#")
+        ? window.location.hash.slice(1)
+        : window.location.hash;
+      const hashParams = new URLSearchParams(hash);
+      const accessToken = hashParams.get("access_token");
+      const refreshToken = hashParams.get("refresh_token");
+      const tokenType = hashParams.get("type");
+
+      if (accessToken && refreshToken && tokenType === "recovery") {
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (!error) {
+          window.history.replaceState(null, "", window.location.pathname);
+          setStatus("ready");
+          return;
+        }
+        // setSession failed — fall through to session check
+      }
+
+      // Check for an existing recovery session (e.g. from a prior setSession)
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setStatus("ready");
