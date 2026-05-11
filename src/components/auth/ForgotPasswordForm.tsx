@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { forgotPasswordAction } from "@/lib/auth/actions";
 import FormError from "./FormError";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -38,23 +37,33 @@ export default function ForgotPasswordForm() {
     if (!validate()) return;
 
     setLoading(true);
-    const result = await forgotPasswordAction({ email: email.trim() });
-    setLoading(false);
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
 
-    if (!result.success) {
-      // Only surface genuine system errors (e.g. rate limit), not "email not found"
-      const isRateLimit = result.error.toLowerCase().includes("rate limit") ||
-        result.error.toLowerCase().includes("too many");
-      if (isRateLimit) {
-        setGlobalError(result.error);
-      } else {
-        // For all other errors, still show the safe generic message
-        setSuccess(true);
+      const result = await res.json();
+
+      if (!result.success) {
+        const isRateLimit =
+          result.error?.toLowerCase().includes("rate limit") ||
+          result.error?.toLowerCase().includes("too many");
+        if (isRateLimit) {
+          setGlobalError(result.error);
+        } else {
+          setSuccess(true);
+        }
+        return;
       }
-      return;
-    }
 
-    setSuccess(true);
+      setSuccess(true);
+    } catch {
+      setGlobalError("Unable to connect. Please check your network and try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (success) {
