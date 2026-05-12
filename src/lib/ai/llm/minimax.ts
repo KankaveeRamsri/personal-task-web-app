@@ -87,3 +87,97 @@ export async function callMiniMax(
     throw new Error("api_error");
   }
 }
+
+/**
+ * Stream MiniMax Chat Completions API (OpenAI-compatible SSE).
+ * Yields text chunks as they arrive.
+ * Throws an Error with message "timeout" or "api_error" on failure.
+ */
+export async function* streamMiniMax(
+  messages: MiniMaxMessage[],
+  temperature = 0.3,
+  timeoutMs: number = FALLBACK_TIMEOUT_MS,
+): AsyncGenerator<string> {
+  const apiKey = process.env.MINIMAX_API_KEY;
+  if (!apiKey) {
+    throw new Error("missing_key");
+  }
+
+  const baseUrl =
+    process.env.MINIMAX_BASE_URL?.replace(/\/$/, "") ?? DEFAULT_BASE_URL;
+  const model = process.env.MINIMAX_MODEL ?? DEFAULT_MODEL;
+  const url = `${baseUrl}/chat/completions`;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature,
+        stream: true,
+      }),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error("timeout");
+    }
+    console.error("[MiniMax Stream] Connection error:", err instanceof Error ? err.message : String(err));
+    throw new Error("api_error");
+  }
+
+  clearTimeout(timeoutId);
+
+  if (!res.ok) {
+    console.error(`[MiniMax Stream] API error: HTTP ${res.status}`);
+    throw new Error("api_error");
+  }
+
+  const reader = res.body?.getReader();
+  if (!reader) {
+    throw new Error("api_error");
+  }
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data: ")) continue;
+        const jsonStr = trimmed.slice(6);
+        if (!jsonStr || jsonStr === "[DONE]") continue;
+
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const delta: unknown = parsed?.choices?.[0]?.delta?.content;
+          if (typeof delta === "string" && delta) {
+            yield delta;
+          }
+        } catch {
+          // skip malformed SSE lines
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}

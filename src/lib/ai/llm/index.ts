@@ -7,10 +7,11 @@
  *
  * Both providers expose a unified callLLM() function that accepts a
  * simple messages array and returns a plain assistant-text string.
+ * streamLLM() yields text chunks for streaming responses.
  */
 
-import { callMiniMax, type MiniMaxMessage } from "./minimax";
-import { callGemini, type GeminiContent } from "./gemini";
+import { callMiniMax, streamMiniMax, type MiniMaxMessage } from "./minimax";
+import { callGemini, streamGemini, type GeminiContent } from "./gemini";
 
 export type LLMMessage =
   | { role: "system"; content: string }
@@ -47,6 +48,13 @@ function toGeminiContents(messages: LLMMessage[]): GeminiContent[] {
   }));
 }
 
+function toMiniMaxMessages(messages: LLMMessage[]): MiniMaxMessage[] {
+  return messages.map((m) => ({
+    role: m.role === "assistant" ? "assistant" : m.role as "system" | "user",
+    content: m.content,
+  }));
+}
+
 /**
  * Unified LLM call.  Dispatches to MiniMax or Gemini based on
  * the LLM_PROVIDER environment variable.
@@ -61,17 +69,37 @@ export async function callLLM(
   const timeout = options.timeoutMs ?? getChatTimeoutMs();
 
   if (provider === "minimax") {
-    const minimaxMessages: MiniMaxMessage[] = messages.map((m) => ({
-      role: m.role === "assistant" ? "assistant" : m.role as "system" | "user",
-      content: m.content,
-    }));
-
-    return callMiniMax(minimaxMessages, options.temperature ?? 0.3, timeout);
+    return callMiniMax(toMiniMaxMessages(messages), options.temperature ?? 0.3, timeout);
   }
 
   // Default / fallback: Gemini
   const geminiContents = toGeminiContents(messages);
   return callGemini(geminiContents, options.maxOutputTokens ?? 512, options.temperature ?? 0.2, timeout);
+}
+
+/**
+ * Unified streaming LLM call.  Yields text chunks as they arrive.
+ * Falls back to callLLM (non-streaming) if the provider does not
+ * support streaming — in that case yields a single chunk with the
+ * full response.
+ *
+ * Throws errors with message codes: "missing_key" | "timeout" | "api_error"
+ */
+export async function* streamLLM(
+  messages: LLMMessage[],
+  options: LLMCallOptions = {},
+): AsyncGenerator<string> {
+  const provider = process.env.LLM_PROVIDER ?? "gemini";
+  const timeout = options.timeoutMs ?? getChatTimeoutMs();
+
+  if (provider === "minimax") {
+    yield* streamMiniMax(toMiniMaxMessages(messages), options.temperature ?? 0.3, timeout);
+    return;
+  }
+
+  // Default: Gemini streaming
+  const geminiContents = toGeminiContents(messages);
+  yield* streamGemini(geminiContents, options.maxOutputTokens ?? 512, options.temperature ?? 0.2, timeout);
 }
 
 /** Re-export the active provider name for logging purposes. */

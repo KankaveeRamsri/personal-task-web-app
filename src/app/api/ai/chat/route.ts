@@ -10,7 +10,7 @@ import {
   type AssistantActionType,
 } from "@/lib/ai-assistant/action-planner";
 import { retrieveTaskDocuments, type TaskDocument } from "@/lib/ai/rag/task-retriever";
-import { callLLM, getActiveLLMProvider, type LLMMessage } from "@/lib/ai/llm";
+import { callLLM, streamLLM, getActiveLLMProvider, type LLMMessage } from "@/lib/ai/llm";
 
 export const runtime = "edge";
 
@@ -472,11 +472,37 @@ export async function POST(request: Request) {
     : undefined;
 
   try {
-    const rawReply = await callLLM(chatMessages);
-    return NextResponse.json({
-      reply: rawReply,
-      intent,
-      ...(ragSources ? { ragSources } : {}),
+    const encoder = new TextEncoder();
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        // First event: sources (so frontend can show source chips immediately)
+        if (ragSources && ragSources.length > 0) {
+          controller.enqueue(encoder.encode(`event: sources\ndata: ${JSON.stringify(ragSources)}\n\n`));
+        }
+
+        try {
+          for await (const chunk of streamLLM(chatMessages)) {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+          }
+          controller.enqueue(encoder.encode("event: done\ndata: {}\n\n"));
+        } catch (err) {
+          const code = err instanceof Error && (err.message === "timeout" || err.message === "api_error")
+            ? err.message
+            : "api_error";
+          controller.enqueue(encoder.encode(`event: error\ndata: ${JSON.stringify(code)}\n\n`));
+        }
+
+        controller.close();
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
     });
   } catch (err) {
     console.error("[AI Chat] Chat LLM error:", err instanceof Error ? err.message : String(err));

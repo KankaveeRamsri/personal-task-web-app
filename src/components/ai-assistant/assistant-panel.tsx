@@ -174,6 +174,91 @@ async function callLLM(
   };
 }
 
+interface StreamChatCallbacks {
+  onChunk: (text: string) => void;
+  onSources: (sources: RagSource[]) => void;
+  onError: (msg: string, isTimeout: boolean) => void;
+}
+
+async function streamChat(
+  message: string,
+  tasks: Task[],
+  lists: List[],
+  boardName: string,
+  callbacks: StreamChatCallbacks,
+  workspaceId?: string,
+  boardId?: string,
+  history?: Array<{ role: "user" | "assistant"; content: string }>,
+): Promise<void> {
+  const aiContext = buildAIContext(tasks, lists);
+
+  const res = await fetch("/api/ai/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message,
+      context: { boardName, ...aiContext },
+      ...(workspaceId ? { workspaceId, boardId } : {}),
+      ...(history && history.length > 0 ? { history } : {}),
+    }),
+  });
+
+  if (!res.ok || !res.body) {
+    callbacks.onError("เกิดข้อผิดพลาดในการเชื่อมต่อ AI กรุณาลองใหม่", false);
+    return;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      // Split on SSE event boundaries (double newline)
+      const events = buffer.split("\n\n");
+      buffer = events.pop() ?? "";
+
+      for (const block of events) {
+        if (!block.trim()) continue;
+        let eventType = "";
+        let dataStr = "";
+        for (const line of block.split("\n")) {
+          if (line.startsWith("event:")) eventType = line.slice(6).trim();
+          else if (line.startsWith("data:")) dataStr = line.slice(5).trim();
+        }
+        if (!dataStr) continue;
+
+        if (eventType === "sources") {
+          try {
+            const sources = JSON.parse(dataStr) as RagSource[];
+            callbacks.onSources(sources);
+          } catch { /* skip malformed JSON */ }
+        } else if (eventType === "error") {
+          let code = "api_error";
+          try { code = JSON.parse(dataStr) as string; } catch { /* skip */ }
+          const errMsg =
+            code === "timeout"
+              ? "AI ใช้เวลาตอบนานเกินไป กรุณาลองใหม่ หรือลองถามให้สั้นลง"
+              : "เกิดข้อผิดพลาดในการเชื่อมต่อ AI กรุณาลองใหม่";
+          callbacks.onError(errMsg, code === "timeout");
+        } else if (eventType !== "done") {
+          // Default event = text chunk
+          try {
+            const chunk = JSON.parse(dataStr) as string;
+            if (chunk) callbacks.onChunk(chunk);
+          } catch { /* skip malformed chunk */ }
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 // ── Action Preview Card ──────────────────────────────────────────────
 
 const ACTION_TYPE_LABELS: Record<string, { label: string; icon: string; color: string }> = {
@@ -435,67 +520,62 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
         return;
       }
 
-      // LLM path: all non-action messages (intent used by route for prompt tuning)
+      // LLM path: all non-action messages — SSE streaming
       const intent = detectAssistantIntent(prompt);
       const boardName = boards.find((b) => b.id === selectedBoardId)?.title ?? "";
       const chatHistory = extractHistory(messages, HISTORY_LIMIT);
-      callLLM(
+
+      // Add placeholder; streaming callbacks will update it in place
+      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+
+      streamChat(
         prompt,
         tasks,
         lists,
         boardName,
+        {
+          onChunk(text) {
+            setMessages((prev) =>
+              prev.map((msg, i) =>
+                i === prev.length - 1 ? { ...msg, content: msg.content + text } : msg,
+              ),
+            );
+          },
+          onSources(sources) {
+            setMessages((prev) =>
+              prev.map((msg, i) =>
+                i === prev.length - 1 ? { ...msg, ragSources: sources } : msg,
+              ),
+            );
+          },
+          onError(msg, isTimeout) {
+            setMessages((prev) =>
+              prev.map((msg2, i) =>
+                i === prev.length - 1
+                  ? { ...msg2, content: msg, isFallback: true, isTimeout }
+                  : msg2,
+              ),
+            );
+          },
+        },
         selectedWorkspaceId ?? undefined,
         selectedBoardId ?? undefined,
         chatHistory,
       )
-        .then(({ reply, isFallback, actionPlan, requiresConfirmation, ragSources }) => {
-          if (isFallback) {
-            if (actionPlan) {
-              setMessages((prev) => [
-                ...prev,
-                {
-                  role: "assistant",
-                  content: reply,
-                  actionPlan,
-                  requiresConfirmation,
-                },
-              ]);
-            } else {
-              const filtered = applyFilter(tasks, lists, filter, userEmail);
-              const ruleReply = generateResponseByIntent(intent, filtered, lists);
-              setMessages((prev) => [
-                ...prev,
-                {
-                  role: "assistant",
-                  content: ruleReply + "\n\n_(ใช้โหมดวิเคราะห์ภายในแทนชั่วคราว)_",
-                  isFallback: true,
-                },
-              ]);
-            }
-          } else {
-            setMessages((prev) => [
-              ...prev,
-              {
-                role: "assistant",
-                content: reply,
-                actionPlan,
-                requiresConfirmation,
-                ...(ragSources ? { ragSources } : {}),
-              },
-            ]);
-          }
-        })
         .catch(() => {
           const filtered = applyFilter(tasks, lists, filter, userEmail);
           const fallback = generateResponseByIntent(intent, filtered, lists);
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: "assistant",
-              content: fallback + "\n\n_(ใช้โหมดวิเคราะห์ภายในแทนชั่วคราว)_",
-              isFallback: true,
-            },
-          ]);
+          setMessages((prev) =>
+            prev.map((msg, i) =>
+              i === prev.length - 1
+                ? {
+                    ...msg,
+                    content: fallback + "\n\n_(ใช้โหมดวิเคราะห์ภายในแทนชั่วคราว)_",
+                    isFallback: true,
+                  }
+                : msg,
+            ),
+          );
         })
         .finally(() => setIsLoading(false));
     },
@@ -1039,8 +1119,8 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
           </div>
         ))}
 
-        {/* Loading indicator */}
-        {isLoading && (
+        {/* Loading indicator — hidden once streaming text has started arriving */}
+        {isLoading && !(messages[messages.length - 1]?.role === "assistant" && messages[messages.length - 1]?.content) && (
           <div className="flex gap-2.5">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 mt-0.5">
               <SparkleIcon className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
