@@ -230,6 +230,74 @@ function parseActionPlan(raw: string, actionType: AssistantActionType): Assistan
   }
 }
 
+// ── Context compaction ───────────────────────────────────────────────────
+
+/**
+ * Compacts a context object by limiting array lengths and truncating long
+ * string fields so the JSON output stays within `maxChars` while remaining
+ * valid, structured JSON — never cuts mid-string.
+ */
+function compactContext(
+  ctx: Record<string, unknown>,
+  maxChars: number,
+): Record<string, unknown> {
+  const MAX_ARRAY_LEN = 20;
+  const MAX_FIELD_CHARS = 300;
+
+  const result: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(ctx)) {
+    if (Array.isArray(value)) {
+      result[key] = value.slice(0, MAX_ARRAY_LEN).map((item) => {
+        if (typeof item === "string") {
+          return item.length > MAX_FIELD_CHARS ? item.slice(0, MAX_FIELD_CHARS) + "…" : item;
+        }
+        if (item !== null && typeof item === "object") {
+          return truncateObjectFields(item as Record<string, unknown>, MAX_FIELD_CHARS);
+        }
+        return item;
+      });
+    } else if (typeof value === "string") {
+      result[key] = value.length > MAX_FIELD_CHARS ? value.slice(0, MAX_FIELD_CHARS) + "…" : value;
+    } else {
+      result[key] = value;
+    }
+  }
+
+  // Iteratively remove last array items if still over budget
+  let json = JSON.stringify(result);
+  while (json.length > maxChars) {
+    let trimmed = false;
+    for (const key of Object.keys(result)) {
+      const arr = result[key];
+      if (Array.isArray(arr) && arr.length > 1) {
+        arr.pop();
+        trimmed = true;
+        break;
+      }
+    }
+    if (!trimmed) break;
+    json = JSON.stringify(result);
+  }
+
+  return result;
+}
+
+function truncateObjectFields(
+  obj: Record<string, unknown>,
+  maxChars: number,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (typeof v === "string" && v.length > maxChars) {
+      out[k] = v.slice(0, maxChars) + "…";
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
 // ── Route ──────────────────────────────────────────────────────────────
 
 export async function POST(request: Request) {
@@ -340,9 +408,10 @@ export async function POST(request: Request) {
   const intent = detectAssistantIntent(trimmed);
   const intentInstruction = INTENT_INSTRUCTIONS[intent];
 
-  let contextJSON = context ? JSON.stringify(context) : "{}";
-  if (contextJSON.length > MAX_CONTEXT_CHARS) {
-    contextJSON = contextJSON.slice(0, MAX_CONTEXT_CHARS);
+  let contextJSON = "{}";
+  if (context) {
+    const compacted = compactContext(context, MAX_CONTEXT_CHARS);
+    contextJSON = JSON.stringify(compacted);
   }
 
   const validRagDocs: RagDocument[] =

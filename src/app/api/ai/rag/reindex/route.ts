@@ -10,7 +10,6 @@ const DEFAULT_LIMIT = 50;
 
 export async function POST(request: Request) {
   // 0) Auth check
-  // NOTE: workspace membership validation (workspaceId owned by user) is deferred to Phase 2C.
   const { user, response: authResponse } = await requireAuth();
   if (authResponse) return authResponse;
 
@@ -46,6 +45,32 @@ export async function POST(request: Request) {
     typeof rawLimit === "number" && rawLimit > 0
       ? Math.min(Math.floor(rawLimit), MAX_LIMIT)
       : DEFAULT_LIMIT;
+
+  // Verify user is a member of the workspace
+  const { data: membership } = await supabase
+    .from("workspace_members")
+    .select("role")
+    .eq("workspace_id", workspaceId.trim())
+    .eq("user_id", user!.id)
+    .single();
+
+  if (!membership) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // If boardId provided, verify it belongs to the workspace
+  if (typeof boardId === "string" && boardId.trim()) {
+    const { data: board } = await supabase
+      .from("boards")
+      .select("id")
+      .eq("id", boardId.trim())
+      .eq("workspace_id", workspaceId.trim())
+      .single();
+
+    if (!board) {
+      return NextResponse.json({ error: "Board not found in workspace" }, { status: 404 });
+    }
+  }
 
   const t0 = Date.now();
   console.log("[RAG Reindex] start:", {

@@ -355,7 +355,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
       const actionType = detectActionIntent(prompt);
       if (actionType !== "unknown") {
         const boardName = boards.find((b) => b.id === selectedBoardId)?.title ?? "";
-        callLLM(prompt, tasks, lists, boardName, undefined, undefined)
+        callLLM(prompt, tasks, lists, boardName, selectedWorkspaceId ?? undefined, selectedBoardId ?? undefined)
           .then(({ reply, isFallback, actionPlan, requiresConfirmation }) => {
             if (isFallback) {
               if (actionPlan) {
