@@ -49,6 +49,29 @@ type FilterType = "all" | "mine" | "overdue" | "today";
 const MAX_INPUT_LENGTH = 500;
 const MAX_TITLE_LENGTH = 120;
 const VALID_PRIORITIES: TaskPriority[] = ["none", "low", "medium", "high"];
+const HISTORY_LIMIT = 5;
+const HISTORY_MAX_CONTENT = 300;
+
+/**
+ * Extract recent text-only chat history for context continuity.
+ * Skips action plans, fallback markers, and system/debug messages.
+ */
+function extractHistory(
+  messages: ChatMessage[],
+  limit: number,
+): Array<{ role: "user" | "assistant"; content: string }> {
+  const result: Array<{ role: "user" | "assistant"; content: string }> = [];
+  for (let i = messages.length - 1; i >= 0 && result.length < limit; i--) {
+    const msg = messages[i];
+    if (msg.actionPlan || msg.isFallback || msg.isTimeout) continue;
+    if (msg.actionStatus && msg.actionStatus !== "pending") continue;
+    const content = msg.content.trim().slice(0, HISTORY_MAX_CONTENT);
+    if (!content) continue;
+    result.push({ role: msg.role, content });
+  }
+  result.reverse();
+  return result;
+}
 
 const SUGGESTED_PROMPTS = [
   { icon: "🔍", text: "มี task ไหนเกี่ยวกับ deployment บ้าง" },
@@ -112,6 +135,7 @@ async function callLLM(
   boardName: string,
   workspaceId?: string,
   boardId?: string,
+  history?: Array<{ role: "user" | "assistant"; content: string }>,
 ): Promise<{ reply: string; isFallback: boolean; isTimeout?: boolean; actionPlan?: AssistantActionPlan; requiresConfirmation?: boolean; ragSources?: RagSource[] }> {
   const aiContext = buildAIContext(tasks, lists);
 
@@ -125,6 +149,7 @@ async function callLLM(
         ...aiContext,
       },
       ...(workspaceId ? { workspaceId, boardId } : {}),
+      ...(history && history.length > 0 ? { history } : {}),
     }),
   });
 
@@ -413,6 +438,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
       // LLM path: all non-action messages (intent used by route for prompt tuning)
       const intent = detectAssistantIntent(prompt);
       const boardName = boards.find((b) => b.id === selectedBoardId)?.title ?? "";
+      const chatHistory = extractHistory(messages, HISTORY_LIMIT);
       callLLM(
         prompt,
         tasks,
@@ -420,6 +446,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
         boardName,
         selectedWorkspaceId ?? undefined,
         selectedBoardId ?? undefined,
+        chatHistory,
       )
         .then(({ reply, isFallback, actionPlan, requiresConfirmation, ragSources }) => {
           if (isFallback) {

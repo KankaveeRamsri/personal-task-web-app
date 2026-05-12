@@ -22,6 +22,29 @@ const RAG_TOP_K = (() => {
   const raw = parseInt(process.env.AI_RAG_TOP_K ?? "", 10);
   return Number.isFinite(raw) && raw > 0 && raw <= 20 ? raw : 3;
 })();
+const HISTORY_LIMIT = (() => {
+  const raw = parseInt(process.env.AI_CHAT_HISTORY_LIMIT ?? "", 10);
+  return Number.isFinite(raw) && raw > 0 && raw <= 20 ? raw : 5;
+})();
+const HISTORY_MAX_CONTENT = 300;
+
+type HistoryEntry = { role: "user" | "assistant"; content: string };
+
+function sanitizeHistory(raw: unknown): HistoryEntry[] {
+  if (!Array.isArray(raw)) return [];
+  const result: HistoryEntry[] = [];
+  for (const item of raw) {
+    if (result.length >= HISTORY_LIMIT) break;
+    if (!item || typeof item !== "object") continue;
+    const obj = item as Record<string, unknown>;
+    if (obj.role !== "user" && obj.role !== "assistant") continue;
+    if (typeof obj.content !== "string") continue;
+    const content = obj.content.trim().slice(0, HISTORY_MAX_CONTENT);
+    if (!content) continue;
+    result.push({ role: obj.role, content });
+  }
+  return result;
+}
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -323,13 +346,16 @@ export async function POST(request: Request) {
     return fallbackReply("invalid_request", 400);
   }
 
-  const { message, context, workspaceId, boardId, ragContext } = body as {
+  const { message, context, workspaceId, boardId, ragContext, history: rawHistory } = body as {
     message: string;
     context?: Record<string, unknown>;
     workspaceId?: string;
     boardId?: string;
     ragContext?: RagDocument[];
+    history?: unknown;
   };
+
+  const history = sanitizeHistory(rawHistory);
 
   // 4) Validate message
   const trimmed = message.trim();
@@ -342,7 +368,7 @@ export async function POST(request: Request) {
 
   // 5) Check for action intent
   const actionType = detectActionIntent(trimmed);
-  console.log("[AI Chat] ACTION_INTENT:", actionType, "| message:", trimmed);
+  console.log("[AI Chat] ACTION_INTENT:", actionType, "| message:", trimmed, "| history:", history.length);
 
   if (actionType !== "unknown") {
     try {
@@ -430,6 +456,7 @@ export async function POST(request: Request) {
   const chatMessages: LLMMessage[] = [
     { role: "system", content: SYSTEM_PROMPT },
     { role: "assistant", content: "เข้าใจครับ ผมจะตอบเป็นภาษาไทย โดยใช้เฉพาะข้อมูลที่ให้มา ตาม intent ที่ระบุ" },
+    ...history.map((h) => h as LLMMessage),
     { role: "user", content: userContent },
   ];
 
