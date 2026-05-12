@@ -304,6 +304,31 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
   const [inputValue, setInputValue] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // ── Dev: Reindex ────────────────────────────────────────────────
+  // Temporary dev-only reindex control. Easy to remove later.
+  type ReindexStatus = "idle" | "loading" | "success" | "error";
+  const [reindexStatus, setReindexStatus] = useState<ReindexStatus>("idle");
+  const [reindexResult, setReindexResult] = useState<{ indexed: number; failed: number } | null>(null);
+
+  const handleReindex = useCallback(async () => {
+    if (!selectedWorkspaceId || !selectedBoardId || reindexStatus === "loading") return;
+    setReindexStatus("loading");
+    setReindexResult(null);
+    try {
+      const res = await fetch("/api/ai/rag/reindex", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspaceId: selectedWorkspaceId, boardId: selectedBoardId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Reindex failed");
+      setReindexResult({ indexed: data.indexed, failed: data.failed });
+      setReindexStatus("success");
+    } catch {
+      setReindexStatus("error");
+    }
+  }, [selectedWorkspaceId, selectedBoardId, reindexStatus]);
+
   const handleSourceClick = useCallback(
     (src: RagSource) => {
       if (src.boardId) {
@@ -1026,6 +1051,30 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
           </div>
         )}
       </div>
+
+      {/* ── Dev: Reindex Board ──────────────────────────────────────── */}
+      {/* Temporary dev-only tool. Remove this block when no longer needed. */}
+      {hasBoard && (
+        <div className="border-t border-dashed border-zinc-200 dark:border-zinc-700/60 px-4 py-2 flex items-center gap-2 bg-zinc-50/50 dark:bg-zinc-800/30">
+          <button
+            onClick={handleReindex}
+            disabled={reindexStatus === "loading"}
+            className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-2.5 py-1 text-[10px] font-medium text-zinc-600 dark:text-zinc-400 transition-colors hover:border-blue-300 hover:bg-blue-50 dark:hover:border-blue-500/40 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {reindexStatus === "loading" ? "Reindexing…" : "Dev: Reindex Board"}
+          </button>
+          {reindexStatus === "success" && reindexResult && (
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400">
+              Done — {reindexResult.indexed} indexed, {reindexResult.failed} failed
+            </span>
+          )}
+          {reindexStatus === "error" && (
+            <span className="text-[10px] text-red-600 dark:text-red-400">
+              Reindex failed — check console
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Input area */}
       <div className="border-t border-zinc-100 dark:border-zinc-800/80 px-4 py-3">

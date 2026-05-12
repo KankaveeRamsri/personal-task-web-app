@@ -1,6 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-
-const EXPECTED_DIM = 384;
+import { embedText } from "./embed";
 
 export interface ReindexOptions {
   workspaceId: string;
@@ -27,30 +26,6 @@ function buildTaskContent(task: {
   if (task.due_date) parts.push(`Due date: ${task.due_date}`);
   parts.push(`Status: ${task.is_completed ? "completed" : "pending"}`);
   return parts.join("\n");
-}
-
-async function embedText(text: string): Promise<number[]> {
-  const baseUrl = process.env.EMBEDDING_SERVICE_URL;
-  if (!baseUrl) throw new Error("EMBEDDING_SERVICE_URL not configured");
-
-  const res = await fetch(`${baseUrl}/embed`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text }),
-  });
-
-  if (!res.ok) throw new Error(`Embedding service returned ${res.status}`);
-
-  const data = await res.json();
-  const embedding: unknown = data?.embedding;
-
-  if (!Array.isArray(embedding) || embedding.length !== EXPECTED_DIM) {
-    throw new Error(
-      `Invalid embedding: expected ${EXPECTED_DIM} dims, got ${Array.isArray(embedding) ? embedding.length : typeof embedding}`,
-    );
-  }
-
-  return embedding as number[];
 }
 
 export async function reindexTasks(

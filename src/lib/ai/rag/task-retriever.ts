@@ -1,7 +1,7 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { hybridRank, type RankingSignals } from "./hybrid-ranking";
+import { embedText } from "./embed";
 
-const EXPECTED_DIM = 384;
 const DEFAULT_THRESHOLD = 0;
 const DEFAULT_MATCH_COUNT = 5;
 const CANDIDATE_MULTIPLIER = 3;
@@ -23,32 +23,6 @@ export interface RetrieveOptions {
   boardId?: string;
   matchThreshold?: number;
   matchCount?: number;
-}
-
-async function embedQuery(query: string): Promise<number[]> {
-  const baseUrl = process.env.EMBEDDING_SERVICE_URL;
-  if (!baseUrl) throw new Error("EMBEDDING_SERVICE_URL not configured");
-
-  const res = await fetch(`${baseUrl}/embed`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: query }),
-  });
-
-  if (!res.ok) {
-    throw new Error(`Embedding service error: ${res.status}`);
-  }
-
-  const data = await res.json();
-  const embedding: unknown = data?.embedding;
-
-  if (!Array.isArray(embedding) || embedding.length !== EXPECTED_DIM) {
-    throw new Error(
-      `Invalid embedding dimension: expected ${EXPECTED_DIM}, got ${Array.isArray(embedding) ? embedding.length : "non-array"}`,
-    );
-  }
-
-  return embedding as number[];
 }
 
 export async function retrieveTaskDocuments(
@@ -73,7 +47,7 @@ export async function retrieveTaskDocuments(
     candidateCount,
   });
 
-  const queryEmbedding = await embedQuery(query);
+  const queryEmbedding = await embedText(query);
 
   const { data, error } = await supabase.rpc("match_task_documents", {
     query_embedding: queryEmbedding,
