@@ -35,6 +35,7 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   isFallback?: boolean;
+  isTimeout?: boolean;
   actionPlan?: AssistantActionPlan;
   requiresConfirmation?: boolean;
   actionStatus?: ActionStatus;
@@ -111,7 +112,7 @@ async function callLLM(
   boardName: string,
   workspaceId?: string,
   boardId?: string,
-): Promise<{ reply: string; isFallback: boolean; actionPlan?: AssistantActionPlan; requiresConfirmation?: boolean; ragSources?: RagSource[] }> {
+): Promise<{ reply: string; isFallback: boolean; isTimeout?: boolean; actionPlan?: AssistantActionPlan; requiresConfirmation?: boolean; ragSources?: RagSource[] }> {
   const aiContext = buildAIContext(tasks, lists);
 
   const res = await fetch("/api/ai/chat", {
@@ -133,6 +134,7 @@ async function callLLM(
     return {
       reply: data.reply ?? "เกิดข้อผิดพลาด กรุณาลองใหม่",
       isFallback: true,
+      isTimeout: data.errorType === "timeout",
       actionPlan: data.actionPlan,
       requiresConfirmation: data.requiresConfirmation,
     };
@@ -990,7 +992,15 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
                 )}
               </div>
               {/* Fallback mode indicator */}
-              {msg.role === "assistant" && msg.isFallback && (
+              {msg.role === "assistant" && msg.isTimeout && (
+                <div className="inline-flex items-center gap-1 self-start rounded-full bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30 px-2 py-0.5">
+                  <svg className="h-2.5 w-2.5 text-red-500 dark:text-red-400 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                  </svg>
+                  <span className="text-[9px] font-medium text-red-600 dark:text-red-400">AI ใช้เวลานานเกินไป</span>
+                </div>
+              )}
+              {msg.role === "assistant" && msg.isFallback && !msg.isTimeout && (
                 <div className="inline-flex items-center gap-1 self-start rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30 px-2 py-0.5">
                   <svg className="h-2.5 w-2.5 text-amber-500 dark:text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />

@@ -17,11 +17,23 @@ export type LLMMessage =
   | { role: "user"; content: string }
   | { role: "assistant"; content: string };
 
+const DEFAULT_TIMEOUT_MS = 45_000;
+
 export interface LLMCallOptions {
   /** 0.0–1.0.  Defaults to provider-specific value if omitted. */
   temperature?: number;
   /** Max output tokens — honoured by Gemini; ignored by MiniMax (no direct equivalent in standard spec). */
   maxOutputTokens?: number;
+  /** Request timeout in ms. Defaults to AI_CHAT_TIMEOUT_MS env or 45000. */
+  timeoutMs?: number;
+}
+
+/** Read the configurable chat timeout from env. */
+export function getChatTimeoutMs(): number {
+  const raw = parseInt(process.env.AI_CHAT_TIMEOUT_MS ?? "", 10);
+  return Number.isFinite(raw) && raw > 0 && raw <= 120_000
+    ? raw
+    : DEFAULT_TIMEOUT_MS;
 }
 
 /**
@@ -46,6 +58,7 @@ export async function callLLM(
   options: LLMCallOptions = {},
 ): Promise<string> {
   const provider = process.env.LLM_PROVIDER ?? "gemini";
+  const timeout = options.timeoutMs ?? getChatTimeoutMs();
 
   if (provider === "minimax") {
     const minimaxMessages: MiniMaxMessage[] = messages.map((m) => ({
@@ -53,12 +66,12 @@ export async function callLLM(
       content: m.content,
     }));
 
-    return callMiniMax(minimaxMessages, options.temperature ?? 0.3);
+    return callMiniMax(minimaxMessages, options.temperature ?? 0.3, timeout);
   }
 
   // Default / fallback: Gemini
   const geminiContents = toGeminiContents(messages);
-  return callGemini(geminiContents, options.maxOutputTokens ?? 512, options.temperature ?? 0.2);
+  return callGemini(geminiContents, options.maxOutputTokens ?? 512, options.temperature ?? 0.2, timeout);
 }
 
 /** Re-export the active provider name for logging purposes. */

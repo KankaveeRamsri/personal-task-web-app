@@ -18,6 +18,10 @@ export const runtime = "edge";
 
 const MAX_MESSAGE_LENGTH = 500;
 const MAX_CONTEXT_CHARS = 4000;
+const RAG_TOP_K = (() => {
+  const raw = parseInt(process.env.AI_RAG_TOP_K ?? "", 10);
+  return Number.isFinite(raw) && raw > 0 && raw <= 20 ? raw : 3;
+})();
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -74,14 +78,14 @@ async function fetchRagInternal(
     console.log("[RAG Retrieve] params:", {
       workspaceId,
       boardId: boardId ?? null,
-      matchCount: 5,
+      matchCount: RAG_TOP_K,
       matchThreshold: 0,
     });
 
     const docs = await retrieveTaskDocuments(supabase, query, {
       workspaceId,
       boardId,
-      matchCount: 5,
+      matchCount: RAG_TOP_K,
       matchThreshold: 0,
     });
 
@@ -96,7 +100,7 @@ function fallbackReply(errorType: ErrorType, status: number) {
   const messages: Record<ErrorType, string> = {
     invalid_request: "รูปแบบคำขอไม่ถูกต้อง กรุณาลองใหม่",
     missing_key: "ตอนนี้ AI แบบ LLM ยังไม่พร้อมใช้งาน เลยใช้ผลวิเคราะห์แบบ rule-based แทนครับ",
-    timeout: "ระบบใช้เวลาตอบนานเกินไป กรุณาลองใหม่อีกครั้ง",
+    timeout: "AI ใช้เวลาตอบนานเกินไป ลองถามให้สั้นลงหรือกดใหม่อีกครั้ง",
     api_error: "เกิดข้อผิดพลาดในการเชื่อมต่อ AI กรุณาลองใหม่",
   };
   return NextResponse.json(
@@ -232,68 +236,53 @@ function parseActionPlan(raw: string, actionType: AssistantActionType): Assistan
 
 // ── Context compaction ───────────────────────────────────────────────────
 
-/**
- * Compacts a context object by limiting array lengths and truncating long
- * string fields so the JSON output stays within `maxChars` while remaining
- * valid, structured JSON — never cuts mid-string.
- */
-function compactContext(
-  ctx: Record<string, unknown>,
-  maxChars: number,
-): Record<string, unknown> {
-  const MAX_ARRAY_LEN = 20;
-  const MAX_FIELD_CHARS = 300;
+const TASK_KEEP_KEYS = new Set([
+  "id", "title", "list_id", "priority", "due_date",
+  "assignee_id", "is_completed", "created_by",
+]);
 
+const LIST_KEEP_KEYS = new Set(["id", "title", "is_done"]);
+
+/**
+ * Slim the raw board context: pick only fields the LLM needs and
+ * cap array lengths so the payload stays small.
+ */
+function slimContext(ctx: Record<string, unknown>): Record<string, unknown> {
+  const MAX_ARRAY = 15;
   const result: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(ctx)) {
-    if (Array.isArray(value)) {
-      result[key] = value.slice(0, MAX_ARRAY_LEN).map((item) => {
-        if (typeof item === "string") {
-          return item.length > MAX_FIELD_CHARS ? item.slice(0, MAX_FIELD_CHARS) + "…" : item;
-        }
+    if (key === "tasks" && Array.isArray(value)) {
+      result[key] = value.slice(0, MAX_ARRAY).map((item: unknown) => {
         if (item !== null && typeof item === "object") {
-          return truncateObjectFields(item as Record<string, unknown>, MAX_FIELD_CHARS);
+          return pickFields(item as Record<string, unknown>, TASK_KEEP_KEYS);
         }
         return item;
       });
-    } else if (typeof value === "string") {
-      result[key] = value.length > MAX_FIELD_CHARS ? value.slice(0, MAX_FIELD_CHARS) + "…" : value;
+    } else if (key === "lists" && Array.isArray(value)) {
+      result[key] = (value as unknown[]).map((item: unknown) => {
+        if (item !== null && typeof item === "object") {
+          return pickFields(item as Record<string, unknown>, LIST_KEEP_KEYS);
+        }
+        return item;
+      });
+    } else if (Array.isArray(value)) {
+      result[key] = value.slice(0, MAX_ARRAY);
     } else {
       result[key] = value;
     }
   }
 
-  // Iteratively remove last array items if still over budget
-  let json = JSON.stringify(result);
-  while (json.length > maxChars) {
-    let trimmed = false;
-    for (const key of Object.keys(result)) {
-      const arr = result[key];
-      if (Array.isArray(arr) && arr.length > 1) {
-        arr.pop();
-        trimmed = true;
-        break;
-      }
-    }
-    if (!trimmed) break;
-    json = JSON.stringify(result);
-  }
-
   return result;
 }
 
-function truncateObjectFields(
+function pickFields(
   obj: Record<string, unknown>,
-  maxChars: number,
+  keep: Set<string>,
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(obj)) {
-    if (typeof v === "string" && v.length > maxChars) {
-      out[k] = v.slice(0, maxChars) + "…";
-    } else {
-      out[k] = v;
-    }
+  for (const k of keep) {
+    if (k in obj) out[k] = obj[k];
   }
   return out;
 }
@@ -410,8 +399,11 @@ export async function POST(request: Request) {
 
   let contextJSON = "{}";
   if (context) {
-    const compacted = compactContext(context, MAX_CONTEXT_CHARS);
-    contextJSON = JSON.stringify(compacted);
+    const slimmed = slimContext(context);
+    contextJSON = JSON.stringify(slimmed);
+    if (contextJSON.length > MAX_CONTEXT_CHARS) {
+      contextJSON = contextJSON.slice(0, MAX_CONTEXT_CHARS);
+    }
   }
 
   const validRagDocs: RagDocument[] =

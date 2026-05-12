@@ -7,7 +7,7 @@
  *   GEMINI_API_KEY — Google AI Studio key
  */
 
-const GEMINI_TIMEOUT_MS = 10_000;
+const GEMINI_FALLBACK_TIMEOUT_MS = 10_000;
 const DEFAULT_MAX_OUTPUT_TOKENS = 512;
 
 export interface GeminiContentPart {
@@ -28,6 +28,7 @@ export async function callGemini(
   contents: GeminiContent[],
   maxOutputTokens: number = DEFAULT_MAX_OUTPUT_TOKENS,
   temperature = 0.2,
+  timeoutMs: number = GEMINI_FALLBACK_TIMEOUT_MS,
 ): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -37,7 +38,7 @@ export async function callGemini(
   const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const res = await fetch(geminiUrl, {

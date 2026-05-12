@@ -10,7 +10,7 @@
 
 const DEFAULT_BASE_URL = "https://api.minimax.io/v1";
 const DEFAULT_MODEL = "MiniMax-M2.7-highspeed";
-const MINIMAX_TIMEOUT_MS = 30_000;
+const FALLBACK_TIMEOUT_MS = 30_000;
 
 export interface MiniMaxMessage {
   role: "system" | "user" | "assistant";
@@ -26,6 +26,7 @@ export interface MiniMaxMessage {
 export async function callMiniMax(
   messages: MiniMaxMessage[],
   temperature = 0.3,
+  timeoutMs: number = FALLBACK_TIMEOUT_MS,
 ): Promise<string> {
   const apiKey = process.env.MINIMAX_API_KEY;
   if (!apiKey) {
@@ -38,7 +39,7 @@ export async function callMiniMax(
   const url = `${baseUrl}/chat/completions`;
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), MINIMAX_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const res = await fetch(url, {
