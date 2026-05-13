@@ -56,7 +56,7 @@ interface FallbackResponse {
   errorType: ErrorType;
 }
 
-type RagDocument = Pick<TaskDocument, "task_id" | "content" | "similarity" | "hybridScore" | "rankingSignals" | "board_id">;
+type RagDocument = Pick<TaskDocument, "task_id" | "content" | "similarity" | "hybridScore" | "rankingSignals" | "board_id" | "metadata">;
 
 const MAX_RAG_CONTENT_LENGTH = 300;
 
@@ -467,10 +467,14 @@ export async function POST(request: Request) {
     ? validRagDocs.map((d) => ({
         taskId: d.task_id,
         similarity: d.similarity,
-        hybridScore: d.hybridScore,
-        rankingSignals: d.rankingSignals,
         preview: d.content.slice(0, 100),
         ...(d.board_id ? { boardId: d.board_id } : {}),
+        title: typeof d.metadata?.title === "string" ? d.metadata.title : undefined,
+        priority:
+          typeof d.metadata?.priority === "string" && d.metadata.priority !== "none"
+            ? d.metadata.priority
+            : undefined,
+        dueDate: typeof d.metadata?.due_date === "string" ? d.metadata.due_date : undefined,
       }))
     : undefined;
 

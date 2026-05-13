@@ -29,6 +29,9 @@ interface RagSource {
   similarity: number;
   preview: string;
   boardId?: string;
+  title?: string;
+  priority?: string;
+  dueDate?: string;
 }
 
 interface ChatMessage {
@@ -71,6 +74,23 @@ function extractHistory(
   }
   result.reverse();
   return result;
+}
+
+const RAG_PRIORITY_META: Record<string, { label: string; color: string }> = {
+  high: { label: "สูง", color: "text-red-500 dark:text-red-400" },
+  medium: { label: "กลาง", color: "text-amber-500 dark:text-amber-400" },
+  low: { label: "ต่ำ", color: "text-emerald-600 dark:text-emerald-400" },
+};
+
+function formatDueDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "";
+    const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+    return `${d.getDate()} ${months[d.getMonth()]}`;
+  } catch {
+    return "";
+  }
 }
 
 const SUGGESTED_PROMPTS = [
@@ -388,6 +408,222 @@ function ActionPreviewCard({
   );
 }
 
+// ── Markdown Renderer ─────────────────────────────────────────────────
+
+function renderInline(text: string): React.ReactNode[] {
+  const pattern = /\*\*([^*\n]+?)\*\*|`([^`\n]+?)`/g;
+  const result: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let keyCounter = 0;
+  pattern.lastIndex = 0;
+
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      result.push(text.slice(lastIndex, match.index));
+    }
+    if (match[1] !== undefined) {
+      result.push(
+        <strong key={keyCounter++} className="font-semibold text-zinc-900 dark:text-zinc-100">
+          {match[1]}
+        </strong>,
+      );
+    } else if (match[2] !== undefined) {
+      result.push(
+        <code
+          key={keyCounter++}
+          className="rounded bg-zinc-100 dark:bg-zinc-700/60 px-1 py-0.5 text-[0.82em] font-mono text-zinc-700 dark:text-zinc-200"
+        >
+          {match[2]}
+        </code>,
+      );
+    }
+    lastIndex = pattern.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    result.push(text.slice(lastIndex));
+  }
+  return result.length > 0 ? result : [text];
+}
+
+type MdBlock =
+  | { t: "h1" | "h2" | "h3"; text: string }
+  | { t: "p"; lines: string[] }
+  | { t: "ul"; items: string[] }
+  | { t: "code"; lang: string; lines: string[] }
+  | { t: "table"; headers: string[]; rows: string[][] };
+
+function parseMarkdown(raw: string): MdBlock[] {
+  const lines = raw.split("\n");
+  const blocks: MdBlock[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    if (!line.trim()) { i++; continue; }
+
+    if (line.startsWith("```")) {
+      const lang = line.slice(3).trim();
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].startsWith("```")) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      if (i < lines.length) i++;
+      blocks.push({ t: "code", lang, lines: codeLines });
+      continue;
+    }
+
+    if (line.startsWith("### ")) { blocks.push({ t: "h3", text: line.slice(4) }); i++; continue; }
+    if (line.startsWith("## ")) { blocks.push({ t: "h2", text: line.slice(3) }); i++; continue; }
+    if (line.startsWith("# ")) { blocks.push({ t: "h1", text: line.slice(2) }); i++; continue; }
+
+    if (/^[-*]\s/.test(line)) {
+      const items: string[] = [];
+      while (i < lines.length && /^[-*]\s/.test(lines[i])) {
+        items.push(lines[i].replace(/^[-*]\s+/, ""));
+        i++;
+      }
+      blocks.push({ t: "ul", items });
+      continue;
+    }
+
+    if (line.trim().startsWith("|")) {
+      const tableLines: string[] = [];
+      while (i < lines.length && lines[i].trim().startsWith("|")) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      const headers = tableLines[0].split("|").map((s) => s.trim()).filter(Boolean);
+      const dataStart =
+        tableLines.length > 1 && /^[\s|:-]+$/.test(tableLines[1]) ? 2 : 1;
+      const rows = tableLines.slice(dataStart).map((l) =>
+        l.split("|").map((s) => s.trim()).filter(Boolean),
+      );
+      if (headers.length > 0) blocks.push({ t: "table", headers, rows });
+      continue;
+    }
+
+    const paraLines: string[] = [];
+    while (
+      i < lines.length &&
+      lines[i].trim() &&
+      !lines[i].startsWith("#") &&
+      !/^[-*]\s/.test(lines[i]) &&
+      !lines[i].startsWith("```") &&
+      !lines[i].trim().startsWith("|")
+    ) {
+      paraLines.push(lines[i]);
+      i++;
+    }
+    if (paraLines.length > 0) blocks.push({ t: "p", lines: paraLines });
+  }
+
+  return blocks;
+}
+
+function MarkdownRenderer({ content }: { content: string }) {
+  if (!content) return null;
+  const blocks = parseMarkdown(content);
+
+  return (
+    <div className="space-y-1.5 text-sm leading-relaxed">
+      {blocks.map((block, idx) => {
+        if (block.t === "h1") {
+          return (
+            <h1 key={idx} className="text-sm font-bold text-zinc-900 dark:text-zinc-100 mt-2 first:mt-0">
+              {renderInline(block.text)}
+            </h1>
+          );
+        }
+        if (block.t === "h2") {
+          return (
+            <h2 key={idx} className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mt-1.5 first:mt-0">
+              {renderInline(block.text)}
+            </h2>
+          );
+        }
+        if (block.t === "h3") {
+          return (
+            <h3 key={idx} className="text-[13px] font-medium text-zinc-700 dark:text-zinc-300 mt-1 first:mt-0">
+              {renderInline(block.text)}
+            </h3>
+          );
+        }
+        if (block.t === "code") {
+          return (
+            <pre
+              key={idx}
+              className="overflow-x-auto rounded-lg bg-zinc-100 dark:bg-zinc-800 px-3 py-2 text-[11px] font-mono text-zinc-700 dark:text-zinc-300"
+            >
+              <code>{block.lines.join("\n")}</code>
+            </pre>
+          );
+        }
+        if (block.t === "ul") {
+          return (
+            <ul key={idx} className="space-y-0.5">
+              {block.items.map((item, j) => (
+                <li key={j} className="flex items-baseline gap-1.5">
+                  <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-zinc-400 dark:bg-zinc-500" />
+                  <span className="flex-1">{renderInline(item)}</span>
+                </li>
+              ))}
+            </ul>
+          );
+        }
+        if (block.t === "table") {
+          return (
+            <div key={idx} className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-700/40">
+              <table className="w-full border-collapse text-xs">
+                <thead className="bg-zinc-50 dark:bg-zinc-800/60">
+                  <tr>
+                    {block.headers.map((h, j) => (
+                      <th
+                        key={j}
+                        className="border-b border-zinc-200 dark:border-zinc-700/40 px-3 py-1.5 text-left font-medium text-zinc-600 dark:text-zinc-400"
+                      >
+                        {renderInline(h)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {block.rows.map((row, j) => (
+                    <tr key={j} className="border-b border-zinc-100 dark:border-zinc-800/40 last:border-0">
+                      {row.map((cell, k) => (
+                        <td key={k} className="px-3 py-1.5 text-zinc-700 dark:text-zinc-300">
+                          {renderInline(cell)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        }
+        if (block.t === "p") {
+          return (
+            <p key={idx} className="text-zinc-700 dark:text-zinc-300">
+              {block.lines.map((l, j) => (
+                <span key={j}>
+                  {renderInline(l)}
+                  {j < block.lines.length - 1 && <br />}
+                </span>
+              ))}
+            </p>
+          );
+        }
+        return null;
+      })}
+    </div>
+  );
+}
+
 // ── Shared SVGs ──────────────────────────────────────────────────────
 
 function SparkleIcon({ className }: { className?: string }) {
@@ -579,7 +815,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
         })
         .finally(() => setIsLoading(false));
     },
-    [isLoading, tasks, lists, userEmail, boards, selectedBoardId, selectedWorkspaceId],
+    [isLoading, messages, tasks, lists, userEmail, boards, selectedBoardId, selectedWorkspaceId],
   );
 
   const handleSubmit = useCallback(() => {
@@ -1030,7 +1266,10 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
         )}
 
         {/* Chat messages */}
-        {messages.map((msg, i) => (
+        {messages.map((msg, i) => {
+          // Skip empty assistant placeholder while streaming hasn't started yet
+          if (msg.role === "assistant" && !msg.content && !msg.actionPlan && !msg.ragSources) return null;
+          return (
           <div
             key={i}
             className={`flex gap-2.5 ${msg.role === "user" ? "justify-end" : ""}`}
@@ -1042,37 +1281,46 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
             )}
             <div className="flex flex-col gap-1.5 max-w-[85%]">
               <div
-                className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-line ${
+                className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
                   msg.role === "user"
-                    ? "bg-blue-600 text-white dark:bg-blue-500 rounded-br-sm"
+                    ? "whitespace-pre-line bg-blue-600 text-white dark:bg-blue-500 rounded-br-sm"
                     : "bg-zinc-50 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-300 border border-zinc-100 dark:border-zinc-700/40 rounded-bl-sm"
                 }`}
               >
-                {msg.content}
+                {msg.role === "user" ? msg.content : <MarkdownRenderer content={msg.content} />}
                 {msg.ragSources && msg.ragSources.length > 0 && (
                   <div className="mt-2.5 pt-2 border-t border-zinc-200/60 dark:border-zinc-700/40">
                     <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500 mb-1.5">
-                      Sources
+                      แหล่งอ้างอิง
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {msg.ragSources.map((src) => {
-                        const label =
-                          src.preview.length > 55
-                            ? src.preview.slice(0, 55) + "…"
-                            : src.preview;
+                        const chipTitle = (
+                          src.title ?? src.preview.split("\n")[0].replace(/^Task:\s*/i, "")
+                        ).slice(0, 40);
+                        const priorityMeta = src.priority ? RAG_PRIORITY_META[src.priority] : undefined;
+                        const dueLabel = src.dueDate ? formatDueDate(src.dueDate) : "";
                         return (
                           <button
                             key={src.taskId}
                             type="button"
-                            title={src.preview}
+                            title={src.title ?? src.preview}
                             onClick={() => handleSourceClick(src)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white/80 dark:bg-zinc-800/50 px-2 py-1 text-[10px] text-zinc-500 dark:text-zinc-400 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 dark:hover:border-blue-500/40 dark:hover:bg-blue-900/20 dark:hover:text-blue-400 transition-colors"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white/80 dark:bg-zinc-800/50 px-2 py-1 text-[10px] text-zinc-500 dark:text-zinc-400 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 dark:hover:border-blue-500/40 dark:hover:bg-blue-900/20 dark:hover:text-blue-400 transition-colors"
                           >
                             <svg className="h-2.5 w-2.5 shrink-0 opacity-70" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
                             </svg>
-                            <span className="max-w-[140px] truncate">{label}</span>
-                            <span className="shrink-0 tabular-nums opacity-60">{Math.round(src.similarity * 100)}%</span>
+                            <span className="max-w-[120px] truncate font-medium">{chipTitle}</span>
+                            {priorityMeta && (
+                              <span className={`shrink-0 font-semibold ${priorityMeta.color}`}>
+                                {priorityMeta.label}
+                              </span>
+                            )}
+                            {dueLabel && (
+                              <span className="shrink-0 opacity-70">📅 {dueLabel}</span>
+                            )}
+                            <span className="shrink-0 tabular-nums opacity-50">{Math.round(src.similarity * 100)}%</span>
                           </button>
                         );
                       })}
@@ -1117,7 +1365,8 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
 
         {/* Loading indicator — hidden once streaming text has started arriving */}
         {isLoading && !(messages[messages.length - 1]?.role === "assistant" && messages[messages.length - 1]?.content) && (
