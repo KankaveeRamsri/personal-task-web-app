@@ -22,6 +22,7 @@ import type { ChatMessage, RagSource, FilterType, ActionStatus } from "./types";
 import { ChatMessages, SparkleIcon } from "./chat-messages";
 import { ChatInput } from "./chat-input";
 import { ReindexButton } from "./reindex-button";
+import { WorkspaceBoardSelector } from "./workspace-board-selector";
 import { useChatSession } from "@/hooks/useChatSession";
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -240,8 +241,20 @@ interface AssistantPanelProps {
 
 export function AssistantPanel({ userEmail }: AssistantPanelProps) {
   const router = useRouter();
-  const { tasks, lists, boards, selectedWorkspaceId, selectedBoardId, createTask, updateTask, moveTask } =
-    useBoardData();
+  const {
+    workspaces,
+    selectedWorkspaceId,
+    setSelectedWorkspaceId,
+    boards,
+    selectedBoardId,
+    setSelectedBoardId,
+    lists,
+    tasks,
+    loading: boardDataLoading,
+    createTask,
+    updateTask,
+    moveTask,
+  } = useBoardData();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -760,29 +773,46 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
 
   return (
     <div className="flex h-full flex-col nx-card shadow-sm overflow-hidden">
-      {/* Header with new chat button */}
-      {messages.length > 0 && (
-        <div className="flex items-center justify-end px-4 pt-3 pb-0">
+      {/* Header: workspace/board selector + new chat */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-zinc-100 px-4 pb-2.5 pt-3 dark:border-zinc-800/60">
+        <WorkspaceBoardSelector
+          workspaces={workspaces}
+          selectedWorkspaceId={selectedWorkspaceId ?? null}
+          onWorkspaceChange={setSelectedWorkspaceId}
+          boards={boards}
+          selectedBoardId={selectedBoardId ?? null}
+          onBoardChange={setSelectedBoardId}
+          isLoading={boardDataLoading || isSessionLoading}
+        />
+        {messages.length > 0 && (
           <button
             id="ai-new-chat-btn"
             onClick={() => void handleNewChat()}
             disabled={isLoading}
             title="เริ่มแชทใหม่"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-zinc-800/40 px-2.5 py-1 text-xs font-medium text-zinc-500 dark:text-zinc-400 transition-all hover:border-red-300 hover:bg-red-50 dark:hover:border-red-500/40 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-zinc-800/40 px-2.5 py-1 text-xs font-medium text-zinc-500 dark:text-zinc-400 transition-all hover:border-red-300 hover:bg-red-50 dark:hover:border-red-500/40 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
               <path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14ZM6.75 5.75a.75.75 0 0 1 1.5 0v2.5h2.5a.75.75 0 0 1 0 1.5h-2.5v2.5a.75.75 0 0 1-1.5 0v-2.5h-2.5a.75.75 0 0 1 0-1.5h2.5v-2.5Z" clipRule="evenodd" />
             </svg>
             แชทใหม่
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Chat area */}
       <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
 
         {/* Empty state / compact welcome */}
-        {showInitialPrompts ? (
+        {isSessionLoading && messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-12 text-sm text-zinc-400 dark:text-zinc-500">
+            <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            กำลังโหลดประวัติแชท...
+          </div>
+        ) : showInitialPrompts ? (
           <div className="flex flex-col items-center gap-5 pt-6 pb-2">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-100 dark:border-blue-800/30 shadow-sm">
               <SparkleIcon className="h-7 w-7 text-blue-600 dark:text-blue-400" />
