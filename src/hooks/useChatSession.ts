@@ -11,7 +11,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { ChatMessage } from "@/components/ai-assistant/types";
 
 export interface StoredMessage {
@@ -88,16 +88,10 @@ export function useChatSession(
   });
   const [restoredMessages, setRestoredMessages] = useState<ChatMessage[] | null>(null);
 
-  // Track the previous workspaceId+boardId to detect changes
-  const prevKeyRef = useRef<string>("");
-
   // ── Load session when workspace/board changes ──────────────────────
 
   useEffect(() => {
-    const key = `${workspaceId ?? ""}|${boardId ?? ""}`;
-    if (!workspaceId || key === prevKeyRef.current) return;
-
-    prevKeyRef.current = key;
+    if (!workspaceId) return;
 
     let cancelled = false;
 

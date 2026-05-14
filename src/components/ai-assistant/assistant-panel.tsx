@@ -683,6 +683,10 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
 
       setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
+      // Accumulate streamed text locally — never call saveAssistantMessage inside a
+      // state updater (concurrent mode / Strict Mode may invoke updaters multiple times).
+      let streamedContent = "";
+
       streamChat(
         prompt,
         tasks,
@@ -690,6 +694,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
         boardName,
         {
           onChunk(text) {
+            streamedContent += text;
             setMessages((prev) =>
               prev.map((msg, i) =>
                 i === prev.length - 1 ? { ...msg, content: msg.content + text } : msg,
@@ -704,6 +709,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
             );
           },
           onError(msg, isTimeout) {
+            streamedContent = ""; // reset on error — don't persist error messages
             setMessages((prev) =>
               prev.map((msg2, i) =>
                 i === prev.length - 1
@@ -711,7 +717,6 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
                   : msg2,
               ),
             );
-            // Do NOT save error messages to DB
           },
         },
         selectedWorkspaceId ?? undefined,
@@ -719,14 +724,10 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
         chatHistory,
       )
         .then(() => {
-          // After stream completes, save the final assistant content to DB
-          setMessages((prev) => {
-            const last = prev[prev.length - 1];
-            if (last && last.role === "assistant" && last.content && !last.isFallback && !last.isTimeout) {
-              saveAssistantMessage(last.content);
-            }
-            return prev;
-          });
+          // Save once, directly — not inside a state updater
+          if (streamedContent) {
+            saveAssistantMessage(streamedContent);
+          }
         })
         .catch(() => {
           const filtered = applyFilter(tasks, lists, filter, userEmail);
