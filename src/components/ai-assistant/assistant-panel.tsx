@@ -22,6 +22,7 @@ import type { ChatMessage, RagSource, FilterType, ActionStatus } from "./types";
 import { ChatMessages, SparkleIcon } from "./chat-messages";
 import { ChatInput } from "./chat-input";
 import { ReindexButton } from "./reindex-button";
+import { useChatSession } from "@/hooks/useChatSession";
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -247,9 +248,20 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
   const [inputValue, setInputValue] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // ── Persistent chat session ────────────────────────────────────────
+  const { isSessionLoading, restoredMessages, saveUserMessage, saveAssistantMessage, clearChat } =
+    useChatSession(selectedWorkspaceId ?? null, selectedBoardId ?? null);
+
+  // Restore messages when board/session loads
+  useEffect(() => {
+    if (restoredMessages !== null && !isSessionLoading) {
+      setMessages(restoredMessages);
+    }
+  }, [restoredMessages, isSessionLoading]);
+
   const boardTitle = boards.find((b) => b.id === selectedBoardId)?.title;
   const hasBoard = !!selectedBoardId;
-  const showInitialPrompts = messages.length === 0 && !isLoading;
+  const showInitialPrompts = messages.length === 0 && !isLoading && !isSessionLoading;
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -594,11 +606,23 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
 
   // ── Chat flow ─────────────────────────────────────────────────────
 
+  // ── New chat handler ───────────────────────────────────────────────
+
+  const handleNewChat = useCallback(async () => {
+    if (isLoading) return;
+    await clearChat();
+    setMessages([]);
+  }, [isLoading, clearChat]);
+
+  // ── Chat flow ─────────────────────────────────────────────────────
+
   const handlePrompt = useCallback(
     (prompt: string, filter: FilterType = "all") => {
       if (isLoading) return;
 
       setMessages((prev) => [...prev, { role: "user", content: prompt }]);
+      // Save user message to DB (fire-and-forget)
+      saveUserMessage(prompt);
       setIsLoading(true);
 
       const actionType = detectActionIntent(prompt);
@@ -612,6 +636,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
                   ...prev,
                   { role: "assistant", content: reply, actionPlan, requiresConfirmation },
                 ]);
+                // Do NOT save action plan messages to DB
               } else {
                 const filtered = applyFilter(tasks, lists, filter, userEmail);
                 const ruleReply = generateResponseByIntent("general", filtered, lists);
@@ -623,12 +648,17 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
                     isFallback: true,
                   },
                 ]);
+                // Do NOT save fallback messages to DB
               }
             } else {
               setMessages((prev) => [
                 ...prev,
                 { role: "assistant", content: reply, actionPlan, requiresConfirmation },
               ]);
+              // Save clean LLM reply to DB
+              if (!actionPlan) {
+                saveAssistantMessage(reply);
+              }
             }
           })
           .catch(() => {
@@ -681,12 +711,23 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
                   : msg2,
               ),
             );
+            // Do NOT save error messages to DB
           },
         },
         selectedWorkspaceId ?? undefined,
         selectedBoardId ?? undefined,
         chatHistory,
       )
+        .then(() => {
+          // After stream completes, save the final assistant content to DB
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last && last.role === "assistant" && last.content && !last.isFallback && !last.isTimeout) {
+              saveAssistantMessage(last.content);
+            }
+            return prev;
+          });
+        })
         .catch(() => {
           const filtered = applyFilter(tasks, lists, filter, userEmail);
           const fallback = generateResponseByIntent(intent, filtered, lists);
@@ -704,7 +745,7 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
         })
         .finally(() => setIsLoading(false));
     },
-    [isLoading, messages, tasks, lists, userEmail, boards, selectedBoardId, selectedWorkspaceId],
+    [isLoading, messages, tasks, lists, userEmail, boards, selectedBoardId, selectedWorkspaceId, saveUserMessage, saveAssistantMessage],
   );
 
   const handleSubmit = useCallback(() => {
@@ -718,6 +759,24 @@ export function AssistantPanel({ userEmail }: AssistantPanelProps) {
 
   return (
     <div className="flex h-full flex-col nx-card shadow-sm overflow-hidden">
+      {/* Header with new chat button */}
+      {messages.length > 0 && (
+        <div className="flex items-center justify-end px-4 pt-3 pb-0">
+          <button
+            id="ai-new-chat-btn"
+            onClick={() => void handleNewChat()}
+            disabled={isLoading}
+            title="เริ่มแชทใหม่"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-zinc-800/40 px-2.5 py-1 text-xs font-medium text-zinc-500 dark:text-zinc-400 transition-all hover:border-red-300 hover:bg-red-50 dark:hover:border-red-500/40 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
+              <path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14ZM6.75 5.75a.75.75 0 0 1 1.5 0v2.5h2.5a.75.75 0 0 1 0 1.5h-2.5v2.5a.75.75 0 0 1-1.5 0v-2.5h-2.5a.75.75 0 0 1 0-1.5h2.5v-2.5Z" clipRule="evenodd" />
+            </svg>
+            แชทใหม่
+          </button>
+        </div>
+      )}
+
       {/* Chat area */}
       <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
 
